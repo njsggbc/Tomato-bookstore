@@ -1,0 +1,35 @@
+spring:
+  datasource: #更换为可用配置
+    url: jdbc:mysql://localhost:3306/TomatoMall?createDatabaseIfNotExist=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: root   
+    password: 123456 
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+
+app:
+  init-data:
+    root-user: #自定义初始管理员信息
+      id: 1
+      username: root
+      phone: 10000000000 
+      password: 123456 
+    system-store: #自定义默认系统商店信息
+      id: 1
+      name: 系统店铺
+      description: 特殊用途店铺
+      address: 默认地址
+      logo-url: ""
+
+server:
+  port: 8080
+
+aliyun:
+  oss: #添加必要配置
+    endpoint: 
+    accessKeyId: 
+    accessKeySecret: 
+    bucketName: 
