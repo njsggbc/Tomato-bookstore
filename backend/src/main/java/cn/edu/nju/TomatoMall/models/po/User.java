@@ -18,16 +18,19 @@ import java.util.List;
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private int id;
 
     @Column(nullable = false, unique = true)
     private String username;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String phone;
 
     @Column(nullable = false)
     private String password;
+
+    @Column(unique = true)
+    private String email;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -37,15 +40,6 @@ public class User {
     private LocalDateTime createTime = LocalDateTime.now();
 
     private String name;
-    private String email;
     private String avatarUrl;
     private String address;
-
-    // 关联关系
-    @OneToMany(mappedBy = "manager", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE}, orphanRemoval = true)
-    private List<Store> managedStores = new ArrayList<>();
-
-    @ManyToMany(mappedBy = "staffs", fetch = FetchType.LAZY)
-    private List<Store> workedStores = new ArrayList<>();
-
 }

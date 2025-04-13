@@ -28,8 +28,8 @@ server:
   port: 8080
 
 aliyun:
-  oss: #添加必要配置
-    endpoint: 
-    accessKeyId: 
-    accessKeySecret: 
-    bucketName: 
+  oss: # 添加必要配置
+    endpoint:
+    accessKeyId:
+    accessKeySecret:
+    bucketName:

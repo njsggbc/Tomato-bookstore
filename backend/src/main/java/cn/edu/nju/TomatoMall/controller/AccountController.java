@@ -42,8 +42,9 @@ public class AccountController {
     }
 
     @PutMapping
-    public ApiResponse<Boolean> updateAccount(@RequestBody Map<String, String> params) {
-        return ApiResponse.success(userService.accountUpdate(params));
+    public ApiResponse<Void> updateAccount(@RequestBody Map<String, String> params) {
+        userService.accountUpdate(params);
+        return ApiResponse.success();
     }
 
 

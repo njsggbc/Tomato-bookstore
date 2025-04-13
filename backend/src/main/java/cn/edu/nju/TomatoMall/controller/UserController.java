@@ -22,8 +22,9 @@ public class UserController {
      * 用户注册
      */
     @PostMapping(path = "/register", consumes = "multipart/form-data")
-    public ApiResponse<Boolean> register(@ModelAttribute UserRegisterRequest params) {
-        return ApiResponse.success(userService.register(params));
+    public ApiResponse<Void> register(@ModelAttribute UserRegisterRequest params) {
+        userService.register(params);
+        return ApiResponse.success();
     }
 
     /**
@@ -56,25 +57,19 @@ public class UserController {
      * 更新用户信息
      */
     @PutMapping(consumes = "multipart/form-data")
-    public ApiResponse<Boolean> updateInformation(@ModelAttribute UserUpdateRequest params) {
-        return ApiResponse.success(userService.updateInformation(params));
+    public ApiResponse<Void> updateInformation(@ModelAttribute UserUpdateRequest params) {
+        userService.updateInformation(params);
+        return ApiResponse.success();
     }
 
     /**
      * 更新用户密码
      */
     @PatchMapping("/password")
-    public ApiResponse<Boolean> updatePassword(@RequestParam("currentPassword") String currentPassword,
+    public ApiResponse<Void> updatePassword(@RequestParam("currentPassword") String currentPassword,
                                                @RequestParam("newPassword") String newPassword) {
-        return ApiResponse.success(userService.updatePassword(currentPassword, newPassword));
-    }
-
-    /**
-     * 获取当前用户在某个商店的权限
-     */
-    @GetMapping("/permission")
-    public ApiResponse<String> getPermission(@RequestParam("storeId") int storeId) {
-        return ApiResponse.success(userService.getPermission(storeId));
+        userService.updatePassword(currentPassword, newPassword);
+        return ApiResponse.success();
     }
 
 }
