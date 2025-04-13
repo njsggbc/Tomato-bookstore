@@ -23,6 +23,10 @@ public class ApiResponse<T> implements Serializable {
         return new ApiResponse<T>(200, null, result);
     }
 
+    public static ApiResponse<Void> success() {
+        return new ApiResponse<>(200, null, null);
+    }
+
     public static <T> ApiResponse<T> failure(int code, String msg) {
         return new ApiResponse<T>(code, msg, null);
     }

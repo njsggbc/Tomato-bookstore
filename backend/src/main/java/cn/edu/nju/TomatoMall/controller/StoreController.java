@@ -1,9 +1,12 @@
 package cn.edu.nju.TomatoMall.controller;
 
+import cn.edu.nju.TomatoMall.models.dto.employment.TokenGenerateRequest;
+import cn.edu.nju.TomatoMall.models.dto.employment.TokenInfoResponse;
 import cn.edu.nju.TomatoMall.models.dto.store.StoreCreateRequest;
-import cn.edu.nju.TomatoMall.models.dto.store.StoreBriefResponse;
-import cn.edu.nju.TomatoMall.models.dto.store.StoreDetailResponse;
+import cn.edu.nju.TomatoMall.models.dto.store.StoreInfoResponse;
 import cn.edu.nju.TomatoMall.models.dto.store.StoreUpdateRequest;
+import cn.edu.nju.TomatoMall.models.dto.user.UserBriefResponse;
+import cn.edu.nju.TomatoMall.service.EmploymentService;
 import cn.edu.nju.TomatoMall.service.StoreService;
 import cn.edu.nju.TomatoMall.models.vo.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,98 +22,131 @@ public class StoreController {
     @Autowired
     private StoreService storeService;
 
+    @Autowired
+    private EmploymentService employmentService;
+
     /**
      * 获取商店列表
      */
-
     @GetMapping
-    public ApiResponse<Page<StoreBriefResponse>> getStoreList(
+    public ApiResponse<Page<StoreInfoResponse>> getStoreList(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "0") int size,
             @RequestParam(defaultValue = "id") String field,
             @RequestParam(defaultValue = "true") boolean order) {
-        Page<StoreBriefResponse> storePage = storeService.getStoreList(page, size, field, order);
+        Page<StoreInfoResponse> storePage = storeService.getStoreList(page, size, field, order);
         return ApiResponse.success(storePage);
+    }
+
+    /**
+     * 获取当前用户管理的商店列表
+     */
+    @GetMapping("/managed")
+    public ApiResponse<List<StoreInfoResponse>> getManagedStoreList() {
+        List<StoreInfoResponse> storeList = storeService.getManagedStoreList();
+        return ApiResponse.success(storeList);
+    }
+
+    /**
+     * 获取当前用户工作的商店列表
+     */
+    @GetMapping("/worked")
+    public ApiResponse<List<StoreInfoResponse>> getWorkedStoreList() {
+        List<StoreInfoResponse> storeList = storeService.getWorkedStoreList();
+        return ApiResponse.success(storeList);
     }
 
     /**
      * 创建新商店
      */
     @PostMapping(consumes = "multipart/form-data")
-    public ApiResponse<Boolean> createStore(@ModelAttribute StoreCreateRequest params) {
-        return ApiResponse.success(storeService.createStore(params));
+    public ApiResponse<Void> createStore(@ModelAttribute StoreCreateRequest params) {
+        storeService.createStore(params);
+        return ApiResponse.success();
     }
 
     /**
-     * 获取商店详细信息
+     * 获取商店信息
      */
     @GetMapping("/{storeId}")
-    public ApiResponse<StoreDetailResponse> getStore(@PathVariable int storeId) {
-        return ApiResponse.success(storeService.getDetail(storeId));
-    }
-
-    /**
-     * 获取商店简略信息
-     */
-    @GetMapping("/{storeId}/brief")
-    public ApiResponse<StoreBriefResponse> getStoreInfo(@PathVariable int storeId) {
-        return ApiResponse.success(storeService.getBrief(storeId));
+    public ApiResponse<StoreInfoResponse> getStore(@PathVariable int storeId) {
+        return ApiResponse.success(storeService.getInfo(storeId));
     }
 
     /**
      * 更新商店信息
      */
     @PatchMapping(path = "/{storeId}", consumes = "multipart/form-data")
-    public ApiResponse<Boolean> updateStore(@PathVariable int storeId, @ModelAttribute StoreUpdateRequest params) {
-        return ApiResponse.success(storeService.updateStore(storeId, params));
+    public ApiResponse<Void> updateStore(@PathVariable int storeId, @ModelAttribute StoreUpdateRequest params) {
+        storeService.updateStore(storeId, params);
+        return ApiResponse.success();
     }
 
     /**
      * 删除商店
      */
     @DeleteMapping("/{storeId}")
-    public ApiResponse<Boolean> deleteStore(@PathVariable int storeId) {
-        return ApiResponse.success(storeService.deleteStore(storeId));
+    public ApiResponse<Void> deleteStore(@PathVariable int storeId) {
+        storeService.deleteStore(storeId);
+        return ApiResponse.success();
     }
 
     /**
-     * 获取商店的令牌列表
+     * 获取商店的token列表
      */
     @GetMapping("/{storeId}/tokens")
-    public ApiResponse<List<String>> getStoreTokenList(@PathVariable int storeId) {
-        return ApiResponse.success(storeService.getStoreTokenList(storeId));
+    public ApiResponse<List<TokenInfoResponse>> getTokenList(@PathVariable int storeId) {
+        List<TokenInfoResponse> tokens = employmentService.getTokenList(storeId);
+        return ApiResponse.success(tokens);
     }
 
     /**
-     * 生成商店令牌
+     * 生成商店员工授权token
      */
     @PostMapping("/{storeId}/tokens")
-    public ApiResponse<Boolean> generateToken(@PathVariable int storeId) {
-        return ApiResponse.success(storeService.generateToken(storeId));
+    public ApiResponse<String> generateToken(@PathVariable int storeId,
+                                             @RequestBody TokenGenerateRequest request) {
+        String token = employmentService.generateToken(storeId, request);
+        return ApiResponse.success(token);
     }
 
     /**
-     * 删除商店令牌
+     * 删除商店员工授权token
      */
-    @DeleteMapping("/{storeId}/tokens")
-    public ApiResponse<Boolean> deleteToken(@PathVariable int storeId, @RequestParam String token) {
-        return ApiResponse.success(storeService.deleteToken(storeId, token));
+    @DeleteMapping("/{storeId}/tokens/{tokenId}")
+    public ApiResponse<Void> deleteToken(@PathVariable int storeId,
+                                         @PathVariable int tokenId) {
+        employmentService.deleteToken(storeId, tokenId);
+        return ApiResponse.success();
     }
 
     /**
-     * 验证商店令牌
+     * 验证商店员工授权token
      */
-    @PostMapping("/{storeId}/staffs")
-    public ApiResponse<Boolean> authToken(@PathVariable int storeId, @RequestParam String token) {
-        return ApiResponse.success(storeService.authToken(storeId, token));
+    @PostMapping("/{storeId}/auth")
+    public ApiResponse<Void> authToken(@PathVariable int storeId,
+                                       @RequestParam String token) {
+        employmentService.authToken(storeId, token);
+        return ApiResponse.success();
     }
 
     /**
-     * 删除商店员工
+     * 解雇商店员工
      */
-    @DeleteMapping("/{storeId}/staffs")
-    public ApiResponse<Boolean> deleteStaff(@PathVariable int storeId, @RequestParam int staffId) {
-        return ApiResponse.success(storeService.deleteStaff(storeId, staffId));
+    @DeleteMapping("/{storeId}/staff/{userId}")
+    public ApiResponse<Void> dismissEmployee(@PathVariable int storeId,
+                                             @PathVariable int userId) {
+        employmentService.dismiss(storeId, userId);
+        return ApiResponse.success();
+    }
+
+    /**
+     * 获取商店员工列表
+     */
+    @GetMapping("/{storeId}/staff")
+    public ApiResponse<List<UserBriefResponse>> getStaffList(@PathVariable int storeId) {
+        List<UserBriefResponse> staffList = employmentService.getStaffList(storeId);
+        return ApiResponse.success(staffList);
     }
 
     /**
@@ -121,11 +157,12 @@ public class StoreController {
      * @return 操作成功与否
      */
     @PostMapping("/review")
-    public ApiResponse<Boolean> reviewStore(
+    public ApiResponse<Void> reviewStore(
             @RequestParam int storeId,
-            @RequestParam boolean pass) {
-
-        return ApiResponse.success(storeService.review(storeId, pass));
+            @RequestParam boolean pass
+    ) {
+        storeService.review(storeId, pass);
+        return ApiResponse.success();
     }
 
     /**
@@ -138,7 +175,7 @@ public class StoreController {
      * @return 店铺分页列表
      */
     @GetMapping("/awaiting-review")
-    public ApiResponse<Page<StoreBriefResponse>> getAwaitingReviewStoreList(
+    public ApiResponse<Page<StoreInfoResponse>> getAwaitingReviewStoreList(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "0") int size,
             @RequestParam(defaultValue = "id") String field,
@@ -157,7 +194,7 @@ public class StoreController {
      * @return 店铺分页列表
      */
     @GetMapping("/suspended")
-    public ApiResponse<Page<StoreBriefResponse>> getSuspendedStoreList(
+    public ApiResponse<Page<StoreInfoResponse>> getSuspendedStoreList(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "0") int size,
             @RequestParam(defaultValue = "id") String field,

@@ -1,7 +1,6 @@
 package cn.edu.nju.TomatoMall.service.impl;
 
 import cn.edu.nju.TomatoMall.enums.Role;
-import cn.edu.nju.TomatoMall.enums.StoreRole;
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
 import cn.edu.nju.TomatoMall.models.dto.user.*;
 import cn.edu.nju.TomatoMall.models.po.User;
@@ -17,34 +16,34 @@ import java.util.Map;
 
 @Service
 public class UserServiceImpl implements UserService {
+    private final UserRepository userRepository;
+    private final SecurityUtil securityUtil;
+    private final FileUtil fileUtil;
 
     @Autowired
-    UserRepository userRepository;
-
-    @Autowired
-    SecurityUtil securityUtil;
-
-    @Autowired
-    FileUtil fileUtil;
-
+    public UserServiceImpl(UserRepository userRepository, SecurityUtil securityUtil, FileUtil fileUtil) {
+        this.userRepository = userRepository;
+        this.securityUtil = securityUtil;
+        this.fileUtil = fileUtil;
+    }
 
     @Override
-    public Boolean register(UserRegisterRequest params) {
+    public void register(UserRegisterRequest params) {
         User user = new User();
 
         String phone = params.getPhone();
-        if (userRepository.findByPhone(phone).isPresent()) {
+        if (userRepository.existsByPhone(phone)) {
             throw TomatoMallException.phoneAlreadyExists();
         }
 
         String username = params.getUsername();
-        if (userRepository.findByUsername(username).isPresent()) {
+        if (userRepository.existsByUsername(username)) {
             throw TomatoMallException.usernameAlreadyExists();
         }
 
         String email = params.getEmail();
         if (email != null) {
-            if (userRepository.findByEmail(email).isPresent()) {
+            if (userRepository.existsByEmail(email)) {
                 throw TomatoMallException.emailAlreadyExists();
             }
         }
@@ -64,8 +63,6 @@ public class UserServiceImpl implements UserService {
         if(params.getAvatar() != null){
             user.setAvatarUrl(fileUtil.upload(user.getId(), params.getAvatar()));
         }
-
-        return true;
     }
 
     @Override
@@ -103,37 +100,31 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Boolean updateInformation(UserUpdateRequest params) {
+    public void updateInformation(UserUpdateRequest params) {
         User user = securityUtil.getCurrentUser();
 
         String phone = params.getPhone();
         String username = params.getUsername();
         String email = params.getEmail();
 
-        if (phone != null && userRepository.findByPhone(phone).isPresent() && !phone.equals(user.getPhone())) {
+        if (phone != null && userRepository.existsByPhone(phone) && !phone.equals(user.getPhone())) {
             throw TomatoMallException.phoneAlreadyExists();
-        }
-
-        if (username != null && userRepository.findByUsername(username).isPresent() && !username.equals(user.getUsername())) {
-            throw TomatoMallException.usernameAlreadyExists();
-        }
-
-        if (email != null && userRepository.findByEmail(email).isPresent() && !email.equals(user.getEmail())) {
-            throw TomatoMallException.emailAlreadyExists();
-        }
-
-        if(phone != null){
+        } else {
             user.setPhone(phone);
         }
-        if(username != null){
+
+        if (username != null && userRepository.existsByUsername(username) && !username.equals(user.getUsername())) {
+            throw TomatoMallException.usernameAlreadyExists();
+        } else {
             user.setUsername(username);
         }
-        if(email != null){
+
+        if (email != null && userRepository.existsByEmail(email) && !email.equals(user.getEmail())) {
+            throw TomatoMallException.emailAlreadyExists();
+        } else {
             user.setEmail(email);
         }
-        if(params.getUsername() != null){
-            user.setUsername(params.getUsername());
-        }
+
         if(params.getName() != null){
             user.setName(params.getName());
         }
@@ -149,39 +140,16 @@ public class UserServiceImpl implements UserService {
         }
 
         userRepository.save(user);
-
-        return true;
     }
 
     @Override
-    public Boolean updatePassword(String currentPassword, String newPassword) {
+    public void updatePassword(String currentPassword, String newPassword) {
         User user = securityUtil.getCurrentUser();
         if (!user.getPassword().equals(currentPassword)) {
             throw TomatoMallException.phoneOrPasswordError();
         }
         user.setPassword(newPassword);
         userRepository.save(user);
-
-        return true;
-    }
-
-    @Override
-    public String getPermission(int storeId) {
-        User user = securityUtil.getCurrentUser();
-
-        for (int i = 0; i < user.getManagedStores().size(); i++) {
-            if (user.getManagedStores().get(i).getId() == storeId) {
-                return StoreRole.MANAGER.toString();
-            }
-        }
-
-        for (int i = 0; i < user.getWorkedStores().size(); i++) {
-            if (user.getWorkedStores().get(i).getId() == storeId) {
-                return StoreRole.STAFF.toString();
-            }
-        }
-
-        return StoreRole.CUSTOMER.toString();
     }
 
     /*----------- HACK: 以下为兼容测试用方法 -----------*/
@@ -212,7 +180,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Boolean accountUpdate(Map<String, String> params) {
+    public void accountUpdate(Map<String, String> params) {
         UserUpdateRequest userUpdateRequest = new UserUpdateRequest();
         userUpdateRequest.setUsername(params.get("username"));
         userUpdateRequest.setPhone(params.get("telephone"));
@@ -227,7 +195,7 @@ public class UserServiceImpl implements UserService {
             userRepository.save(user);
         }
 
-        return updateInformation(userUpdateRequest);
+        updateInformation(userUpdateRequest);
     }
 
     @Override

@@ -1,41 +1,30 @@
 package cn.edu.nju.TomatoMall.service;
 
-import cn.edu.nju.TomatoMall.models.dto.store.StoreCreateRequest;
-import cn.edu.nju.TomatoMall.models.dto.store.StoreBriefResponse;
-import cn.edu.nju.TomatoMall.models.dto.store.StoreDetailResponse;
-import cn.edu.nju.TomatoMall.models.dto.store.StoreUpdateRequest;
+import cn.edu.nju.TomatoMall.models.dto.store.*;
 import org.springframework.data.domain.Page;
 
 import java.util.List;
 
 public interface StoreService {
-    Page<StoreBriefResponse> getStoreList(int page, int size, String field, boolean order);
+    Page<StoreInfoResponse> getStoreList(int page, int size, String field, boolean order);
 
-    StoreDetailResponse getDetail(int storeId);
+    List<StoreInfoResponse> getManagedStoreList();
 
-    StoreBriefResponse getBrief(int storeId);
+    List<StoreInfoResponse> getWorkedStoreList();
 
-    Boolean createStore(StoreCreateRequest params);
+    StoreInfoResponse getInfo(int storeId);
 
-    Boolean updateStore(int storeId, StoreUpdateRequest params);
+    void createStore(StoreCreateRequest params);
 
-    Boolean deleteStore(int storeId);
+    void updateStore(int storeId, StoreUpdateRequest params);
 
-    List<String> getStoreTokenList(int storeId);
+    void deleteStore(int storeId);
 
-    Boolean generateToken(int storeId);
+    void review(int storeId, boolean pass);
 
-    Boolean deleteToken(int storeId, String token);
+    Page<StoreInfoResponse> getAwaitingReviewStoreList(int page, int size, String field, boolean order);
 
-    Boolean authToken(int storeId, String token);
-
-    Boolean deleteStaff(int storeId, int userId);
-
-    Boolean review(int storeId, boolean pass);
-
-    Page<StoreBriefResponse> getAwaitingReviewStoreList(int page, int size, String field, boolean order);
-
-    Page<StoreBriefResponse> getSuspendedStoreList(int page, int size, String field, boolean order);
+    Page<StoreInfoResponse> getSuspendedStoreList(int page, int size, String field, boolean order);
 
     List<String> getStoreQualification(int storeId);
 }

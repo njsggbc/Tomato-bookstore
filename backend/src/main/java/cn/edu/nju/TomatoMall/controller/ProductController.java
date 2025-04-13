@@ -35,11 +35,27 @@ public class ProductController {
     }
 
     /**
+     * 获取商店商品列表
+     */
+    @GetMapping("/store/{storeId}")
+    public ApiResponse<Page<ProductBriefResponse>> getStoreProductList(
+            @PathVariable int storeId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "0") int size,
+            @RequestParam(defaultValue = "id") String field,
+            @RequestParam(defaultValue = "true") boolean order) {
+
+        Page<ProductBriefResponse> productPage = productService.getStoreProductList(storeId, page, size, field, order);
+        return ApiResponse.success(productPage);
+    }
+
+    /**
      * 创建新商品
      */
     @PostMapping(path = "/create", consumes = "multipart/form-data")
-    public ApiResponse<Boolean> createProduct(@ModelAttribute ProductCreateRequest params) {
-        return ApiResponse.success(productService.createProduct(params));
+    public ApiResponse<Void> createProduct(@ModelAttribute ProductCreateRequest params) {
+        productService.createProduct(params);
+        return ApiResponse.success();
     }
 
     /**
@@ -54,8 +70,9 @@ public class ProductController {
      * 更新商品信息
      */
     @PatchMapping(path = "/{productId}", consumes = "multipart/form-data")
-    public ApiResponse<Boolean> updateProduct(@PathVariable int productId, @ModelAttribute ProductUpdateRequest params) {
-        return ApiResponse.success(productService.updateProduct(productId, params));
+    public ApiResponse<Void> updateProduct(@PathVariable int productId, @ModelAttribute ProductUpdateRequest params) {
+        productService.updateProduct(productId, params);
+        return ApiResponse.success();
     }
 
     /**

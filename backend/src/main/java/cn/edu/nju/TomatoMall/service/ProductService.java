@@ -9,9 +9,9 @@ import org.springframework.data.domain.Page;
 import java.util.Map;
 
 public interface ProductService {
-    Boolean createProduct(ProductCreateRequest params);
+    void createProduct(ProductCreateRequest params);
 
-    Boolean updateProduct(int productId, ProductUpdateRequest params);
+    void updateProduct(int productId, ProductUpdateRequest params);
 
     // HACK: 为了测试要返回毫无意义的字符串 😩
     String deleteProduct(int productId);
@@ -19,6 +19,8 @@ public interface ProductService {
     ProductDetailResponse getProductDetail(int productId);
 
     Page<ProductBriefResponse> getProductList(int page, int size, String field, boolean order);
+
+    Page<ProductBriefResponse> getStoreProductList(int storeId, int page, int size, String field, boolean order);
 
     /*---------- HACK: 以下为兼容测试用接口 ----------*/
 
@@ -28,6 +30,6 @@ public interface ProductService {
 
     String updateStockpile(int productId, int stockpile);
 
-    Integer getStockpile(int productId);
+    int getStockpile(int productId);
 
 }

@@ -10,7 +10,7 @@ public interface UserService {
      * @param params
      * @return
      */
-    Boolean register(UserRegisterRequest params);
+    void register(UserRegisterRequest params);
 
     /**
      * 登录
@@ -37,7 +37,7 @@ public interface UserService {
      * @param params
      * @return
      */
-    Boolean updateInformation(UserUpdateRequest params);
+    void updateInformation(UserUpdateRequest params);
 
     /**
      * 更新用户密码
@@ -45,14 +45,7 @@ public interface UserService {
      * @param newPassword
      * @return
      */
-    Boolean updatePassword(String currentPassword, String newPassword);
-
-    /**
-     * 获取用户对于商店的权限
-     * @param storeId
-     * @return
-     */
-    String getPermission(int storeId);
+    void updatePassword(String currentPassword, String newPassword);
 
     /*---------- HACK: 以下为兼容测试用接口 ----------*/
 
@@ -60,7 +53,7 @@ public interface UserService {
 
     UserDetailResponse accountGet(String username);
 
-    Boolean accountUpdate(Map<String, String> params);
+    void accountUpdate(Map<String, String> params);
 
     String accountLogin(String username, String password);
 

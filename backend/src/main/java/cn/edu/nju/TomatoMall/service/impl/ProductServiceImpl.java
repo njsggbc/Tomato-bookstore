@@ -9,6 +9,8 @@ import cn.edu.nju.TomatoMall.models.dto.product.ProductUpdateRequest;
 import cn.edu.nju.TomatoMall.models.po.Product;
 import cn.edu.nju.TomatoMall.models.po.Store;
 import cn.edu.nju.TomatoMall.models.po.User;
+import cn.edu.nju.TomatoMall.repository.EmploymentRepository;
+import cn.edu.nju.TomatoMall.repository.EmploymentTokenRepository;
 import cn.edu.nju.TomatoMall.repository.ProductRepository;
 import cn.edu.nju.TomatoMall.repository.StoreRepository;
 import cn.edu.nju.TomatoMall.service.ProductService;
@@ -20,43 +22,53 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class ProductServiceImpl implements ProductService {
-    @Autowired
-    StoreRepository storeRepository;
+    private final ProductRepository productRepository;
+    private final StoreRepository storeRepository;
+    private final EmploymentRepository employmentRepository;
+    private final SecurityUtil securityUtil;
+    private final FileUtil fileUtil;
 
     @Autowired
-    ProductRepository productRepository;
-
-    @Autowired
-    SecurityUtil securityUtil;
-
-    @Autowired
-    FileUtil fileUtil;
+    public ProductServiceImpl(ProductRepository productRepository, StoreRepository storeRepository, EmploymentRepository employmentRepository, SecurityUtil securityUtil, FileUtil fileUtil) {
+        this.productRepository = productRepository;
+        this.storeRepository = storeRepository;
+        this.employmentRepository = employmentRepository;
+        this.securityUtil = securityUtil;
+        this.fileUtil = fileUtil;
+    }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ProductBriefResponse> getProductList(int page, int size, String field, boolean order) {
         Sort.Direction direction = order ? Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = PageRequest.of(page, size > 0 ? size : Integer.MAX_VALUE, Sort.by(direction, field));
 
-        Page<Product> productPage = productRepository.findAll(pageable);
-
-        return productPage.map(ProductBriefResponse::new);
+        return productRepository
+                .findAll(pageable)
+                .map(ProductBriefResponse::new);
     }
 
     @Override
-    public Boolean createProduct(ProductCreateRequest params) {
-        Store store = storeRepository.findById(params.getStoreId()).orElseThrow(TomatoMallException::storeNotFound);
+    public Page<ProductBriefResponse> getStoreProductList(int storeId, int page, int size, String field, boolean order) {
+        Sort.Direction direction = order ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(page, size > 0 ? size : Integer.MAX_VALUE, Sort.by(direction, field));
 
-        User user = securityUtil.getCurrentUser();
-        if (!store.getManager().equals(user) && !store.getStaffs().contains(user)) {
-            throw TomatoMallException.permissionDenied();
-        }
+        return productRepository
+                .findByStoreId(storeId, pageable)
+                .map(ProductBriefResponse::new);
+    }
+
+    @Override
+    public void createProduct(ProductCreateRequest params) {
+        validatePermission(params.getStoreId());
 
         Product product = new Product();
         product.setName(params.getTitle());
@@ -64,29 +76,19 @@ public class ProductServiceImpl implements ProductService {
         product.setStock(params.getStock());
         product.setSales(0);
         product.setDescription(params.getDescription());
-        product.setImages(params.getImages().stream()
-                        .map(image -> fileUtil.upload(user.getId(), image))
-                        .collect(Collectors.toList())
-        );
+        product.setImages(uploadImages(params.getImages()));
         product.setSpecifications(params.getSpecifications());
         product.setCreateTime(LocalDateTime.now());
-        product.setStore(store);
+        product.setStore(storeRepository.getReferenceById(params.getStoreId()));
 
-        // 主实体级联保存
-        store.getProducts().add(product);
-        storeRepository.save(store);
-
-        return true;
+        productRepository.save(product);
     }
 
     @Override
-    public Boolean updateProduct(int productId, ProductUpdateRequest params) {
+    public void updateProduct(int productId, ProductUpdateRequest params) {
         Product product = productRepository.findById(productId).orElseThrow(TomatoMallException::productNotFound);
-        Store store = product.getStore();
-        User user = securityUtil.getCurrentUser();
-        if (!store.getManager().equals(user) && !store.getStaffs().contains(user)) {
-            throw TomatoMallException.permissionDenied();
-        }
+
+        validatePermission(product.getStore().getId());
 
         if (params.getTitle() != null) {
             product.setName(params.getTitle());
@@ -101,46 +103,69 @@ public class ProductServiceImpl implements ProductService {
             product.setStock(params.getStock());
         }
         if (params.getImages() != null) {
-            if (product.getImages() != null) {
-                product.getImages().forEach(fileUtil::delete);
-            }
-            product.setImages(params.getImages().stream()
-                            .map(image -> fileUtil.upload(user.getId(), image))
-                            .collect(Collectors.toList())
-            );
+            deleteImages(product.getImages());
+            product.setImages(uploadImages(params.getImages()));
         }
         if (params.getSpecifications() != null) {
             product.setSpecifications(params.getSpecifications());
         }
 
         productRepository.save(product);
-
-        return true;
     }
 
     @Override
     public String deleteProduct(int productId) {
         Product product = productRepository.findById(productId).orElseThrow(TomatoMallException::productNotFound);
-        Store store = product.getStore();
-        User user = securityUtil.getCurrentUser();
-        if (!user.getRole().equals(Role.ADMIN) && !store.getManager().equals(user) && !store.getStaffs().contains(user)) {
-            throw TomatoMallException.permissionDenied();
-        }
+
+        validatePermission(product.getStore().getId());
 
         if (product.getImages() != null) {
-            product.getImages().forEach(fileUtil::delete);
+            deleteImages(product.getImages());
         }
 
-        // 主实体级联保存
-        store.getProducts().remove(product);
-        storeRepository.save(store);
+        // TODO: 删除条件检查
 
+        productRepository.delete(product);
+
+        // HACK: for test
         return "删除成功";
     }
 
     @Override
     public ProductDetailResponse getProductDetail(int productId) {
         return new ProductDetailResponse(productRepository.findById(productId).orElseThrow(TomatoMallException::productNotFound));
+    }
+
+    private void validatePermission(Integer storeId) {
+        User currentUser = securityUtil.getCurrentUser();
+        // 系统默认店铺，只有系统管理员具有权限
+        if (storeId == 1) {
+            if (!currentUser.getRole().equals(Role.ADMIN)) {
+                throw TomatoMallException.permissionDenied();
+            }
+            return;
+        }
+
+        if (!storeRepository.existsByIdAndManagerId(storeId, currentUser.getId())
+                && !employmentRepository.existsByStoreIdAndEmployeeId(storeId, currentUser.getId())) {
+            throw TomatoMallException.permissionDenied();
+        }
+
+    }
+
+    private List<String> uploadImages(List<MultipartFile> images) {
+        List<String> imageUrls = new ArrayList<>();
+        for (MultipartFile image : images) {
+            String imageUrl = fileUtil.upload(securityUtil.getCurrentUser().getId(), image);
+            imageUrls.add(imageUrl);
+        }
+        return imageUrls;
+    }
+
+    private void deleteImages(List<String> imageUrls) {
+        if (imageUrls != null) {
+            imageUrls.forEach(fileUtil::delete);
+        }
     }
 
     /*------------- HACK: 以下为兼容测试用方法 -------------*/
@@ -157,7 +182,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public Integer getStockpile(int productId) {
+    public int getStockpile(int productId) {
         return productRepository.findById(productId).orElseThrow(TomatoMallException::productNotFound).getStock();
     }
 

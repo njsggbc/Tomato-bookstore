@@ -17,7 +17,7 @@ import java.util.Map;
 public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private int id;
 
     @Column(nullable = false)
     private String name;
@@ -29,13 +29,13 @@ public class Product {
     private List<String> images;
 
     @Column(nullable = false)
-    private Double price;
+    private double price;
 
     @Column(nullable = false)
-    private Integer stock;
+    private int stock;
 
     @Column(nullable = false)
-    private Integer sales;
+    private int sales;
 
     private Double rate;
 

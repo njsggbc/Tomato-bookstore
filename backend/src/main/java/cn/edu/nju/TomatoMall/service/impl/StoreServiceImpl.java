@@ -4,11 +4,11 @@ import cn.edu.nju.TomatoMall.enums.Role;
 import cn.edu.nju.TomatoMall.enums.StoreStatus;
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
 import cn.edu.nju.TomatoMall.models.dto.store.StoreCreateRequest;
-import cn.edu.nju.TomatoMall.models.dto.store.StoreBriefResponse;
-import cn.edu.nju.TomatoMall.models.dto.store.StoreDetailResponse;
+import cn.edu.nju.TomatoMall.models.dto.store.StoreInfoResponse;
 import cn.edu.nju.TomatoMall.models.dto.store.StoreUpdateRequest;
 import cn.edu.nju.TomatoMall.models.po.Store;
 import cn.edu.nju.TomatoMall.models.po.User;
+import cn.edu.nju.TomatoMall.repository.EmploymentRepository;
 import cn.edu.nju.TomatoMall.repository.StoreRepository;
 import cn.edu.nju.TomatoMall.service.StoreService;
 import cn.edu.nju.TomatoMall.util.FileUtil;
@@ -20,58 +20,68 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
 public class StoreServiceImpl implements StoreService {
-    @Autowired
-    StoreRepository storeRepository;
-
-    @Autowired
-    SecurityUtil securityUtil;
-
-    @Autowired
-    FileUtil fileUtil;
-
+    private final StoreRepository storeRepository;
+    private final SecurityUtil securityUtil;
+    private final FileUtil fileUtil;
     private static final List<StoreStatus> AWAITING_REVIEW_STATUS = Arrays.asList(StoreStatus.PENDING, StoreStatus.UPDATING);
+    private final EmploymentRepository employmentRepository;
+
+    @Autowired
+    public StoreServiceImpl(StoreRepository storeRepository, SecurityUtil securityUtil, FileUtil fileUtil, EmploymentRepository employmentRepository) {
+        this.storeRepository = storeRepository;
+        this.securityUtil = securityUtil;
+        this.fileUtil = fileUtil;
+        this.employmentRepository = employmentRepository;
+    }
 
     @Override
-    public Page<StoreBriefResponse> getStoreList(int page, int size, String field, boolean order) {
+    public Page<StoreInfoResponse> getStoreList(int page, int size, String field, boolean order) {
         Pageable pageable = PageRequest.of(page, size > 0 ? size : Integer.MAX_VALUE,
                 Sort.by(order ? Sort.Direction.ASC : Sort.Direction.DESC, field));
 
         Page<Store> storePage = storeRepository.findByStatus(StoreStatus.NORMAL, pageable);
 
-        return storePage.map(StoreBriefResponse::new);
+        return storePage.map(StoreInfoResponse::new);
     }
 
     @Override
-    public StoreDetailResponse getDetail(int storeId) {
+    public List<StoreInfoResponse> getManagedStoreList() {
+        return storeRepository.findByManagerId(securityUtil.getCurrentUser().getId()).stream()
+                .map(StoreInfoResponse::new)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<StoreInfoResponse> getWorkedStoreList() {
+        return employmentRepository.findStoreByEmployeeId(securityUtil.getCurrentUser().getId()).stream()
+                .map(StoreInfoResponse::new)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public StoreInfoResponse getInfo(int storeId) {
         Store store = storeRepository.findById(storeId).orElseThrow(TomatoMallException::storeNotFound);
         if (!store.getStatus().equals(StoreStatus.NORMAL)
                 && !securityUtil.getCurrentUser().getRole().equals(Role.ADMIN)
-                && !securityUtil.getCurrentUser().equals(store.getManager())
+                && !securityUtil.getCurrentUser().equals(store.getManager()) // 普通用户只能查看正常店铺的信息
         ) {
             throw TomatoMallException.storeNotFound();
         }
-        return new StoreDetailResponse(store);
+        return new StoreInfoResponse(store);
     }
 
     @Override
-    public StoreBriefResponse getBrief(int storeId) {
-        Store store = storeRepository.findById(storeId).orElseThrow(TomatoMallException::storeNotFound);
-        return new StoreBriefResponse(store);
-    }
-
-    @Override
-    public Boolean createStore(StoreCreateRequest params) {
+    public void createStore(StoreCreateRequest params) {
         String name = params.getName();
-        if (storeRepository.findByName(name) != null) {
+        if (storeRepository.existsByName(name)) {
             throw TomatoMallException.storeNameAlreadyExists();
         }
 
@@ -91,16 +101,12 @@ public class StoreServiceImpl implements StoreService {
         );
 
         storeRepository.save(store);
-
-        return true;
     }
 
     @Override
-    public Boolean updateStore(int storeId, StoreUpdateRequest params) {
+    public void updateStore(int storeId, StoreUpdateRequest params) {
         Store store = storeRepository.findById(storeId).orElseThrow(TomatoMallException::storeNotFound);
-        if (!store.getManager().equals(securityUtil.getCurrentUser())) {
-            throw TomatoMallException.permissionDenied();
-        }
+        validatePermission(store);
 
         if (params.getName() != null) {
             store.setName(params.getName());
@@ -128,22 +134,16 @@ public class StoreServiceImpl implements StoreService {
         store.setStatus(StoreStatus.UPDATING);
 
         storeRepository.save(store);
-
-        return true;
     }
 
     @Override
-    public Boolean deleteStore(int storeId) {
+    public void deleteStore(int storeId) {
         Store store = storeRepository.findById(storeId).orElseThrow(TomatoMallException::storeNotFound);
-        if (!store.getManager().equals(securityUtil.getCurrentUser())) {
-            throw TomatoMallException.permissionDenied();
-        }
+        validatePermission(store);
 
         store.setStatus(StoreStatus.DELETING);
 
         storeRepository.save(store);
-
-        return true;
     }
 
     private void deleteStore(Store store){
@@ -158,84 +158,7 @@ public class StoreServiceImpl implements StoreService {
     }
 
     @Override
-    public List<String> getStoreTokenList(int storeId) {
-        Store store = storeRepository.findById(storeId).orElseThrow(TomatoMallException::storeNotFound);
-        if (!store.getManager().equals(securityUtil.getCurrentUser())) {
-            throw TomatoMallException.permissionDenied();
-        }
-
-        if (!store.getManager().equals(securityUtil.getCurrentUser())) {
-            throw TomatoMallException.permissionDenied();
-        }
-        return store.getTokens();
-    }
-
-    @Override
-    public Boolean generateToken(int storeId) {
-        Store store = storeRepository.findById(storeId).orElseThrow(TomatoMallException::storeNotFound);
-        if (!store.getManager().equals(securityUtil.getCurrentUser())) {
-            throw TomatoMallException.permissionDenied();
-        }
-
-        store.getTokens().add(securityUtil.getToken(store.getManager()));
-        storeRepository.save(store);
-        return true;
-    }
-
-    @Override
-    public Boolean deleteToken(int storeId, String token) {
-        Store store = storeRepository.findById(storeId).orElseThrow(TomatoMallException::storeNotFound);
-        if (!store.getManager().equals(securityUtil.getCurrentUser())) {
-            throw TomatoMallException.permissionDenied();
-        }
-
-        store.getTokens().remove(token);
-        storeRepository.save(store);
-        return true;
-    }
-
-    @Override
-    public Boolean authToken(int storeId, String token) {
-        Store store = storeRepository.findById(storeId).orElseThrow(TomatoMallException::storeNotFound);
-        if (!store.getTokens().contains(token) || !securityUtil.verifyToken(token)) {
-            throw TomatoMallException.tokenInvalid();
-        }
-
-        User user = securityUtil.getCurrentUser();
-        if (store.getManager().equals(user) || store.getStaffs().contains(user)) {
-            store.getTokens().remove(token);
-            storeRepository.save(store);
-            throw TomatoMallException.storeStaffAlreadyExists();
-        }
-
-        store.getStaffs().add(user);
-        store.getTokens().remove(token);
-        storeRepository.save(store);
-
-        return true;
-    }
-
-    @Override
-    public Boolean deleteStaff(int storeId, int userId) {
-        Store store = storeRepository.findById(storeId).orElseThrow(TomatoMallException::storeNotFound);
-        if (!store.getManager().equals(securityUtil.getCurrentUser())) {
-            throw TomatoMallException.permissionDenied();
-        }
-
-        User user = store.getStaffs()
-                .stream()
-                .filter(staff -> staff.getId() == userId)
-                .findFirst()
-                .orElseThrow(TomatoMallException::userNotFound);
-
-        store.getStaffs().remove(user);
-        storeRepository.save(store);
-
-        return true;
-    }
-
-    @Override
-    public Boolean review(int storeId, boolean pass) {
+    public void review(int storeId, boolean pass) {
         if (!securityUtil.getCurrentUser().getRole().equals(Role.ADMIN)) {
             throw TomatoMallException.permissionDenied();
         }
@@ -269,28 +192,26 @@ public class StoreServiceImpl implements StoreService {
                 break;
             default: throw TomatoMallException.invalidOperation();
         }
-
-        return true;
     }
 
     @Override
-    public Page<StoreBriefResponse> getAwaitingReviewStoreList(int page, int size, String field, boolean order) {
+    public Page<StoreInfoResponse> getAwaitingReviewStoreList(int page, int size, String field, boolean order) {
         Pageable pageable = PageRequest.of(page, size > 0 ? size : Integer.MAX_VALUE,
                 Sort.by(order ? Sort.Direction.ASC : Sort.Direction.DESC, field));
 
         Page<Store> storePage = storeRepository.findByStatusIn(AWAITING_REVIEW_STATUS, pageable);
 
-        return storePage.map(StoreBriefResponse::new);
+        return storePage.map(StoreInfoResponse::new);
     }
 
     @Override
-    public Page<StoreBriefResponse> getSuspendedStoreList(int page, int size, String field, boolean order) {
+    public Page<StoreInfoResponse> getSuspendedStoreList(int page, int size, String field, boolean order) {
         Pageable pageable = PageRequest.of(page, size > 0 ? size : Integer.MAX_VALUE,
                 Sort.by(order ? Sort.Direction.ASC : Sort.Direction.DESC, field));
 
         Page<Store> storePage = storeRepository.findByStatus(StoreStatus.SUSPENDED, pageable);
 
-        return storePage.map(StoreBriefResponse::new);
+        return storePage.map(StoreInfoResponse::new);
     }
 
     @Override
@@ -302,4 +223,9 @@ public class StoreServiceImpl implements StoreService {
         return storeRepository.findById(storeId).orElseThrow(TomatoMallException::unexpectedError).getQualifications();
     }
 
+    private void validatePermission(Store store) {
+        if (!store.getManager().equals(securityUtil.getCurrentUser())) {
+            throw TomatoMallException.permissionDenied();
+        }
+    }
 }
