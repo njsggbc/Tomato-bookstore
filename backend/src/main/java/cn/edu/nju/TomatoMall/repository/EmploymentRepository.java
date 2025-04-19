@@ -19,11 +19,11 @@ public interface EmploymentRepository extends JpaRepository<Employment, Integer>
 
     // Get all employees for a specific store
     @Query("SELECT e.employee FROM Employment e WHERE e.store.id = :storeId")
-    List<User> findEmployeeByStoreId(@Param("storeId") int storeId);
+    List<User> getEmployeeByStoreId(@Param("storeId") int storeId);
 
     // Get all stores for a specific employee
     @Query("SELECT e.store FROM Employment e WHERE e.employee.id = :employeeId")
-    List<Store> findStoreByEmployeeId(Integer employeeId);
+    List<Store> getStoreByEmployeeId(Integer employeeId);
 
     boolean existsByStoreIdAndEmployeeId(int storeId, int employeeId);
 }

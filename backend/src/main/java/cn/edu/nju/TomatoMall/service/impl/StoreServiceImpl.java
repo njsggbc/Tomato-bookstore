@@ -22,7 +22,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -61,7 +60,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     public List<StoreInfoResponse> getWorkedStoreList() {
-        return employmentRepository.findStoreByEmployeeId(securityUtil.getCurrentUser().getId()).stream()
+        return employmentRepository.getStoreByEmployeeId(securityUtil.getCurrentUser().getId()).stream()
                 .map(StoreInfoResponse::new)
                 .collect(Collectors.toList());
     }

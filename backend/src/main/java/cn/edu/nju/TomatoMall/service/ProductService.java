@@ -22,14 +22,13 @@ public interface ProductService {
 
     Page<ProductBriefResponse> getStoreProductList(int storeId, int page, int size, String field, boolean order);
 
+    String updateStockpile(int productId, int stockpile);
+
+    int getStockpile(int productId);
+
     /*---------- HACK: 以下为兼容测试用接口 ----------*/
 
     ProductBriefResponse createProduct(Map<String, Object> params);
 
     String updateProduct(Map<String, Object> params);
-
-    String updateStockpile(int productId, int stockpile);
-
-    int getStockpile(int productId);
-
 }
