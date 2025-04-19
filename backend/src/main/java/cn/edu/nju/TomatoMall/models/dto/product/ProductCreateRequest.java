@@ -5,6 +5,7 @@ import lombok.Setter;
 import lombok.NonNull;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -15,7 +16,7 @@ public class ProductCreateRequest {
     String title;
     String description;
     List<MultipartFile> images;
-    double price;
+    BigDecimal price;
     int stock;
     int storeId;
     Map<String, String> specifications;

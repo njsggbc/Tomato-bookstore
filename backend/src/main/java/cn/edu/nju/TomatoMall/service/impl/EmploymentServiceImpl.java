@@ -134,7 +134,7 @@ public class EmploymentServiceImpl implements EmploymentService {
     @Override
     @Transactional(readOnly = true)
     public List<UserBriefResponse> getStaffList(int storeId) {
-        return employmentRepository.findEmployeeByStoreId(storeId)
+        return employmentRepository.getEmployeeByStoreId(storeId)
                 .stream()
                 .map(UserBriefResponse::new)
                 .collect(Collectors.toList());

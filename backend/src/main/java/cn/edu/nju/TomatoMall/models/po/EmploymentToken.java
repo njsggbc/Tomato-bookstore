@@ -17,13 +17,13 @@ public class EmploymentToken {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, updatable = false)
     private String token;
 
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     private LocalDateTime expiresAt;
@@ -32,7 +32,7 @@ public class EmploymentToken {
     private boolean valid = true;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "store_id", nullable = false)
+    @JoinColumn(name = "store_id", nullable = false, updatable = false)
     private Store store;
 
     @ManyToOne(fetch = FetchType.LAZY)
