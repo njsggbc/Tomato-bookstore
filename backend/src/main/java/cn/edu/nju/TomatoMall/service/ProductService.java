@@ -1,9 +1,6 @@
 package cn.edu.nju.TomatoMall.service;
 
-import cn.edu.nju.TomatoMall.models.dto.product.ProductBriefResponse;
-import cn.edu.nju.TomatoMall.models.dto.product.ProductCreateRequest;
-import cn.edu.nju.TomatoMall.models.dto.product.ProductDetailResponse;
-import cn.edu.nju.TomatoMall.models.dto.product.ProductUpdateRequest;
+import cn.edu.nju.TomatoMall.models.dto.product.*;
 import org.springframework.data.domain.Page;
 
 import java.util.Map;
@@ -21,6 +18,8 @@ public interface ProductService {
     Page<ProductBriefResponse> getProductList(int page, int size, String field, boolean order);
 
     Page<ProductBriefResponse> getStoreProductList(int storeId, int page, int size, String field, boolean order);
+
+    ProductSnapshotResponse getSnapshot(int snapshotId);
 
     String updateStockpile(int productId, int stockpile);
 

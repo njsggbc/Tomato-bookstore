@@ -30,7 +30,7 @@ public class OrderItem {
 
     @ManyToOne
     @JoinColumn(name = "product_snapshot_id", nullable = false)
-    private ProductSnapshot product;
+    private ProductSnapshot productSnapshot;
 
     @Column(nullable = false)
     private int quantity;
@@ -40,6 +40,6 @@ public class OrderItem {
 
     @PrePersist
     private void calculateTotalPrice() {
-        this.totalPrice = product.getPrice().multiply(BigDecimal.valueOf(quantity));
+        this.totalPrice = productSnapshot.getPrice().multiply(BigDecimal.valueOf(quantity));
     }
 }

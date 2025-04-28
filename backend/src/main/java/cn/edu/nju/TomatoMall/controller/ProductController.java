@@ -1,9 +1,6 @@
 package cn.edu.nju.TomatoMall.controller;
 
-import cn.edu.nju.TomatoMall.models.dto.product.ProductBriefResponse;
-import cn.edu.nju.TomatoMall.models.dto.product.ProductCreateRequest;
-import cn.edu.nju.TomatoMall.models.dto.product.ProductDetailResponse;
-import cn.edu.nju.TomatoMall.models.dto.product.ProductUpdateRequest;
+import cn.edu.nju.TomatoMall.models.dto.product.*;
 import cn.edu.nju.TomatoMall.service.ProductService;
 import cn.edu.nju.TomatoMall.models.vo.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -79,8 +76,17 @@ public class ProductController {
     }
 
     /**
-     * 删除商品, HACK: 返回一个毫无意义的字符串
+     * 获取商品快照信息
      */
+    @GetMapping("/snapshot/{snapshotId}")
+    public ApiResponse<ProductSnapshotResponse> getProductSnapshot(@PathVariable int snapshotId) {
+        return ApiResponse.success(productService.getSnapshot(snapshotId));
+    }
+
+    /**
+     * 删除商品
+     */
+    // HACK: 返回值无意义
     @DeleteMapping("/{productId}")
     public ApiResponse<String> deleteProduct(@PathVariable int productId) {
         return ApiResponse.success(productService.deleteProduct(productId));

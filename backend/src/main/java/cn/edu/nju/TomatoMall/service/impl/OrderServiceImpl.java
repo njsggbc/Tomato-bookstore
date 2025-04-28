@@ -687,7 +687,7 @@ public class OrderServiceImpl implements OrderService {
         cartItemRepository.delete(cartItem);
         return OrderItem.builder()
                 .productId(productId)
-                .product(cartItem.getProduct().getSnapshot())
+                .productSnapshot(cartItem.getProduct().getSnapshot())
                 .quantity(quantity)
                 .order(order)
                 .build();

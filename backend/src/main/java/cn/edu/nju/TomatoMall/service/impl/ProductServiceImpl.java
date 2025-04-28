@@ -2,10 +2,7 @@ package cn.edu.nju.TomatoMall.service.impl;
 
 import cn.edu.nju.TomatoMall.enums.Role;
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
-import cn.edu.nju.TomatoMall.models.dto.product.ProductBriefResponse;
-import cn.edu.nju.TomatoMall.models.dto.product.ProductCreateRequest;
-import cn.edu.nju.TomatoMall.models.dto.product.ProductDetailResponse;
-import cn.edu.nju.TomatoMall.models.dto.product.ProductUpdateRequest;
+import cn.edu.nju.TomatoMall.models.dto.product.*;
 import cn.edu.nju.TomatoMall.models.po.Inventory;
 import cn.edu.nju.TomatoMall.models.po.Product;
 import cn.edu.nju.TomatoMall.models.po.User;
@@ -32,7 +29,7 @@ public class ProductServiceImpl implements ProductService {
     private final InventoryService inventoryService;
     private final StoreRepository storeRepository;
     private final EmploymentRepository employmentRepository;
-    private final OrderRepository orderRepository;
+    private final ProductSnapshotRepository productSnapshotRepository;
     private final SecurityUtil securityUtil;
     private final FileUtil fileUtil;
 
@@ -41,14 +38,14 @@ public class ProductServiceImpl implements ProductService {
                               InventoryService inventoryService,
                               StoreRepository storeRepository,
                               EmploymentRepository employmentRepository,
-                              OrderRepository orderRepository,
+                              ProductSnapshotRepository productSnapshotRepository,
                               SecurityUtil securityUtil,
                               FileUtil fileUtil) {
         this.productRepository = productRepository;
         this.inventoryService = inventoryService;
         this.storeRepository = storeRepository;
         this.employmentRepository = employmentRepository;
-        this.orderRepository = orderRepository;
+        this.productSnapshotRepository = productSnapshotRepository;
         this.securityUtil = securityUtil;
         this.fileUtil = fileUtil;
     }
@@ -146,6 +143,11 @@ public class ProductServiceImpl implements ProductService {
     public ProductDetailResponse getProductDetail(int productId) {
         return new ProductDetailResponse(productRepository.findByIdAndOnSaleIsTrue(productId)
                 .orElseThrow(TomatoMallException::productNotFound));
+    }
+
+    @Override
+    public ProductSnapshotResponse getSnapshot(int snapshotId) {
+        return new ProductSnapshotResponse(productSnapshotRepository.findById(snapshotId));
     }
 
     @Override
