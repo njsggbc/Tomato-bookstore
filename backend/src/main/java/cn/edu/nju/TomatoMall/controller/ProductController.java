@@ -13,6 +13,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * product
+ */
 @RestController
 @RequestMapping("/api/products")
 public class ProductController {
@@ -89,6 +92,15 @@ public class ProductController {
     @PatchMapping("/stockpile/{productId}")
     public ApiResponse<String> updateStockpile(@PathVariable int productId, @RequestBody Map<String, Integer> params) {
         return ApiResponse.success(productService.updateStockpile(productId, params.get("amount")));
+    }
+
+    /**
+     * 调整商品库存预警值
+     */
+    @PatchMapping("/threshold/{productId}")
+    public ApiResponse<Void> updateThreshold(@PathVariable int productId, @RequestParam int threshold) {
+        productService.updateThreshold(productId, threshold);
+        return ApiResponse.success();
     }
 
     /**

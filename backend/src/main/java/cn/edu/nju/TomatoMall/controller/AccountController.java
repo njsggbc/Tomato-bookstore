@@ -11,7 +11,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.util.Map;
 
 /**
- * HACK: 兼容测试用用户接口
+ * account
  */
 
 @RestController

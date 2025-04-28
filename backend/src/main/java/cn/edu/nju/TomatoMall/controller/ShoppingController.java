@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 购物控制器，处理包括购物车管理、订单处理和支付处理在内的购物操作
+ * shopping
  */
 @RestController
 @RequestMapping("/api")
