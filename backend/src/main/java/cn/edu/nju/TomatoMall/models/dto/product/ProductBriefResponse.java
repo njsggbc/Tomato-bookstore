@@ -1,5 +1,6 @@
 package cn.edu.nju.TomatoMall.models.dto.product;
 
+import cn.edu.nju.TomatoMall.enums.InventoryStatus;
 import cn.edu.nju.TomatoMall.models.po.Product;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,7 +19,7 @@ public class ProductBriefResponse {
     BigDecimal price;
     double rate;
     int sales;
-    boolean soldOut;
+    InventoryStatus inventoryStatus;
 
     public ProductBriefResponse(Product product) {
         this.id = product.getId();
@@ -28,6 +29,6 @@ public class ProductBriefResponse {
         this.price = product.getPrice();
         this.rate = product.getRate();
         this.sales = product.getSales();
-        this.soldOut = product.isSoldOut();
+        this.inventoryStatus = product.getInventoryStatus();
     }
 }

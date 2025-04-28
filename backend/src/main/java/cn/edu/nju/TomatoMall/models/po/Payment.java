@@ -2,10 +2,7 @@ package cn.edu.nju.TomatoMall.models.po;
 
 import cn.edu.nju.TomatoMall.enums.PaymentMethod;
 import cn.edu.nju.TomatoMall.enums.PaymentStatus;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.NonNull;
-import lombok.Setter;
+import lombok.*;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
@@ -16,7 +13,10 @@ import java.util.List;
 @Entity
 @Getter
 @Setter
-@NoArgsConstructor
+@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Table(name = "payment")
 public class Payment {
     @Id
     String id = String.valueOf(System.currentTimeMillis());

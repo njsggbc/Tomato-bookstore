@@ -1,8 +1,7 @@
 package cn.edu.nju.TomatoMall.models.po;
 
 import cn.edu.nju.TomatoMall.enums.OrderStatus;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
@@ -14,6 +13,9 @@ import java.util.UUID;
 @Entity
 @Getter
 @Setter
+@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Table(name = "orders")
 public class Order {
     @Id
@@ -47,7 +49,7 @@ public class Order {
     private List<ShippingInfo> shippingInfos = new ArrayList<>(); // 可能包含多个运输信息，如收货和退货
 
     @Column(nullable = false)
-    private LocalDateTime createTime;
+    private LocalDateTime createTime = LocalDateTime.now();
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderLog> logs = new ArrayList<>();
@@ -56,4 +58,10 @@ public class Order {
     @JoinColumn(name = "payment_id")
     private Payment payment;
 
+    @PrePersist
+    private void calculateTotalAmount() {
+        totalAmount = items.stream()
+                .map(OrderItem::getTotalPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
 }

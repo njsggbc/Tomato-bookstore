@@ -1,5 +1,6 @@
 package cn.edu.nju.TomatoMall.repository;
 
+import cn.edu.nju.TomatoMall.enums.InventoryStatus;
 import cn.edu.nju.TomatoMall.models.po.Product;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -30,8 +31,8 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
     boolean existsByIdAndOnSaleIsTrue(int id);
 
     @Modifying
-    @Query("UPDATE Product p SET p.soldOut = :soldOut WHERE p.id = :id")
-    void setSoldOutById(@Param("id") int id, @Param("soldOut") boolean soldOut);
+    @Query("UPDATE Product p SET p.inventoryStatus = :inventoryStatus WHERE p.id = :id")
+    void setInventoryStatusById(@Param("id") int id, @Param("inventoryStatus") InventoryStatus inventoryStatus);
 
     @Modifying
     @Query("UPDATE Product p SET p.sales = p.sales + :increment WHERE p.id = :id")

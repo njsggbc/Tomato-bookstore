@@ -2,9 +2,8 @@ package cn.edu.nju.TomatoMall.models.po;
 
 import cn.edu.nju.TomatoMall.enums.OrderEvent;
 import cn.edu.nju.TomatoMall.enums.OrderStatus;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import jdk.nashorn.internal.ir.annotations.Immutable;
+import lombok.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.persistence.*;
@@ -14,7 +13,11 @@ import java.util.List;
 @Entity
 @Getter
 @Setter
-@NoArgsConstructor
+@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Table(name = "order_log")
+@Immutable
 public class OrderLog {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

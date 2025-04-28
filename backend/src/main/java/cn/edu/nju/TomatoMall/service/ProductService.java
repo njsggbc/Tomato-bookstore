@@ -24,6 +24,8 @@ public interface ProductService {
 
     String updateStockpile(int productId, int stockpile);
 
+    void updateThreshold(int productId, int threshold);
+
     int getStockpile(int productId);
 
     /*---------- HACK: 以下为兼容测试用接口 ----------*/

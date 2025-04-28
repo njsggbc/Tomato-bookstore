@@ -20,7 +20,6 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -32,8 +31,8 @@ import java.util.stream.Collectors;
 @Service
 public class OrderServiceImpl implements OrderService {
     private final ProductRepository productRepository;
+    private final CartItemRepository cartItemRepository;
     private final OrderRepository orderRepository;
-    private final OrderItemRepository orderItemRepository;
     private final SecurityUtil securityUtil;
     private final StoreRepository storeRepository;
     private final EmploymentRepository employmentRepository;
@@ -42,8 +41,8 @@ public class OrderServiceImpl implements OrderService {
 
     @Autowired
     public OrderServiceImpl(ProductRepository productRepository,
+                            CartItemRepository cartItemRepository,
                             OrderRepository orderRepository,
-                            OrderItemRepository orderItemRepository,
                             SecurityUtil securityUtil,
                             StoreRepository storeRepository,
                             EmploymentRepository employmentRepository,
@@ -51,8 +50,8 @@ public class OrderServiceImpl implements OrderService {
                             ApplicationEventPublisher eventPublisher
     ) {
         this.productRepository = productRepository;
+        this.cartItemRepository = cartItemRepository;
         this.orderRepository = orderRepository;
-        this.orderItemRepository = orderItemRepository;
         this.securityUtil = securityUtil;
         this.storeRepository = storeRepository;
         this.employmentRepository = employmentRepository;
@@ -65,49 +64,46 @@ public class OrderServiceImpl implements OrderService {
     //---------------------------
 
     /**
-     * 购买单个商品并创建订单
+     * 处理多个购物车项的结算
+     * 按店铺分组商品并检查每个商品的库存状态
      *
-     * @param params 购买请求参数
-     * @return 支付信息响应
+     * @param cartItemIds 购物车项ID列表
+     * @return 结算响应列表，包含每个商品的可用库存信息
+     * @throws TomatoMallException 当购物车项无效时抛出异常
      */
     @Override
-    @Transactional
-    public PaymentInfoResponse purchase(PurchaseRequest params) {
-        // 创建包含单个商品的订单
-        Order order = buildOrder(
-                securityUtil.getCurrentUser(),
-                Collections.singletonList(buildOrderItem(securityUtil.getCurrentUser(), params.getProductId(), params.getQuantity())),
-                params.getRemark(),
-                params.getAddress(),
-                params.getName(),
-                params.getPhone()
-        );
-
-        // 为订单创建支付
-        Payment payment = new Payment(securityUtil.getCurrentUser(), Collections.singletonList(order));
-        order.setPayment(payment);
-
-        // 发布支付创建事件
-        eventPublisher.publishEvent(new PaymentCreateEvent(payment));
-
-        orderRepository.save(order);
-        return new PaymentInfoResponse(payment);
+    @Transactional(readOnly = true)
+    public List<CheckoutResponse> checkout(List<Integer> cartItemIds) {
+        List<CartItem> cartItems = getValidCartItems(securityUtil.getCurrentUser(), cartItemIds);
+        if (cartItems.isEmpty()) {
+            throw TomatoMallException.invalidCartItem();
+        }
+        return cartItems.stream()
+                .map(item -> {
+                    int availableStock = inventoryService.getAvailableStock(item.getProduct().getId());
+                    return new CheckoutResponse(item.getId(), availableStock);
+                })
+                .collect(Collectors.toList());
     }
 
     /**
-     * 处理多个购物车项的结算
-     * 按店铺分组商品并为每个店铺创建独立的订单
+     * 提交订单
+     * 创建订单并初始化支付
      *
-     * @param params 结算请求参数
+     * @param params 提交请求参数
      * @return 支付信息响应
+     * @throws TomatoMallException 当购物车项无效时抛出异常
      */
     @Override
     @Transactional
-    public PaymentInfoResponse checkout(CheckOutRequest params) {
+    public PaymentInfoResponse submit(SubmitRequest params) {
         User user = securityUtil.getCurrentUser();
 
         // 获取并验证购物车项
-        List<OrderItem> cartItems = getValidCartItems(user, params.getCartItemIds());
+        List<CartItem> cartItems = getValidCartItems(user, params.getCartItemIds());
+        if (cartItems.isEmpty()) {
+            throw TomatoMallException.invalidCartItem();
+        }
 
         // 按店铺分组商品并创建订单
         List<Order> orders = groupByStore(cartItems).entrySet().stream()
@@ -115,10 +111,10 @@ public class OrderServiceImpl implements OrderService {
                         user,
                         entry.getKey(),
                         entry.getValue(),
-                        params.getAddress(),
-                        params.getName(),
-                        params.getPhone(),
-                        params.getRemark()
+                        params.getRecipientAddress(),
+                        params.getRecipientName(),
+                        params.getRecipientPhone(),
+                        params.getStoreRemarks().get(entry.getKey().getId())
                 ))
                 .collect(Collectors.toList());
 
@@ -137,25 +133,35 @@ public class OrderServiceImpl implements OrderService {
     /**
      * 获取当前用户的购物车项列表
      *
-     * @return 购物车项信息列表
+     * @return 购物车项信息响应列表
      */
     @Override
-    public List<OrderItemInfoResponse> getCartItems() {
+    @Transactional(readOnly = true)
+    public List<CartItemInfoResponse> getCartItemList() {
         User user = securityUtil.getCurrentUser();
-        return orderItemRepository.findCartItemsByUserId(user.getId()).stream()
-                .map(OrderItemInfoResponse::new)
+        return cartItemRepository.findByUserId(user.getId()).stream()
+                .map(CartItemInfoResponse::new)
                 .collect(Collectors.toList());
     }
 
     /**
      * 添加商品到购物车
      *
-     * @param params 添加购物车请求参数
+     * @param productId 商品ID
+     * @param quantity 数量
+     * @throws TomatoMallException 当操作无效时抛出异常
      */
     @Override
-    public void addToCart(CartAddRequest params) {
+    @Transactional
+    public void addToCart(int productId, int quantity) {
         try {
-            orderItemRepository.save(buildOrderItem(securityUtil.getCurrentUser(), params.getProductId(), params.getQuantity()));
+            cartItemRepository.save(
+                    CartItem.builder()
+                            .user(securityUtil.getCurrentUser())
+                            .product(productRepository.getReferenceById(productId))
+                            .quantity(quantity)
+                            .build()
+            );
         } catch (Exception e) {
             throw TomatoMallException.invalidOperation();
         }
@@ -165,11 +171,13 @@ public class OrderServiceImpl implements OrderService {
      * 从购物车中移除商品
      *
      * @param cartItemId 购物车项ID
+     * @throws TomatoMallException 当操作无效时抛出异常
      */
     @Override
+    @Transactional
     public void removeFromCart(int cartItemId) {
         try {
-            orderItemRepository.deleteCartItemByIdAndUserId(cartItemId, securityUtil.getCurrentUser().getId());
+            cartItemRepository.deleteByIdAndUserId(cartItemId, securityUtil.getCurrentUser().getId());
         } catch (Exception e) {
             throw TomatoMallException.invalidOperation();
         }
@@ -180,11 +188,13 @@ public class OrderServiceImpl implements OrderService {
      *
      * @param cartItemId 购物车项ID
      * @param quantity 更新的数量
+     * @throws TomatoMallException 当操作无效时抛出异常
      */
     @Override
+    @Transactional
     public void updateCartItemQuantity(int cartItemId, int quantity) {
         try {
-            orderItemRepository.updateCartItemQuantityByIdAndUserId(cartItemId, securityUtil.getCurrentUser().getId(), quantity);
+            cartItemRepository.updateCartItemQuantityByIdAndUserId(cartItemId, securityUtil.getCurrentUser().getId(), quantity);
         } catch (Exception e) {
             throw TomatoMallException.invalidOperation();
         }
@@ -195,9 +205,11 @@ public class OrderServiceImpl implements OrderService {
      *
      * @param orderId 订单ID
      * @param orderNo 订单编号
-     * @return 客户订单详细信息
+     * @return 客户订单详细信息响应
+     * @throws TomatoMallException 当订单未找到时抛出异常
      */
     @Override
+    @Transactional(readOnly = true)
     public CustomerOrderInfoResponse getOrderInfo(Integer orderId, String orderNo) {
         if (orderId != null) {
             return new CustomerOrderInfoResponse(
@@ -218,9 +230,11 @@ public class OrderServiceImpl implements OrderService {
      * 获取客户订单列表，按状态过滤
      *
      * @param status 请求的订单状态
-     * @return 订单简要信息列表
+     * @return 订单简要信息响应列表
+     * @throws TomatoMallException 当操作无效时抛出异常
      */
     @Override
+    @Transactional(readOnly = true)
     public List<OrderBriefResponse> getOrderList(CustomerRequestOrderStatus status) {
         List<OrderStatus> statusList;
         switch (status) {
@@ -253,11 +267,14 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * 取消订单
+     * 释放库存并申请退款
      *
      * @param orderId 订单ID
      * @param reason 取消原因
+     * @throws TomatoMallException 当订单未找到或状态不允许取消时抛出异常
      */
     @Override
+    @Transactional
     public void cancel(int orderId, String reason) {
         Order order = orderRepository.findByIdAndUserId(orderId, securityUtil.getCurrentUser().getId())
                 .orElseThrow(TomatoMallException::orderNotFound);
@@ -267,16 +284,16 @@ public class OrderServiceImpl implements OrderService {
             throw TomatoMallException.invalidOperation();
         }
 
-        order.getItems().forEach(this::cancelOrderItem);
+        order.getItems().forEach(item -> inventoryService.unlockStock(item.getProductId(), item.getQuantity()));
         order.setStatus(OrderStatus.REFUND_PROCESSING);
-        order.getLogs().add(buildOrderLog(
-                securityUtil.getCurrentUser(),
-                order,
-                OrderEvent.CANCEL,
-                OrderStatus.REFUND_PROCESSING,
-                "用户取消订单: " + reason,
-                LocalDateTime.now()
-        ));
+        order.getLogs().add(OrderLog.builder()
+                .operator(securityUtil.getCurrentUser())
+                .order(order)
+                .event(OrderEvent.CANCEL)
+                .afterEventStatus(OrderStatus.REFUND_PROCESSING)
+                .message("用户取消订单: " + reason)
+                .timestamp(LocalDateTime.now())
+                .build());
 
         orderRepository.save(order);
 
@@ -285,10 +302,13 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * 确认收货
+     * 将订单状态更新为已完成
      *
      * @param orderId 订单ID
+     * @throws TomatoMallException 当订单未找到或状态不允许确认收货时抛出异常
      */
     @Override
+    @Transactional
     public void confirmReceipt(int orderId) {
         Order order = orderRepository.findByIdAndUserId(orderId, securityUtil.getCurrentUser().getId())
                 .orElseThrow(TomatoMallException::orderNotFound);
@@ -298,14 +318,14 @@ public class OrderServiceImpl implements OrderService {
         }
 
         order.setStatus(OrderStatus.COMPLETED);
-        order.getLogs().add(buildOrderLog(
-                securityUtil.getCurrentUser(),
-                order,
-                OrderEvent.CONFIRM_RECEIPT,
-                OrderStatus.COMPLETED,
-                "确认收货",
-                LocalDateTime.now()
-        ));
+        order.getLogs().add(OrderLog.builder()
+                .operator(securityUtil.getCurrentUser())
+                .order(order)
+                .event(OrderEvent.CONFIRM_RECEIPT)
+                .afterEventStatus(OrderStatus.COMPLETED)
+                .message("确认收货")
+                .timestamp(LocalDateTime.now())
+                .build());
 
         orderRepository.save(order);
     }
@@ -319,9 +339,11 @@ public class OrderServiceImpl implements OrderService {
      *
      * @param storeId 店铺ID
      * @param status 请求的订单状态
-     * @return 订单简要信息列表
+     * @return 订单简要信息响应列表
+     * @throws TomatoMallException 当用户无操作该店铺的权限时抛出异常
      */
     @Override
+    @Transactional(readOnly = true)
     public List<OrderBriefResponse> getStoreOrderList(int storeId, StoreRequestOrderStatus status) {
         validateStorePermission(storeId);
 
@@ -360,9 +382,11 @@ public class OrderServiceImpl implements OrderService {
      * @param storeId 店铺ID
      * @param orderId 订单ID
      * @param orderNo 订单编号
-     * @return 店铺订单详细信息
+     * @return 店铺订单详细信息响应
+     * @throws TomatoMallException 当用户无操作该店铺的权限或订单未找到时抛出异常
      */
     @Override
+    @Transactional(readOnly = true)
     public StoreOrderInfoResponse getStoreOrderInfo(int storeId, Integer orderId, String orderNo) {
         validateStorePermission(storeId);
 
@@ -383,11 +407,14 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * 商家确认订单
+     * 确认库存扣减并更新订单状态
      *
      * @param storeId 店铺ID
      * @param orderId 订单ID
+     * @throws TomatoMallException 当用户无操作该店铺的权限、订单未找到或状态不允许确认时抛出异常
      */
     @Override
+    @Transactional
     public void confirm(int storeId, int orderId) {
         validateStorePermission(storeId);
 
@@ -399,29 +426,32 @@ public class OrderServiceImpl implements OrderService {
         }
 
         order.getItems().forEach(item -> {
-            inventoryService.confirmStockDeduction(item.getProduct().getId(), item.getQuantity());
+            inventoryService.confirmStockDeduction(item.getProductId(), item.getQuantity());
         });
         order.setStatus(OrderStatus.AWAITING_SHIPMENT);
-        order.getLogs().add(buildOrderLog(
-                securityUtil.getCurrentUser(),
-                order,
-                OrderEvent.CONFIRM,
-                OrderStatus.AWAITING_SHIPMENT,
-                "订单已确认",
-                LocalDateTime.now()
-        ));
+        order.getLogs().add(OrderLog.builder()
+                .operator(securityUtil.getCurrentUser())
+                .order(order)
+                .event(OrderEvent.CONFIRM)
+                .afterEventStatus(OrderStatus.AWAITING_SHIPMENT)
+                .message("订单已确认")
+                .timestamp(LocalDateTime.now())
+                .build());
 
         orderRepository.save(order);
     }
 
     /**
      * 商家拒绝订单
+     * 释放库存并申请退款
      *
      * @param storeId 店铺ID
      * @param orderId 订单ID
      * @param message 拒绝原因
+     * @throws TomatoMallException 当用户无操作该店铺的权限、订单未找到或状态不允许拒绝时抛出异常
      */
     @Override
+    @Transactional
     public void refuse(int storeId, int orderId, String message) {
         validateStorePermission(storeId);
 
@@ -432,16 +462,16 @@ public class OrderServiceImpl implements OrderService {
             throw TomatoMallException.invalidOperation();
         }
 
-        order.getItems().forEach(this::cancelOrderItem);
+        order.getItems().forEach(item -> inventoryService.unlockStock(item.getProductId(), item.getQuantity()));
         order.setStatus(OrderStatus.REFUND_PROCESSING);
-        order.getLogs().add(buildOrderLog(
-                securityUtil.getCurrentUser(),
-                order,
-                OrderEvent.REFUSE,
-                OrderStatus.REFUND_PROCESSING,
-                "商家取消订单: " + message,
-                LocalDateTime.now()
-        ));
+        order.getLogs().add(OrderLog.builder()
+                .operator(securityUtil.getCurrentUser())
+                .order(order)
+                .event(OrderEvent.REFUSE)
+                .afterEventStatus(OrderStatus.REFUND_PROCESSING)
+                .message("商家取消订单: " + message)
+                .timestamp(LocalDateTime.now())
+                .build());
 
         orderRepository.save(order);
 
@@ -450,12 +480,15 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * 商家发货
+     * 更新商品销量并更新订单状态
      *
      * @param storeId 店铺ID
      * @param orderId 订单ID
      * @param params 发货请求参数
+     * @throws TomatoMallException 当用户无操作该店铺的权限、订单未找到或状态不允许发货时抛出异常
      */
     @Override
+    @Transactional
     public void ship(int storeId, int orderId, ShipRequest params) {
         validateStorePermission(storeId);
 
@@ -468,19 +501,17 @@ public class OrderServiceImpl implements OrderService {
         // TODO: 物流发货逻辑，验证并关联订单
 
         // 更新销量
-        order.getItems().forEach(item -> {
-            productRepository.increaseSalesById(item.getProduct().getId(), item.getQuantity());
-        });
+        order.getItems().forEach(item -> productRepository.increaseSalesById(item.getProductId(), item.getQuantity()));
 
         order.setStatus(OrderStatus.IN_TRANSIT);
-        order.getLogs().add(buildOrderLog(
-                securityUtil.getCurrentUser(),
-                order,
-                OrderEvent.SHIP,
-                OrderStatus.IN_TRANSIT,
-                "已发货",
-                LocalDateTime.now()
-        ));
+        order.getLogs().add(OrderLog.builder()
+                .operator(securityUtil.getCurrentUser())
+                .order(order)
+                .event(OrderEvent.SHIP)
+                .afterEventStatus(OrderStatus.IN_TRANSIT)
+                .message("已发货")
+                .timestamp(LocalDateTime.now())
+                .build());
 
         orderRepository.save(order);
     }
@@ -493,10 +524,12 @@ public class OrderServiceImpl implements OrderService {
      * 终止订单（管理员功能）
      *
      * @param orderId 订单ID
+     *
      */
     @Override
+    @Transactional
     public void terminate(int orderId) {
-        // TODO
+        // TODO: 实现管理员终止订单功能
     }
 
     //-----------------------------
@@ -505,6 +538,7 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * 处理支付成功事件
+     * 更新订单状态为处理中
      *
      * @param event 支付成功事件
      */
@@ -514,14 +548,14 @@ public class OrderServiceImpl implements OrderService {
         Payment payment = event.getPayment();
         payment.getOrders().forEach(order -> {
             order.setStatus(OrderStatus.PROCESSING);
-            order.getLogs().add(buildOrderLog(
-                    order.getUser(),
-                    order,
-                    OrderEvent.PAY,
-                    OrderStatus.PROCESSING,
-                    "交易号：" + payment.getTradeNo(),
-                    LocalDateTime.now()
-            ));
+            order.getLogs().add(OrderLog.builder()
+                    .operator(order.getUser())
+                    .order(order)
+                    .event(OrderEvent.PAY)
+                    .afterEventStatus(OrderStatus.PROCESSING)
+                    .message("交易号：" + payment.getTradeNo())
+                    .timestamp(LocalDateTime.now())
+                    .build());
         });
 
         orderRepository.saveAll(payment.getOrders());
@@ -529,6 +563,7 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * 处理支付取消事件
+     * 释放库存并更新订单状态为已取消
      *
      * @param event 支付取消事件
      */
@@ -537,17 +572,17 @@ public class OrderServiceImpl implements OrderService {
     public void handlePaymentCancel(PaymentCancelEvent event) {
         Payment payment = event.getPayment();
         payment.getOrders().forEach(order -> {
-            order.getItems().forEach(this::cancelOrderItem);
+            order.getItems().forEach(item -> inventoryService.unlockStock(item.getProductId(), item.getQuantity()));
             order.setStatus(OrderStatus.CANCELLED);
             order.setPayment(null);
-            order.getLogs().add(buildOrderLog(
-                    securityUtil.getCurrentUser(),
-                    order,
-                    OrderEvent.CANCEL,
-                    OrderStatus.CANCELLED,
-                    "支付取消: " + event.getReason(),
-                    LocalDateTime.now()
-            ));
+            order.getLogs().add(OrderLog.builder()
+                    .operator(securityUtil.getCurrentUser())
+                    .order(order)
+                    .event(OrderEvent.CANCEL)
+                    .afterEventStatus(OrderStatus.CANCELLED)
+                    .message("支付取消: " + event.getReason())
+                    .timestamp(LocalDateTime.now())
+                    .build());
         });
 
         orderRepository.saveAll(payment.getOrders());
@@ -555,6 +590,7 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * 处理订单退款成功事件
+     * 更新订单状态为已取消
      *
      * @param event 订单退款成功事件
      */
@@ -563,15 +599,15 @@ public class OrderServiceImpl implements OrderService {
     public void handleOrderRefundSuccess(OrderRefundSuccessEvent event) {
         Order order = event.getOrder();
         order.setStatus(OrderStatus.CANCELLED);
-        order.getLogs().add(buildOrderLog(
-                securityUtil.getCurrentUser(),
-                order,
-                OrderEvent.REFUND,
-                OrderStatus.CANCELLED,
-                "已退款: " + event.getRefundAmount() + "\n" +
-                        "交易号：" + event.getTradeNo(),
-                LocalDateTime.now()
-        ));
+        order.getLogs().add(OrderLog.builder()
+                .operator(securityUtil.getCurrentUser())
+                .order(order)
+                .event(OrderEvent.REFUND)
+                .afterEventStatus(OrderStatus.CANCELLED)
+                .message("已退款: " + event.getRefundAmount() + "\n" +
+                        "交易号：" + event.getTradeNo())
+                .timestamp(LocalDateTime.now())
+                .build());
 
         orderRepository.save(order);
     }
@@ -581,35 +617,11 @@ public class OrderServiceImpl implements OrderService {
     //-----------------------------
 
     /**
-     * 构建订单（简化版本，使用已有商品列表）
-     *
-     * @param user 用户
-     * @param items 订单项列表
-     * @param remark 订单备注
-     * @param address 收货地址
-     * @param name 收货人姓名
-     * @param phone 收货人电话
-     * @return 构建的订单对象
-     */
-    private Order buildOrder(User user,
-                             List<OrderItem> items,
-                             String remark,
-                             String address,
-                             String name,
-                             String phone
-    ) {
-        if (items.isEmpty()) {
-            throw TomatoMallException.invalidOrderItem();
-        }
-        return buildOrder(user, items.get(0).getProduct().getStore(), items, address, name, phone, remark);
-    }
-
-    /**
      * 构建订单（完整版本，指定店铺和商品列表）
      *
      * @param user 用户
      * @param store 店铺
-     * @param items 订单项列表
+     * @param cartItems 购物车项列表
      * @param address 收货地址
      * @param name 收货人姓名
      * @param phone 收货人电话
@@ -618,149 +630,67 @@ public class OrderServiceImpl implements OrderService {
      */
     private Order buildOrder(User user,
                              Store store,
-                             List<OrderItem> items,
+                             List<CartItem> cartItems,
                              String address,
                              String name,
                              String phone,
                              String remark
     ) {
-        if (items.isEmpty()) {
-            throw TomatoMallException.invalidOrderItem();
-        }
-        Order order = new Order();
-        order.setUser(user);
-        order.setStore(store);
-        order.setRemark(remark);
-        order.setStatus(OrderStatus.AWAITING_PAYMENT);
-
-        // 处理订单项，并计算总价
-        BigDecimal total = items.stream()
-                .map(item -> processOrderItem(order, item))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        order.setTotalAmount(total);
+        Order order = Order.builder()
+                .user(user)
+                .store(store)
+                .remark(remark)
+                .status(OrderStatus.AWAITING_SHIPMENT)
+                .build();
 
         // 添加订单项
-        items.forEach(order.getItems()::add);
+        order.setItems(
+                cartItems.stream()
+                        .map(cartItem -> buildOrderItem(order, cartItem))
+                        .collect(Collectors.toList())
+        );
 
         // 添加收货信息
-        order.getShippingInfos().add(buildShippingInfo(
-                user,
-                address,
-                name,
-                phone
-        ));
-
-        order.setCreateTime(LocalDateTime.now());
+        order.getShippingInfos().add(ShippingInfo.builder()
+                .recipientName(getRecipientName(name, user))
+                .recipientPhone(getRecipientPhone(phone, user))
+                .deliveryAddress(getDeliveryAddress(address, user))
+                .build());
 
         // 添加订单日志
-        order.getLogs().add(buildOrderLog(
-                user,
-                order,
-                OrderEvent.CREATE,
-                OrderStatus.AWAITING_PAYMENT,
-                "下单成功",
-                order.getCreateTime()
-        ));
+        order.getLogs().add(OrderLog.builder()
+                .operator(user)
+                .order(order)
+                .event(OrderEvent.CREATE)
+                .afterEventStatus(OrderStatus.AWAITING_PAYMENT)
+                .message("下单成功")
+                .timestamp(order.getCreateTime())
+                .build());
 
         return order;
     }
 
     /**
      * 构建订单项
+     * 锁定库存并从购物车中删除相应的购物车项
      *
-     * @param user 用户
-     * @param productId 商品ID
-     * @param quantity 数量
+     * @param order 订单
+     * @param cartItem 购物车项
      * @return 构建的订单项对象
      */
-    private OrderItem buildOrderItem(User user, int productId, int quantity) {
-        if (!productRepository.existsByIdAndOnSaleIsTrue(productId)) {
-            throw TomatoMallException.productNotFound();
-        }
-        OrderItem item = new OrderItem();
-        item.setProduct(productRepository.getReferenceById(productId));
-        item.setQuantity(quantity);
-        item.setUser(user);
-        return item;
-    }
-
-    /**
-     * 处理订单项，锁定库存并计算价格
-     *
-     * @param order 订单
-     * @param orderItem 订单项
-     * @return 订单项总价
-     */
-    private BigDecimal processOrderItem(Order order, OrderItem orderItem) {
-        orderItem.setOrder(order);
-        Product product = orderItem.getProduct();
-        inventoryService.lockStock(product.getId(), orderItem.getQuantity());
-        orderItem.setUnitPriceSnapshot(product.getPrice());
-        return product.getPrice().multiply(new BigDecimal(orderItem.getQuantity()));
-    }
-
-    /**
-     * 取消订单项，解锁库存并返回到购物车
-     *
-     * @param orderItem 订单项
-     */
-    private void cancelOrderItem(OrderItem orderItem) {
-        Product product = orderItem.getProduct();
-        inventoryService.unlockStock(product.getId(), orderItem.getQuantity());
-
-        // 查找用户是否已有该商品的购物车项
-        Optional<OrderItem> existingCartItem = orderItemRepository.findCartItemByUserIdAndProductId(
-                orderItem.getUser().getId(),
-                product.getId()
-        );
-
-        if (existingCartItem.isPresent()) {
-            // 合并数量
-            existingCartItem.get().setQuantity(existingCartItem.get().getQuantity() + orderItem.getQuantity());
-            orderItemRepository.save(existingCartItem.get());
-        } else {
-            // 新建购物车项
-            orderItemRepository.save(buildOrderItem(orderItem.getUser(), product.getId(), orderItem.getQuantity()));
-        }
-    }
-
-    /**
-     * 构建收货信息
-     *
-     * @param user 用户
-     * @param address 收货地址
-     * @param name 收货人姓名
-     * @param phone 收货人电话
-     * @return 构建的收货信息对象
-     */
-    private ShippingInfo buildShippingInfo(User user, String address, String name, String phone) {
-        ShippingInfo info = new ShippingInfo();
-        info.setDeliveryAddress(getDeliveryAddress(address, user));
-        info.setRecipientName(getRecipientName(name, user));
-        info.setRecipientPhone(getRecipientPhone(phone, user));
-        return info;
-    }
-
-    /**
-     * 构建订单日志
-     *
-     * @param user 操作用户
-     * @param order 订单
-     * @param event 订单事件
-     * @param status 事件后的状态
-     * @param message 日志信息
-     * @param timestamp 时间戳
-     * @return 构建的订单日志对象
-     */
-    private OrderLog buildOrderLog(User user, Order order, OrderEvent event, OrderStatus status, String message, LocalDateTime timestamp) {
-        OrderLog log = new OrderLog();
-        log.setOrder(order);
-        log.setEvent(event);
-        log.setAfterEventStatus(status);
-        log.setMessage(message);
-        log.setOperator(user);
-        log.setTimestamp(timestamp);
-        return log;
+    private OrderItem buildOrderItem(Order order, CartItem cartItem) {
+        int productId = cartItem.getProduct().getId();
+        int quantity = cartItem.getQuantity();
+        // 锁定库存
+        inventoryService.lockStock(productId, quantity);
+        // 删除购物车项
+        cartItemRepository.delete(cartItem);
+        return OrderItem.builder()
+                .productId(productId)
+                .product(cartItem.getProduct().getSnapshot())
+                .quantity(quantity)
+                .order(order)
+                .build();
     }
 
     /**
@@ -769,22 +699,23 @@ public class OrderServiceImpl implements OrderService {
      * @param user 用户
      * @param cartItemIds 购物车项ID列表
      * @return 有效的购物车项列表
+     * @throws TomatoMallException 当购物车项无效时抛出异常
      */
-    private List<OrderItem> getValidCartItems(User user, List<Integer> cartItemIds) {
-        List<OrderItem> items = orderItemRepository.findCartItemsByIdsAndUserId(cartItemIds, user.getId());
+    private List<CartItem> getValidCartItems(User user, List<Integer> cartItemIds) {
+        List<CartItem> items = cartItemRepository.findByIdsAndUserId(cartItemIds, user.getId());
         if (items.size() != cartItemIds.size()) {
-            throw TomatoMallException.invalidOrderItem();
+            throw TomatoMallException.invalidCartItem();
         }
         return items;
     }
 
     /**
-     * 将订单项按店铺分组
+     * 将购物车项按店铺分组
      *
-     * @param items 订单项列表
-     * @return 按店铺分组的订单项映射
+     * @param items 购物车项列表
+     * @return 按店铺分组的购物车项映射
      */
-    private Map<Store, List<OrderItem>> groupByStore(List<OrderItem> items) {
+    private Map<Store, List<CartItem>> groupByStore(List<CartItem> items) {
         return items.stream()
                 .collect(Collectors.groupingBy(
                         item -> item.getProduct().getStore(),

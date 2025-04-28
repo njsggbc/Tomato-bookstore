@@ -53,35 +53,26 @@ public class ShoppingController {
     /*---------------- 通用订单服务 ----------------*/
 
     /**
-     * 立即购买商品
-     *
-     * @param params 购买请求参数，包含商品ID、数量和配送地址等信息
-     * @return 包含支付信息的响应
-     */
-    @PostMapping("/purchase")
-    public ApiResponse<PaymentInfoResponse> purchase(@RequestBody PurchaseRequest params) {
-        return ApiResponse.success(orderService.purchase(params));
-    }
-
-    /**
      * 获取当前用户的购物车商品列表
      *
      * @return 购物车中的商品项列表
      */
     @GetMapping("/cart")
-    public ApiResponse<List<OrderItemInfoResponse>> getCartItems() {
-        return ApiResponse.success(orderService.getCartItems());
+    public ApiResponse<List<CartItemInfoResponse>> getCartItems() {
+        return ApiResponse.success(orderService.getCartItemList());
     }
 
     /**
      * 向购物车添加商品
      *
-     * @param params 添加购物车请求，包含商品ID和数量等信息
+     * @param productId 商品ID
+     * @param quantity 商品数量
      * @return 操作成功的空响应
      */
     @PostMapping("/cart")
-    public ApiResponse<Void> addToCart(@RequestBody CartAddRequest params) {
-        orderService.addToCart(params);
+    public ApiResponse<Void> addToCart(@RequestParam int productId,
+                                       @RequestParam int quantity) {
+        orderService.addToCart(productId, quantity);
         return ApiResponse.success();
     }
 
@@ -115,12 +106,23 @@ public class ShoppingController {
     /**
      * 结算购物车中的商品
      *
-     * @param params 结算请求参数，包含配送地址和支付方式等信息
+     * @param cartItemIds 购物车项ID列表
      * @return 包含支付信息的响应
      */
     @PostMapping("/cart/checkout")
-    public ApiResponse<PaymentInfoResponse> checkout(@RequestBody CheckOutRequest params) {
-        return ApiResponse.success(orderService.checkout(params));
+    public ApiResponse<List<CheckoutResponse>> checkout(@RequestBody List<Integer> cartItemIds) {
+        return ApiResponse.success(orderService.checkout(cartItemIds));
+    }
+
+    /**
+     * 提交订单
+     *
+     * @param params 提交订单请求参数
+     * @return 支付信息响应
+     */
+    @PostMapping("/orders")
+    public ApiResponse<PaymentInfoResponse> submit(@RequestBody SubmitRequest params) {
+        return ApiResponse.success(orderService.submit(params));
     }
 
     /**

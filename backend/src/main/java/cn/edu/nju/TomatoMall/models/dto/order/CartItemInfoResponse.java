@@ -1,26 +1,23 @@
 package cn.edu.nju.TomatoMall.models.dto.order;
 
 import cn.edu.nju.TomatoMall.models.dto.product.ProductBriefResponse;
-import cn.edu.nju.TomatoMall.models.po.OrderItem;
+import cn.edu.nju.TomatoMall.models.po.CartItem;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import lombok.NonNull;
 
-import java.math.BigDecimal;
 
 @Getter
 @Setter
 @NoArgsConstructor
-@NonNull
-public class OrderItemInfoResponse {
+public class CartItemInfoResponse {
     private int id;
     private ProductBriefResponse product;
     private int quantity;
-    private BigDecimal unitPrice;
 
-    public OrderItemInfoResponse(OrderItem cartItem) {
+    public CartItemInfoResponse(CartItem cartItem) {
         this.id = cartItem.getId();
         this.quantity = cartItem.getQuantity();
+        this.product = new ProductBriefResponse(cartItem.getProduct());
     }
 }

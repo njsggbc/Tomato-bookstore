@@ -35,4 +35,8 @@ public interface InventoryRepository extends JpaRepository<Inventory, Integer> {
 
     @Query("SELECT i.quantity - i.lockedQuantity FROM Inventory i WHERE i.product.id = :productId")
     int getAvailableStockById(@Param("productId") int productId);
+
+    @Modifying
+    @Query("UPDATE Inventory i SET i.thresholdQuantity = :thresholdQuantity WHERE i.product.id = :productId")
+    void updateThresholdQuantityByProductId(int productId, int thresholdQuantity);
 }

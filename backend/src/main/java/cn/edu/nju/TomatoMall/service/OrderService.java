@@ -8,21 +8,21 @@ import java.util.List;
 
 public interface OrderService {
     /*---------------- 通用服务 ----------------*/
-    PaymentInfoResponse purchase(PurchaseRequest params);
+    List<CartItemInfoResponse> getCartItemList();
 
-    List<OrderItemInfoResponse> getCartItems();
-
-    void addToCart(CartAddRequest params);
+    void addToCart(int productId, int quantity);
 
     void removeFromCart(int cartItemId);
 
     void updateCartItemQuantity(int cartItemId, int quantity);
 
+    List<CheckoutResponse> checkout(List<Integer> cartItemIds);
+
+    PaymentInfoResponse submit(SubmitRequest params);
+
     CustomerOrderInfoResponse getOrderInfo(Integer orderId, String orderNo);
 
     List<OrderBriefResponse> getOrderList(CustomerRequestOrderStatus status);
-
-    PaymentInfoResponse checkout(CheckOutRequest params);
 
     void cancel(int orderId, String message);
 

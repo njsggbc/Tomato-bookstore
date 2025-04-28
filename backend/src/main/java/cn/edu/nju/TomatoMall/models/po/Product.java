@@ -1,21 +1,19 @@
 package cn.edu.nju.TomatoMall.models.po;
 
-import lombok.Getter;
-import lombok.NonNull;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
+import cn.edu.nju.TomatoMall.enums.InventoryStatus;
+import lombok.*;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.function.BiConsumer;
+import java.util.*;
 
 @Entity
 @Getter
 @Setter
-@NoArgsConstructor
+@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Table(name = "product")
 public class Product {
     @Id
@@ -29,39 +27,51 @@ public class Product {
     private String description;
 
     @ElementCollection
-    private List<String> images;
+    private List<String> images = new ArrayList<>();
 
     @Column(nullable = false)
     private BigDecimal price;
 
-    @OneToOne(cascade = CascadeType.ALL, mappedBy = "product")
-    private Inventory inventory;
+    @ElementCollection
+    private Map<String, String> specifications  = new HashMap<>();
 
     private Double rate;
 
-    @NonNull
-    private int sales;
-
-    @ElementCollection
-    private Map<String, String> specifications;
+    @Column(nullable = false)
+    private int sales = 0;
 
     @Column(nullable = false, updatable = false)
-    private LocalDateTime createTime;
+    private LocalDateTime createTime = LocalDateTime.now();
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "store_id", nullable = false)
+    @JoinColumn(name = "store_id", nullable = false, updatable = false)
     private Store store;
 
     @Column(nullable = false)
-    private boolean onSale;
+    private boolean onSale = true;
+
+    @OneToOne(cascade = CascadeType.ALL, mappedBy = "product")
+    @JoinColumn(nullable = false, updatable = false)
+    private Inventory inventory;
 
     @Column(nullable = false)
-    private boolean soldOut;
+    private InventoryStatus inventoryStatus = InventoryStatus.OUT_OF_STOCK;
 
-    @PrePersist
-    private void prePersist() {
-        this.createTime = LocalDateTime.now();
-        this.onSale = false;
-        this.sales = 0;
+    @OneToMany
+    private List<ProductSnapshot> snapshots = new ArrayList<>();
+
+    public void update() {
+        snapshots.add(ProductSnapshot.builder()
+                        .product(this)
+                        .name(name)
+                        .description(description)
+                        .images(images)
+                        .price(price)
+                        .specifications(specifications)
+                        .build());
+    }
+
+    public ProductSnapshot getSnapshot() {
+        return snapshots.get(snapshots.size() - 1);
     }
 }

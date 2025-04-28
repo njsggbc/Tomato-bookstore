@@ -1,7 +1,7 @@
 package cn.edu.nju.TomatoMall.models.po;
 
-import lombok.Getter;
-import lombok.Setter;
+import jdk.nashorn.internal.ir.annotations.Immutable;
+import lombok.*;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
@@ -11,26 +11,35 @@ import java.math.BigDecimal;
 @Entity
 @Getter
 @Setter
+@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Table(name = "order_item")
+@Immutable
 public class OrderItem {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    public int id;
+    private int id;
 
     @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
-    public User user;
-
-    @ManyToOne
-    @JoinColumn(name = "order_id")
-    public Order order;
-
-    @ManyToOne
-    @JoinColumn(name = "product_id")
-    public Product product;
+    @JoinColumn(name = "order_id", nullable = false)
+    private Order order;
 
     @Column(nullable = false)
-    public int quantity;
+    private int productId;
 
-    @Column(updatable = false)
-    public BigDecimal unitPriceSnapshot; // 商品单价快照，下单时设置
+    @ManyToOne
+    @JoinColumn(name = "product_snapshot_id", nullable = false)
+    private ProductSnapshot product;
+
+    @Column(nullable = false)
+    private int quantity;
+
+    @Column(nullable = false)
+    private BigDecimal totalPrice;
+
+    @PrePersist
+    private void calculateTotalPrice() {
+        this.totalPrice = product.getPrice().multiply(BigDecimal.valueOf(quantity));
+    }
 }

@@ -1,8 +1,8 @@
 package cn.edu.nju.TomatoMall.service.impl;
 
+import cn.edu.nju.TomatoMall.enums.InventoryStatus;
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
 import cn.edu.nju.TomatoMall.models.po.Inventory;
-import cn.edu.nju.TomatoMall.models.po.Product;
 import cn.edu.nju.TomatoMall.repository.InventoryRepository;
 import cn.edu.nju.TomatoMall.repository.ProductRepository;
 import cn.edu.nju.TomatoMall.service.InventoryService;
@@ -26,22 +26,6 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
     @Override
-    @Transactional
-    public Inventory initializeInventory(Product product, int initialQuantity) {
-        if (initialQuantity < 0) {
-            throw TomatoMallException.invalidOperation();
-        }
-
-        Inventory inventory = new Inventory();
-        inventory.setProduct(product);
-        inventory.setQuantity(initialQuantity);
-        inventory.setLockedQuantity(0);
-        inventory.setThresholdQuantity(10);
-
-        return inventory;
-    }
-
-    @Override
     @Transactional(isolation = Isolation.REPEATABLE_READ)
     @Retryable(value = {OptimisticLockingFailureException.class}, maxAttempts = 3, backoff = @Backoff(delay = 500))
     public void setStock(int productId, int quantity) {
@@ -56,7 +40,27 @@ public class InventoryServiceImpl implements InventoryService {
 
         inventoryRepository.save(inventory);
 
-        productRepository.setSoldOutById(productId, getAvailableStock(productId) <= 0);
+        productRepository.setInventoryStatusById(productId,
+                InventoryStatus.getInventoryStatus(getAvailableStock(productId), inventory.getThresholdQuantity())
+        );
+    }
+
+    @Override
+    public void setThreshold(int productId, int threshold) {
+        if (threshold < 0) {
+            throw TomatoMallException.invalidOperation();
+        }
+
+        Inventory inventory = inventoryRepository.findByProductIdWithLock(productId)
+                .orElseThrow(TomatoMallException::productNotFound);
+
+        inventory.setThresholdQuantity(threshold);
+
+        inventoryRepository.save(inventory);
+
+        productRepository.setInventoryStatusById(productId,
+                InventoryStatus.getInventoryStatus(getAvailableStock(productId), inventory.getThresholdQuantity())
+        );
     }
 
     @Override
@@ -79,9 +83,9 @@ public class InventoryServiceImpl implements InventoryService {
             throw new OptimisticLockingFailureException("并发更新库存失败，请重试");
         }
 
-        if (getAvailableStock(productId) <= 0) {
-            productRepository.setSoldOutById(productId, true);
-        }
+        productRepository.setInventoryStatusById(productId,
+                InventoryStatus.getInventoryStatus(getAvailableStock(productId), inventory.getThresholdQuantity())
+        );
     }
 
     @Override
@@ -104,9 +108,9 @@ public class InventoryServiceImpl implements InventoryService {
             throw new OptimisticLockingFailureException("并发更新库存失败，请重试");
         }
 
-        if (getAvailableStock(productId) > 0) {
-            productRepository.setSoldOutById(productId, false);
-        }
+        productRepository.setInventoryStatusById(productId,
+                InventoryStatus.getInventoryStatus(getAvailableStock(productId), inventory.getThresholdQuantity())
+        );
     }
 
     @Override

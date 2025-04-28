@@ -85,19 +85,17 @@ public class StoreServiceImpl implements StoreService {
         }
 
         User user = securityUtil.getCurrentUser();
-        Store store = new Store();
-
-        store.setName(params.getName());
-        store.setManager(user);
-        store.setCreateTime(LocalDateTime.now());
-        store.setStatus(StoreStatus.PENDING);
-        store.setLogoUrl(fileUtil.upload(user.getId(), params.getLogo()));
-        store.setAddress(params.getAddress());
-        store.setDescription(params.getDescription());
-        store.setQualifications(params.getQualification().stream()
-                .map(qualification -> fileUtil.upload(user.getId(), qualification))
-                .collect(Collectors.toList())
-        );
+        Store store = Store.builder()
+                .name(params.getName())
+                .manager(user)
+                .status(StoreStatus.PENDING)
+                .logoUrl(fileUtil.upload(user.getId(), params.getLogo()))
+                .address(params.getAddress())
+                .description(params.getDescription())
+                .qualifications(params.getQualification().stream()
+                        .map(qualification -> fileUtil.upload(user.getId(), qualification))
+                        .collect(Collectors.toList()))
+                .build();
 
         storeRepository.save(store);
     }

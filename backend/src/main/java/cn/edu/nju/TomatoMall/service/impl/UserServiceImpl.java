@@ -29,8 +29,6 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void register(UserRegisterRequest params) {
-        User user = new User();
-
         String phone = params.getPhone();
         if (userRepository.existsByPhone(phone)) {
             throw TomatoMallException.phoneAlreadyExists();
@@ -48,16 +46,17 @@ public class UserServiceImpl implements UserService {
             }
         }
 
-        user.setPhone(phone);
-        user.setUsername(username);
-        user.setEmail(email);
-        // TODO: 加密存储
-        user.setPassword(params.getPassword());
+       User user = User.builder()
+               .phone(phone)
+               .username(username)
+               .email(email)
+               // TODO: 加密存储
+               .password(params.getPassword())
+               .name(params.getName())
+               .address(params.getLocation())
+               .role(Role.USER)
+               .build();
 
-        user.setName(params.getName());
-        user.setAddress(params.getLocation());
-        user.setCreateTime(LocalDateTime.now());
-        user.setRole(Role.USER);
         userRepository.save(user);
 
         if(params.getAvatar() != null){

@@ -17,7 +17,6 @@ public class ProductCreateRequest {
     String description;
     List<MultipartFile> images;
     BigDecimal price;
-    int stock;
-    int storeId;
+    Integer storeId;
     Map<String, String> specifications;
 }

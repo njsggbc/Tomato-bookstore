@@ -11,13 +11,9 @@ import java.util.Optional;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Integer> {
-    @Query("SELECT COUNT(o) > 0 FROM Order o JOIN o.items oi WHERE oi.product.id = ?1 AND o.status NOT IN ('CLOSED', 'CANCELLED')")
-    boolean existsByProductIdAndActive(int productId);
-
     @Query("SELECT o FROM Order o WHERE o.id IN ?1 AND o.user.id = ?2")
     List<Order> findAllByIdsAndUserId(List<Integer> orderIds, int userId);
 
-    Optional<Order> findByOrderNo(String orderNo);
     Optional<Order> findByIdAndUserId(int orderId, int userId);
     Optional<Order> findByOrderNoAndUserId(String orderNo, int userId);
     Optional<Order> findByIdAndStoreId(int orderId, int storeId);

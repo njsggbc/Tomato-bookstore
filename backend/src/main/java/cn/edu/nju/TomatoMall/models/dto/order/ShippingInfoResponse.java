@@ -16,7 +16,7 @@ import java.util.Map;
 public class ShippingInfoResponse {
     private int id;
     private String trackingNumber;
-    private String deliveryAddress;
+    private String recipientAddress;
     private String recipientName;
     private String recipientPhone;
     private ShippingCompany shippingCompany;
@@ -25,7 +25,7 @@ public class ShippingInfoResponse {
     public ShippingInfoResponse(ShippingInfo shippingInfo) {
         this.id = shippingInfo.getId();
         this.trackingNumber = shippingInfo.getTrackingNumber();
-        this.deliveryAddress = shippingInfo.getDeliveryAddress();
+        this.recipientAddress = shippingInfo.getDeliveryAddress();
         this.recipientName = shippingInfo.getRecipientName();
         this.recipientPhone = shippingInfo.getRecipientPhone();
         this.shippingCompany = shippingInfo.getShippingCompany();

@@ -151,6 +151,14 @@ public class TomatoMallException extends RuntimeException{
         return new TomatoMallException(400, "无效的订单项!");
     }
 
+    public static TomatoMallException invalidCartItem() {
+        return new TomatoMallException(400, "无效的购物车项!");
+    }
+
+    public static TomatoMallException invalidCartItem(String message) {
+        return new TomatoMallException(400, message);
+    }
+
     public static TomatoMallException invalidOrderItem(String message) {
         return new TomatoMallException(400, message);
     }

@@ -20,7 +20,7 @@ public class OrderBriefResponse {
     private String orderNo;
     private OrderStatus status;
     private List<OrderItemInfoResponse> items;
-    private BigDecimal totalAmount;
+    private BigDecimal totalPrice;
     private String createTime;
     private int storeId;
     private String storeName;
@@ -32,7 +32,7 @@ public class OrderBriefResponse {
         this.items = order.getItems().stream()
                 .map(OrderItemInfoResponse::new)
                 .collect(Collectors.toList());
-        this.totalAmount = order.getTotalAmount();
+        this.totalPrice = order.getTotalAmount();
         this.createTime = order.getCreateTime().toString();
         this.storeId = order.getStore().getId();
         this.storeName = order.getStore().getName();

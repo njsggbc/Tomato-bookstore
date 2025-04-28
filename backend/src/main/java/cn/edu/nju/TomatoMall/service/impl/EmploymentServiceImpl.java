@@ -61,15 +61,13 @@ public class EmploymentServiceImpl implements EmploymentService {
             token = UUID.randomUUID().toString();
         } while (employmentTokenRepository.existsByTokenAndStoreId(token, storeId));
 
-        EmploymentToken employmentToken = new EmploymentToken();
-        employmentToken.setToken(token);
-        employmentToken.setName(params.getName());
-        employmentToken.setStore(storeRef);
-        employmentToken.setCreatedAt(LocalDateTime.now());
-        employmentToken.setExpiresAt(
-                params.getExpireTime() == null ? null : LocalDateTime.parse(params.getExpireTime())
-        );
-        employmentToken.setValid(true);
+        EmploymentToken employmentToken = EmploymentToken.builder()
+                .token(token)
+                .name(params.getName())
+                .store(storeRef)
+                .expiresAt(params.getExpireTime() == null ? null : LocalDateTime.parse(params.getExpireTime()))
+                .valid(true)
+                .build();
 
         employmentTokenRepository.save(employmentToken);
 
@@ -107,10 +105,10 @@ public class EmploymentServiceImpl implements EmploymentService {
         }
 
         // 创建雇佣关系
-        Employment employment = new Employment();
-        employment.setEmployee(user);
-        employment.setStore(token.getStore());
-        employment.setStartTime(LocalDateTime.now());
+        Employment employment = Employment.builder()
+                .employee(user)
+                .store(token.getStore())
+                .build();
 
         // 标记 Token 为已使用
         token.setValid(false);

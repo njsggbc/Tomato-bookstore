@@ -1,16 +1,6 @@
 package cn.edu.nju.TomatoMall.service;
 
-import cn.edu.nju.TomatoMall.models.po.Inventory;
-import cn.edu.nju.TomatoMall.models.po.Product;
-
 public interface InventoryService {
-
-    /**
-     * 初始化商品库存
-     * @param product 商品
-     * @param initialQuantity 初始库存数量
-     */
-    Inventory initializeInventory(Product product, int initialQuantity);
 
     /**
      * 设置库存 - 用于初始化或重置库存
@@ -18,6 +8,13 @@ public interface InventoryService {
      * @param quantity 设置数量
      */
     void setStock(int productId, int quantity);
+
+    /**
+     * 设置库存预警阈值
+     * @param productId 商品ID
+     * @param threshold 预警阈值
+     */
+    void setThreshold(int productId, int threshold);
 
     /**
      * 锁定库存 - 用于下单时锁定库存，但不实际减少
@@ -54,7 +51,4 @@ public interface InventoryService {
      * @return 是否充足
      */
     boolean checkStock(int productId, int quantity);
-
-//    TODO: 库存预警
-//    boolean setStockThreshold(int productId, int threshold);
 }

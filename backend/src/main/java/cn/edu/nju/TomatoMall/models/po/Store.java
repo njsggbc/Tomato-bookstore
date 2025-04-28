@@ -1,9 +1,7 @@
 package cn.edu.nju.TomatoMall.models.po;
 
 import cn.edu.nju.TomatoMall.enums.StoreStatus;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.springframework.boot.autoconfigure.session.StoreType;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -14,7 +12,9 @@ import java.util.List;
 @Entity
 @Getter
 @Setter
-@NoArgsConstructor
+@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Table(name = "store")
 public class Store {
     @Id
@@ -34,7 +34,7 @@ public class Store {
     private String logoUrl;
 
     @Column(nullable = false, updatable = false)
-    private LocalDateTime createTime;
+    private LocalDateTime createTime = LocalDateTime.now();
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

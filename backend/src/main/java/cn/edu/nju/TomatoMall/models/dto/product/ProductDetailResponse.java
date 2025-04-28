@@ -1,5 +1,6 @@
 package cn.edu.nju.TomatoMall.models.dto.product;
 
+import cn.edu.nju.TomatoMall.enums.InventoryStatus;
 import cn.edu.nju.TomatoMall.models.po.Product;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -25,7 +26,7 @@ public class ProductDetailResponse {
     int storeId;
     String createTime;
     int sales;
-    boolean soldOut;
+    InventoryStatus inventoryStatus;
 
     public ProductDetailResponse(Product product) {
         this.id = product.getId();
@@ -38,7 +39,7 @@ public class ProductDetailResponse {
         this.specifications = product.getSpecifications();
         this.storeId = product.getStore().getId();
         this.sales = product.getSales();
-        this.soldOut = product.isSoldOut();
+        this.inventoryStatus = product.getInventoryStatus();
         this.createTime = product.getCreateTime().toString();
     }
 }

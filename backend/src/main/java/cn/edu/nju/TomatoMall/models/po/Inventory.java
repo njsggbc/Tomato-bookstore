@@ -1,8 +1,6 @@
 package cn.edu.nju.TomatoMall.models.po;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
@@ -10,7 +8,9 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @Setter
-@NoArgsConstructor
+@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Table(name = "inventory")
 public class Inventory {
     @Id
@@ -21,7 +21,7 @@ public class Inventory {
     @JoinColumn(name = "product_id", unique = true)
     private Product product;
 
-    private int quantity;
+    private int quantity = 0;
 
     @Version
     private Long version;
@@ -30,5 +30,5 @@ public class Inventory {
     private Integer lockedQuantity = 0;
 
     // 预警阈值
-    private Integer thresholdQuantity;
+    private Integer thresholdQuantity = 5;
 }

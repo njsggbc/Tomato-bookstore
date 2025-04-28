@@ -6,8 +6,8 @@ import cn.edu.nju.TomatoMall.models.dto.product.ProductBriefResponse;
 import cn.edu.nju.TomatoMall.models.dto.product.ProductCreateRequest;
 import cn.edu.nju.TomatoMall.models.dto.product.ProductDetailResponse;
 import cn.edu.nju.TomatoMall.models.dto.product.ProductUpdateRequest;
+import cn.edu.nju.TomatoMall.models.po.Inventory;
 import cn.edu.nju.TomatoMall.models.po.Product;
-import cn.edu.nju.TomatoMall.models.po.Store;
 import cn.edu.nju.TomatoMall.models.po.User;
 import cn.edu.nju.TomatoMall.repository.*;
 import cn.edu.nju.TomatoMall.service.ProductService;
@@ -24,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -79,16 +78,16 @@ public class ProductServiceImpl implements ProductService {
     public void createProduct(ProductCreateRequest params) {
         validatePermission(params.getStoreId());
 
-        Product product = new Product();
-        product.setName(params.getTitle());
-        product.setPrice(params.getPrice());
-        product.setDescription(params.getDescription());
-        product.setImages(uploadImages(params.getImages()));
-        product.setSpecifications(params.getSpecifications());
-        product.setCreateTime(LocalDateTime.now());
-        product.setStore(storeRepository.getReferenceById(params.getStoreId()));
-        product.setInventory(inventoryService.initializeInventory(product, params.getStock()));
-        product.setSoldOut(params.getStock() > 0);
+        Product product = Product.builder()
+                .name(params.getTitle())
+                .price(params.getPrice())
+                .description(params.getDescription())
+                .images(uploadImages(params.getImages()))
+                .specifications(params.getSpecifications())
+                .store(storeRepository.getReferenceById(params.getStoreId()))
+                .build();
+
+        product.setInventory(Inventory.builder().product(product).build());
 
         productRepository.save(product);
     }
@@ -116,6 +115,9 @@ public class ProductServiceImpl implements ProductService {
             product.setSpecifications(params.getSpecifications());
         }
 
+        // 更新版本信息，并创建新的快照
+        product.update();
+
         productRepository.save(product);
     }
 
@@ -124,10 +126,6 @@ public class ProductServiceImpl implements ProductService {
         Product product = productRepository.findById(productId).orElseThrow(TomatoMallException::productNotFound);
 
         validatePermission(product.getStore().getId());
-
-        if (orderRepository.existsByProductIdAndActive(product.getId())) {
-            throw TomatoMallException.productInOrder();
-        }
 
         product.setOnSale(false);
         product.setDescription(null);
@@ -150,6 +148,23 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(TomatoMallException::productNotFound));
     }
 
+    @Override
+    public String updateStockpile(int productId, int stockpile) {
+        if (!securityUtil.getCurrentUser().getRole().equals(Role.ADMIN)) {
+            throw TomatoMallException.permissionDenied();
+        }
+        inventoryService.setStock(productId, stockpile);
+        return "调整库存成功";
+    }
+
+    @Override
+    public void updateThreshold(int productId, int threshold) {
+        if (!securityUtil.getCurrentUser().getRole().equals(Role.ADMIN)) {
+            throw TomatoMallException.permissionDenied();
+        }
+        inventoryService.setThreshold(productId, threshold);
+    }
+
     private void validatePermission(Integer storeId) {
         User currentUser = securityUtil.getCurrentUser();
         // 系统默认店铺，只有系统管理员具有权限
@@ -165,16 +180,6 @@ public class ProductServiceImpl implements ProductService {
             throw TomatoMallException.permissionDenied();
         }
 
-    }
-
-    @Override
-    public String updateStockpile(int productId, int stockpile) {
-        if (!securityUtil.getCurrentUser().getRole().equals(Role.ADMIN)) {
-            throw TomatoMallException.permissionDenied();
-        }
-        inventoryService.setStock(productId, stockpile);
-        productRepository.setSoldOutById(productId, stockpile <= 0);
-        return "调整库存成功";
     }
 
     @Override
@@ -205,23 +210,14 @@ public class ProductServiceImpl implements ProductService {
             throw TomatoMallException.permissionDenied();
         }
 
-        Product product = new Product();
-        product.setName(params.get("title").toString());
-        product.setPrice(new BigDecimal(params.get("price").toString()));
-        product.setRate(Double.parseDouble(params.get("rate").toString()));
-        product.setDescription(params.get("description").toString());
-        List<String> images = new ArrayList<>();
-        images.add(params.get("cover").toString());
-        product.setImages(images);
-        product.setSpecifications(new HashMap<>()); // HACK: 未提供规格信息
-        product.setSoldOut(true);
-        product.setInventory(inventoryService.initializeInventory(product, 0));
-
-        // HACK: 实体中没有 detail 字段
-
-        Store store = storeRepository.findById(1).orElseThrow(TomatoMallException::unexpectedError);
-        product.setStore(store);
-        product.setCreateTime(LocalDateTime.now());
+        Product product = Product.builder()
+                .name(params.get("title").toString())
+                .price(new BigDecimal(params.get("price").toString()))
+                .rate(Double.parseDouble(params.get("rate").toString()))
+                .description(params.get("description").toString())
+                .images(Collections.singletonList(params.get("cover").toString()))
+                .store(storeRepository.findById(1).orElseThrow(TomatoMallException::unexpectedError))
+                .build();
 
         productRepository.save(product);
 
