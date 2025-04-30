@@ -70,8 +70,8 @@ public class UserController {
      * 更新用户密码
      */
     @PatchMapping("/password")
-    public ApiResponse<Void> updatePassword(@RequestBody Map<String, String> params) {
-        userService.updatePassword(params.get("currentPassword"), params.get("newPassword"));
+    public ApiResponse<Void> updatePassword(@RequestBody UserUpdatePasswordRequest payload) {
+        userService.updatePassword(payload.getCurrentPassword(), payload.getNewPassword());
         return ApiResponse.success();
     }
 
