@@ -20,14 +20,14 @@ public class ApiResponse<T> implements Serializable {
     private T data;
 
     public static <T> ApiResponse<T> success(T result) {
-        return new ApiResponse<T>(200, null, result);
+        return new ApiResponse<>(0, null, result);
     }
 
     public static ApiResponse<Void> success() {
-        return new ApiResponse<>(200, null, null);
+        return new ApiResponse<>(0, null, null);
     }
 
     public static <T> ApiResponse<T> failure(int code, String msg) {
-        return new ApiResponse<T>(code, msg, null);
+        return new ApiResponse<>(code, msg, null);
     }
 }

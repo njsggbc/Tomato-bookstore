@@ -11,7 +11,6 @@ import cn.edu.nju.TomatoMall.util.SecurityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.Map;
 
 @Service
@@ -68,11 +67,11 @@ public class UserServiceImpl implements UserService {
     public String login(UserLoginRequest params) {
         User user = null;
         if (params.getUsername() != null ) {
-            user = userRepository.findByUsername(params.getUsername()).get();
+            user = userRepository.findByUsername(params.getUsername()).orElse(null);
         } else if (params.getPhone() != null) {
-            user = userRepository.findByPhone(params.getPhone()).get();
+            user = userRepository.findByPhone(params.getPhone()).orElse(null);
         } else if (params.getEmail() != null) {
-            user = userRepository.findByEmail(params.getEmail()).get();
+            user = userRepository.findByEmail(params.getEmail()).orElse(null);
         }
 
         if (user == null) {
@@ -80,7 +79,7 @@ public class UserServiceImpl implements UserService {
         }
 
         if (!user.getPassword().equals(params.getPassword())) {
-            throw TomatoMallException.passwordError();
+            throw TomatoMallException.phoneOrPasswordError();
         }
 
         return securityUtil.getToken(user);
@@ -201,7 +200,7 @@ public class UserServiceImpl implements UserService {
     public String accountLogin(String username, String password) {
         User user = userRepository.findByUsername(username).orElseThrow(TomatoMallException::userNotFound);
         if (!user.getPassword().equals(password)) {
-            throw TomatoMallException.passwordError();
+            throw TomatoMallException.phoneOrPasswordError();
         }
 
         return securityUtil.getToken(user);
