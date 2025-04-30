@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletResponse;
+import java.util.Map;
 
 /**
  * user
@@ -69,9 +70,8 @@ public class UserController {
      * 更新用户密码
      */
     @PatchMapping("/password")
-    public ApiResponse<Void> updatePassword(@RequestParam("currentPassword") String currentPassword,
-                                               @RequestParam("newPassword") String newPassword) {
-        userService.updatePassword(currentPassword, newPassword);
+    public ApiResponse<Void> updatePassword(@RequestBody Map<String, String> params) {
+        userService.updatePassword(params.get("currentPassword"), params.get("newPassword"));
         return ApiResponse.success();
     }
 
