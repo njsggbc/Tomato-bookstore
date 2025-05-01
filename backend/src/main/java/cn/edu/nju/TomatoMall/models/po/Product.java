@@ -27,12 +27,14 @@ public class Product {
     private String description;
 
     @ElementCollection
+    @Builder.Default
     private List<String> images = new ArrayList<>();
 
     @Column(nullable = false)
     private BigDecimal price;
 
     @ElementCollection
+    @Builder.Default
     private Map<String, String> specifications  = new HashMap<>();
 
     private Double rate;
@@ -41,6 +43,7 @@ public class Product {
     private int sales = 0;
 
     @Column(nullable = false, updatable = false)
+    @Builder.Default
     private LocalDateTime createTime = LocalDateTime.now();
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -48,6 +51,7 @@ public class Product {
     private Store store;
 
     @Column(nullable = false)
+    @Builder.Default
     private boolean onSale = true;
 
     @OneToOne(cascade = CascadeType.ALL, mappedBy = "product")
@@ -55,9 +59,11 @@ public class Product {
     private Inventory inventory;
 
     @Column(nullable = false)
+    @Builder.Default
     private InventoryStatus inventoryStatus = InventoryStatus.OUT_OF_STOCK;
 
     @OneToMany
+    @Builder.Default
     private List<ProductSnapshot> snapshots = new ArrayList<>();
 
     public void update() {

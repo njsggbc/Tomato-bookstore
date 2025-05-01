@@ -28,5 +28,6 @@ public class Employment {
     private Store store;
 
     @Column(nullable = false, updatable = false)
+    @Builder.Default
     private LocalDateTime startTime = LocalDateTime.now();
 }

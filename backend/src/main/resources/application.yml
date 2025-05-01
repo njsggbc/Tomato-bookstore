@@ -27,8 +27,8 @@ app:
 server:
   port: 8080
 
-aliyun:
-  oss: # 添加必要配置
+aliyun: #添加必要配置！！
+  oss:
     endpoint:
     accessKeyId:
     accessKeySecret:

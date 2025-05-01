@@ -23,6 +23,7 @@ public class Order {
     private int id;
 
     @Column(nullable = false, unique = true, updatable = false)
+    @Builder.Default
     private String orderNo = UUID.randomUUID().toString();
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -34,6 +35,7 @@ public class Order {
     private Store store;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<OrderItem> items = new ArrayList<>();
 
     @Column(nullable = false)
@@ -46,12 +48,15 @@ public class Order {
     private String remark;
 
     @OneToMany(mappedBy = "order",cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<ShippingInfo> shippingInfos = new ArrayList<>(); // 可能包含多个运输信息，如收货和退货
 
     @Column(nullable = false)
+    @Builder.Default
     private LocalDateTime createTime = LocalDateTime.now();
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<OrderLog> logs = new ArrayList<>();
 
     @ManyToOne

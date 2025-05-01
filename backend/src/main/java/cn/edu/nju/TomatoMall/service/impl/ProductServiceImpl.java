@@ -62,6 +62,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ProductBriefResponse> getStoreProductList(int storeId, int page, int size, String field, boolean order) {
         Sort.Direction direction = order ? Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = PageRequest.of(page, size > 0 ? size : Integer.MAX_VALUE, Sort.by(direction, field));
@@ -72,8 +73,15 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional
     public void createProduct(ProductCreateRequest params) {
         validatePermission(params.getStoreId());
+
+        validateName(params.getTitle());
+        validatePrice(params.getPrice());
+        validateDescription(params.getDescription());
+        validateImages(params.getImages());
+        validateSpecifications(params.getSpecifications());
 
         Product product = Product.builder()
                 .name(params.getTitle())
@@ -90,25 +98,31 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional
     public void updateProduct(int productId, ProductUpdateRequest params) {
         Product product = productRepository.findByIdAndOnSaleIsTrue(productId).orElseThrow(TomatoMallException::productNotFound);
 
         validatePermission(product.getStore().getId());
 
         if (params.getTitle() != null) {
+            validateName(params.getTitle());
             product.setName(params.getTitle());
         }
         if (params.getDescription() != null) {
+            validateDescription(params.getDescription());
             product.setDescription(params.getDescription());
         }
         if (params.getPrice() != null) {
+            validatePrice(params.getPrice());
             product.setPrice(params.getPrice());
         }
         if (params.getImages() != null) {
+            validateImages(params.getImages());
             deleteImages(product.getImages());
             product.setImages(uploadImages(params.getImages()));
         }
         if (params.getSpecifications() != null) {
+            validateSpecifications(params.getSpecifications());
             product.setSpecifications(params.getSpecifications());
         }
 
@@ -119,6 +133,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional
     public String deleteProduct(int productId) {
         Product product = productRepository.findById(productId).orElseThrow(TomatoMallException::productNotFound);
 
@@ -140,17 +155,20 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ProductDetailResponse getProductDetail(int productId) {
         return new ProductDetailResponse(productRepository.findByIdAndOnSaleIsTrue(productId)
                 .orElseThrow(TomatoMallException::productNotFound));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ProductSnapshotResponse getSnapshot(int snapshotId) {
         return new ProductSnapshotResponse(productSnapshotRepository.findById(snapshotId));
     }
 
     @Override
+    @Transactional
     public String updateStockpile(int productId, int stockpile) {
         if (!securityUtil.getCurrentUser().getRole().equals(Role.ADMIN)) {
             throw TomatoMallException.permissionDenied();
@@ -160,6 +178,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional
     public void updateThreshold(int productId, int threshold) {
         if (!securityUtil.getCurrentUser().getRole().equals(Role.ADMIN)) {
             throw TomatoMallException.permissionDenied();
@@ -167,24 +186,8 @@ public class ProductServiceImpl implements ProductService {
         inventoryService.setThreshold(productId, threshold);
     }
 
-    private void validatePermission(Integer storeId) {
-        User currentUser = securityUtil.getCurrentUser();
-        // 系统默认店铺，只有系统管理员具有权限
-        if (storeId == 1) {
-            if (!currentUser.getRole().equals(Role.ADMIN)) {
-                throw TomatoMallException.permissionDenied();
-            }
-            return;
-        }
-
-        if (!storeRepository.existsByIdAndManagerId(storeId, currentUser.getId())
-                && !employmentRepository.existsByStoreIdAndEmployeeId(storeId, currentUser.getId())) {
-            throw TomatoMallException.permissionDenied();
-        }
-
-    }
-
     @Override
+    @Transactional(readOnly = true)
     public int getStockpile(int productId) {
         return inventoryService.getAvailableStock(productId);
     }
@@ -204,9 +207,27 @@ public class ProductServiceImpl implements ProductService {
         }
     }
 
+    private void validatePermission(Integer storeId) {
+        User currentUser = securityUtil.getCurrentUser();
+        // 系统默认店铺，只有系统管理员具有权限
+        if (storeId == 1) {
+            if (!currentUser.getRole().equals(Role.ADMIN)) {
+                throw TomatoMallException.permissionDenied();
+            }
+            return;
+        }
+
+        if (!storeRepository.existsByIdAndManagerId(storeId, currentUser.getId())
+                && !employmentRepository.existsByStoreIdAndEmployeeId(storeId, currentUser.getId())) {
+            throw TomatoMallException.permissionDenied();
+        }
+
+    }
+
     /*------------- HACK: 以下为兼容测试用方法 -------------*/
 
     @Override
+    @Transactional
     public ProductBriefResponse createProduct(Map<String, Object> params) {
         if (!securityUtil.getCurrentUser().getRole().equals(Role.ADMIN)) {
             throw TomatoMallException.permissionDenied();
@@ -227,6 +248,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional
     public String updateProduct(Map<String, Object> params) {
         if (!securityUtil.getCurrentUser().getRole().equals(Role.ADMIN)) {
             throw TomatoMallException.permissionDenied();
@@ -252,6 +274,44 @@ public class ProductServiceImpl implements ProductService {
         productRepository.save(product);
 
         return "更新成功";
+    }
+
+    private void validateName(String name) {
+        if (name == null || name.isEmpty()) {
+            throw TomatoMallException.invalidParameter("商品名称不能为空");
+        }
+    }
+
+    private void validatePrice(BigDecimal price) {
+        if (price == null || price.compareTo(BigDecimal.ZERO) <= 0) {
+            throw TomatoMallException.invalidParameter("商品价格必须大于0");
+        }
+    }
+
+    private void validateDescription(String description) {
+        if (description == null || description.isEmpty()) {
+            throw TomatoMallException.invalidParameter("商品描述不能为空");
+        }
+    }
+
+    private void validateImages(List<MultipartFile> images) {
+        if (images == null || images.isEmpty()) {
+            throw TomatoMallException.invalidParameter("商品图片不能为空");
+        }
+    }
+
+    private void validateSpecifications(Map<String, String> specifications) {
+        if (specifications == null || specifications.isEmpty()) {
+            throw TomatoMallException.invalidParameter("商品规格不能为空");
+        }
+        for (Map.Entry<String, String> entry : specifications.entrySet()) {
+            if (entry.getKey() == null || entry.getKey().isEmpty()) {
+                throw TomatoMallException.invalidParameter("商品规格名称不能为空");
+            }
+            if (entry.getValue() == null || entry.getValue().isEmpty()) {
+                throw TomatoMallException.invalidParameter("商品规格值不能为空");
+            }
+        }
     }
 
 }

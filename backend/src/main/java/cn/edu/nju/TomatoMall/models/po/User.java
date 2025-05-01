@@ -37,6 +37,7 @@ public class User {
     private Role role;
 
     @Column(nullable = false, updatable = false)
+    @Builder.Default
     private LocalDateTime createTime = LocalDateTime.now();
 
     private String name;

@@ -43,5 +43,6 @@ public class ShippingInfo {
     @CollectionTable(name = "shipping_logs", joinColumns = @JoinColumn(name = "shipping_info_id"))
     @MapKeyColumn(name = "log_time")
     @Column(name = "log_message")
+    @Builder.Default
     private Map<LocalDateTime, String> logs = new LinkedHashMap<>(); // 时间戳+信息
 }

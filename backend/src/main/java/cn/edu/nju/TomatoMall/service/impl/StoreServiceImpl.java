@@ -19,8 +19,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -42,6 +43,7 @@ public class StoreServiceImpl implements StoreService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<StoreInfoResponse> getStoreList(int page, int size, String field, boolean order) {
         Pageable pageable = PageRequest.of(page, size > 0 ? size : Integer.MAX_VALUE,
                 Sort.by(order ? Sort.Direction.ASC : Sort.Direction.DESC, field));
@@ -52,6 +54,7 @@ public class StoreServiceImpl implements StoreService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<StoreInfoResponse> getManagedStoreList() {
         return storeRepository.findByManagerId(securityUtil.getCurrentUser().getId()).stream()
                 .map(StoreInfoResponse::new)
@@ -59,6 +62,7 @@ public class StoreServiceImpl implements StoreService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<StoreInfoResponse> getWorkedStoreList() {
         return employmentRepository.getStoreByEmployeeId(securityUtil.getCurrentUser().getId()).stream()
                 .map(StoreInfoResponse::new)
@@ -66,6 +70,7 @@ public class StoreServiceImpl implements StoreService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public StoreInfoResponse getInfo(int storeId) {
         Store store = storeRepository.findById(storeId).orElseThrow(TomatoMallException::storeNotFound);
         if (!store.getStatus().equals(StoreStatus.NORMAL)
@@ -78,8 +83,15 @@ public class StoreServiceImpl implements StoreService {
     }
 
     @Override
+    @Transactional
     public void createStore(StoreCreateRequest params) {
         String name = params.getName();
+        validateName(name);
+        validateLogo(params.getLogo());
+        validateAddress(params.getAddress());
+        validateDescription(params.getDescription());
+        validateQualifications(params.getQualification());
+
         if (storeRepository.existsByName(name)) {
             throw TomatoMallException.storeNameAlreadyExists();
         }
@@ -101,26 +113,32 @@ public class StoreServiceImpl implements StoreService {
     }
 
     @Override
+    @Transactional
     public void updateStore(int storeId, StoreUpdateRequest params) {
         Store store = storeRepository.findById(storeId).orElseThrow(TomatoMallException::storeNotFound);
         validatePermission(store);
 
         if (params.getName() != null) {
+            validateName(params.getName());
             store.setName(params.getName());
         }
         if (params.getLogo() != null) {
+            validateLogo(params.getLogo());
             if(store.getLogoUrl() != null){
                 fileUtil.delete(store.getLogoUrl());
             }
             store.setLogoUrl(fileUtil.upload(store.getManager().getId(), params.getLogo()));
         }
         if (params.getAddress() != null) {
+            validateAddress(params.getAddress());
             store.setAddress(params.getAddress());
         }
         if (params.getDescription() != null) {
+            validateDescription(params.getDescription());
             store.setDescription(params.getDescription());
         }
         if (params.getQualification() != null) {
+            validateQualifications(params.getQualification());
             store.getQualifications().forEach(fileUtil::delete);
             store.setQualifications(params.getQualification().stream()
                     .map(qualification -> fileUtil.upload(store.getManager().getId(), qualification))
@@ -134,6 +152,7 @@ public class StoreServiceImpl implements StoreService {
     }
 
     @Override
+    @Transactional
     public void deleteStore(int storeId) {
         Store store = storeRepository.findById(storeId).orElseThrow(TomatoMallException::storeNotFound);
         validatePermission(store);
@@ -155,6 +174,7 @@ public class StoreServiceImpl implements StoreService {
     }
 
     @Override
+    @Transactional
     public void review(int storeId, boolean pass) {
         if (!securityUtil.getCurrentUser().getRole().equals(Role.ADMIN)) {
             throw TomatoMallException.permissionDenied();
@@ -192,6 +212,7 @@ public class StoreServiceImpl implements StoreService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<StoreInfoResponse> getAwaitingReviewStoreList(int page, int size, String field, boolean order) {
         Pageable pageable = PageRequest.of(page, size > 0 ? size : Integer.MAX_VALUE,
                 Sort.by(order ? Sort.Direction.ASC : Sort.Direction.DESC, field));
@@ -202,6 +223,7 @@ public class StoreServiceImpl implements StoreService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<StoreInfoResponse> getSuspendedStoreList(int page, int size, String field, boolean order) {
         Pageable pageable = PageRequest.of(page, size > 0 ? size : Integer.MAX_VALUE,
                 Sort.by(order ? Sort.Direction.ASC : Sort.Direction.DESC, field));
@@ -212,6 +234,7 @@ public class StoreServiceImpl implements StoreService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<String> getStoreQualification(int storeId) {
         if (!securityUtil.getCurrentUser().getRole().equals(Role.ADMIN)) {
             throw TomatoMallException.permissionDenied();
@@ -225,4 +248,35 @@ public class StoreServiceImpl implements StoreService {
             throw TomatoMallException.permissionDenied();
         }
     }
+
+    private void validateName(String name) {
+        if (name == null || name.isEmpty()) {
+            throw TomatoMallException.invalidParameter("店铺名称不合法");
+        }
+    }
+
+    private void validateLogo(MultipartFile logo) {
+        if (logo == null || logo.isEmpty()) {
+            throw TomatoMallException.invalidParameter("店铺logo不能为空");
+        }
+    }
+
+    private void validateAddress(String address) {
+        if (address == null || address.isEmpty()) {
+            throw TomatoMallException.invalidParameter("店铺地址不能为空");
+        }
+    }
+
+    private void validateDescription(String description) {
+        if (description == null || description.isEmpty()) {
+            throw TomatoMallException.invalidParameter("店铺描述不能为空");
+        }
+    }
+
+    private void validateQualifications(List<MultipartFile> qualifications) {
+        if (qualifications == null || qualifications.isEmpty()) {
+            throw TomatoMallException.invalidParameter("店铺资质不能为空");
+        }
+    }
+
 }

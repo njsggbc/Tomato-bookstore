@@ -44,5 +44,6 @@ public class ProductSnapshot {
     private Map<String, String> specifications;
 
     @Column(nullable = false, updatable = false)
+    @Builder.Default
     private LocalDateTime created = LocalDateTime.now();
 }

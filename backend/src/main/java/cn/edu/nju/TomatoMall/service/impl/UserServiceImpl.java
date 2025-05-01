@@ -10,6 +10,7 @@ import cn.edu.nju.TomatoMall.util.FileUtil;
 import cn.edu.nju.TomatoMall.util.SecurityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 
@@ -27,19 +28,23 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void register(UserRegisterRequest params) {
         String phone = params.getPhone();
+        validatePhone(phone);
         if (userRepository.existsByPhone(phone)) {
             throw TomatoMallException.phoneAlreadyExists();
         }
 
         String username = params.getUsername();
+        validateUsername(username);
         if (userRepository.existsByUsername(username)) {
             throw TomatoMallException.usernameAlreadyExists();
         }
 
         String email = params.getEmail();
         if (email != null) {
+            validateEmail(email);
             if (userRepository.existsByEmail(email)) {
                 throw TomatoMallException.emailAlreadyExists();
             }
@@ -58,12 +63,13 @@ public class UserServiceImpl implements UserService {
 
         userRepository.save(user);
 
-        if(params.getAvatar() != null){
+        if(params.getAvatar() != null && !params.getAvatar().isEmpty()){
             user.setAvatarUrl(fileUtil.upload(user.getId(), params.getAvatar()));
         }
     }
 
     @Override
+    @Transactional(readOnly = true)
     public String login(UserLoginRequest params) {
         User user = null;
         if (params.getUsername() != null ) {
@@ -86,11 +92,13 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public UserDetailResponse getDetail() {
         return new UserDetailResponse(securityUtil.getCurrentUser());
     }
 
     @Override
+    @Transactional(readOnly = true)
     public UserBriefResponse getBrief(int id) {
         User user = userRepository.findById(id).orElseThrow(TomatoMallException::userNotFound);
 
@@ -98,6 +106,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void updateInformation(UserUpdateRequest params) {
         User user = securityUtil.getCurrentUser();
 
@@ -105,21 +114,27 @@ public class UserServiceImpl implements UserService {
         String username = params.getUsername();
         String email = params.getEmail();
 
-        if (phone != null && userRepository.existsByPhone(phone) && !phone.equals(user.getPhone())) {
-            throw TomatoMallException.phoneAlreadyExists();
-        } else {
+        if (phone != null) {
+            validatePhone(phone);
+            if (userRepository.existsByPhone(phone) && !phone.equals(user.getPhone())) {
+                throw TomatoMallException.phoneAlreadyExists();
+            }
             user.setPhone(phone);
         }
 
-        if (username != null && userRepository.existsByUsername(username) && !username.equals(user.getUsername())) {
-            throw TomatoMallException.usernameAlreadyExists();
-        } else {
+        if (username != null) {
+            validateUsername(username);
+            if (userRepository.existsByUsername(username) && !username.equals(user.getUsername())) {
+                throw TomatoMallException.usernameAlreadyExists();
+            }
             user.setUsername(username);
         }
 
-        if (email != null && userRepository.existsByEmail(email) && !email.equals(user.getEmail())) {
-            throw TomatoMallException.emailAlreadyExists();
-        } else {
+        if (email != null) {
+            validateEmail(email);
+            if (userRepository.existsByEmail(email) && !email.equals(user.getEmail())) {
+                throw TomatoMallException.emailAlreadyExists();
+            }
             user.setEmail(email);
         }
 
@@ -141,11 +156,13 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void updatePassword(String currentPassword, String newPassword) {
         User user = securityUtil.getCurrentUser();
         if (!user.getPassword().equals(currentPassword)) {
             throw TomatoMallException.phoneOrPasswordError();
         }
+        validatePassword(newPassword);
         user.setPassword(newPassword);
         userRepository.save(user);
     }
@@ -153,6 +170,7 @@ public class UserServiceImpl implements UserService {
     /*----------- HACK: 以下为兼容测试用方法 -----------*/
 
     @Override
+    @Transactional
     public String accountCreate(Map<String, String> params) {
         UserRegisterRequest registerRequest = new UserRegisterRequest();
 
@@ -173,11 +191,13 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public UserDetailResponse accountGet(String username) {
         return new UserDetailResponse(userRepository.findByUsername(username).orElseThrow(TomatoMallException::userNotFound));
     }
 
     @Override
+    @Transactional
     public void accountUpdate(Map<String, String> params) {
         UserUpdateRequest userUpdateRequest = new UserUpdateRequest();
         userUpdateRequest.setUsername(params.get("username"));
@@ -197,6 +217,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public String accountLogin(String username, String password) {
         User user = userRepository.findByUsername(username).orElseThrow(TomatoMallException::userNotFound);
         if (!user.getPassword().equals(password)) {
@@ -204,5 +225,32 @@ public class UserServiceImpl implements UserService {
         }
 
         return securityUtil.getToken(user);
+    }
+
+    private void validatePhone(String phone) {
+        if (phone == null || phone.isEmpty() || !phone.matches("^[1][3-9][0-9]{9}$")) {
+            throw TomatoMallException.invalidParameter("手机号不合法");
+        }
+    }
+
+    private void validateUsername(String username) {
+        if (username == null || username.length() < 3 || username.length() > 20) {
+            throw TomatoMallException.invalidParameter("用户名不合法");
+        }
+    }
+
+    private void validateEmail(String email) {
+        if (email == null || email.isEmpty()) {
+            return;
+        }
+        if (!email.matches("^[\\w-\\.]+@[\\w-]+\\.[a-z]{2,4}$")) {
+            throw TomatoMallException.invalidParameter("邮箱格式不正确");
+        }
+    }
+
+    private void validatePassword(String password) {
+        if (password == null || password.length() < 6) {
+            throw TomatoMallException.invalidParameter("密码长度不能小于6位");
+        }
     }
 }

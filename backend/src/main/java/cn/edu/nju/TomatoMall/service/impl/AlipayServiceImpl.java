@@ -93,6 +93,7 @@ public class AlipayServiceImpl implements PaymentService {
      * @return 返回支付宝支付方式枚举
      */
     @Override
+    @Transactional(readOnly = true)
     public PaymentMethod getPaymentMethod() {
         return PaymentMethod.ALIPAY;
     }
@@ -102,8 +103,8 @@ public class AlipayServiceImpl implements PaymentService {
      * @param paymentId 支付ID
      * @return 返回支付宝支付表单HTML字符串
      */
-    @Transactional
     @Override
+    @Transactional
     public String pay(String paymentId) {
         // 获取支付信息
         Payment payment = paymentRepository.findById(paymentId)
@@ -147,6 +148,7 @@ public class AlipayServiceImpl implements PaymentService {
      * @param paymentId 支付ID
      */
     @Override
+    @Transactional
     public void cancel(String paymentId) {
         // 获取支付信息
         Payment payment = paymentRepository.findById(paymentId)
@@ -217,6 +219,7 @@ public class AlipayServiceImpl implements PaymentService {
      * @return 支付宝交易查询响应
      */
     @Override
+    @Transactional(readOnly = true)
     public AlipayTradeQueryResponse queryTradeStatus(String paymentId) {
         try {
             AlipayTradeQueryRequest request = new AlipayTradeQueryRequest();
@@ -234,6 +237,7 @@ public class AlipayServiceImpl implements PaymentService {
      * @return 支付宝退款查询响应
      */
     @Override
+    @Transactional(readOnly = true)
     public AlipayTradeFastpayRefundQueryResponse queryRefundStatus(String paymentId, String orderNo) {
         try {
             AlipayTradeFastpayRefundQueryRequest request = new AlipayTradeFastpayRefundQueryRequest();
