@@ -16,7 +16,7 @@ public class StoreInfoResponse {
     String logoUrl;
     String regTime;
     String status;
-    int score;
+    Integer score;
 
     public StoreInfoResponse(Store store) {
         this.id = store.getId();

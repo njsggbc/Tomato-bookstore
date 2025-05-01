@@ -90,6 +90,10 @@ public class EmploymentServiceImpl implements EmploymentService {
     public void authToken(int storeId, String tokenValue) {
         User user = securityUtil.getCurrentUser();
 
+        if (storeRepository.existsByIdAndManagerId(storeId, user.getId())) {
+            throw TomatoMallException.invalidOperation();
+        }
+
         // 显式检查雇佣关系是否存在
         if (employmentRepository.existsByStoreIdAndEmployeeId(storeId, user.getId())) {
             throw TomatoMallException.storeStaffAlreadyExists();

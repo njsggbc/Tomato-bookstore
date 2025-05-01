@@ -48,7 +48,9 @@ public class StoreServiceImpl implements StoreService {
         Pageable pageable = PageRequest.of(page, size > 0 ? size : Integer.MAX_VALUE,
                 Sort.by(order ? Sort.Direction.ASC : Sort.Direction.DESC, field));
 
-        Page<Store> storePage = storeRepository.findByStatus(StoreStatus.NORMAL, pageable);
+        // Page<Store> storePage = storeRepository.findByStatus(StoreStatus.NORMAL, pageable);
+        // HACK: 测试用，过滤系统默认店铺
+        Page<Store> storePage = storeRepository.findByStatusAndIdNot(StoreStatus.NORMAL, pageable, 1);
 
         return storePage.map(StoreInfoResponse::new);
     }

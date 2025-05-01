@@ -28,44 +28,48 @@ public class TomatoMallException extends RuntimeException {
     }
 
     // Global Exceptions (100–199)
-    public static TomatoMallException invalidOperation() {
-        return new TomatoMallException(400, 100, "无效操作!");
-    }
-
-    public static TomatoMallException invalidOperation(String message) {
-        return new TomatoMallException(400, 100, message);
-    }
-
-    public static TomatoMallException invalidParameter() {
-        return new TomatoMallException(400, 101, "无效参数!");
-    }
-
-    public static TomatoMallException invalidParameter(String message) {
-        return new TomatoMallException(400, 101, message);
-    }
-
     public static TomatoMallException unexpectedError() {
-        return new TomatoMallException(500, 102, "意外错误!");
+        return new TomatoMallException(500, 100, "意外错误!");
     }
 
     public static TomatoMallException unexpectedError(String message) {
-        return new TomatoMallException(500, 102, message);
+        return new TomatoMallException(500, 100, message);
     }
 
     public static TomatoMallException operationFail() {
-        return new TomatoMallException(500, 103, "操作失败!");
+        return new TomatoMallException(500, 101, "操作失败!");
     }
 
     public static TomatoMallException operationFail(String message) {
-        return new TomatoMallException(500, 103, message);
+        return new TomatoMallException(500, 101, message);
+    }
+
+    public static TomatoMallException pathError(String requestURI) {
+        return new TomatoMallException(400, 102, requestURI);
+    }
+
+    public static TomatoMallException invalidOperation() {
+        return new TomatoMallException(400, 103, "无效操作!");
+    }
+
+    public static TomatoMallException invalidOperation(String message) {
+        return new TomatoMallException(400, 103, message);
+    }
+
+    public static TomatoMallException invalidParameter() {
+        return new TomatoMallException(400, 104, "无效参数!");
+    }
+
+    public static TomatoMallException invalidParameter(String message) {
+        return new TomatoMallException(400, 104, message);
     }
 
     public static TomatoMallException fileUploadFail() {
-        return new TomatoMallException(500, 104, "文件上传失败!");
+        return new TomatoMallException(500, 105, "文件上传失败!");
     }
 
     public static TomatoMallException fileUploadFail(String message) {
-        return new TomatoMallException(500, 104, message);
+        return new TomatoMallException(500, 105, message);
     }
 
     // User-related Exceptions (200–299)

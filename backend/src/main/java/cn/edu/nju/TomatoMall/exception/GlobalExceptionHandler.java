@@ -9,6 +9,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class GlobalExceptionHandler {
     @ExceptionHandler(value = TomatoMallException.class)
     public ResponseEntity<ApiResponse<String>> handleAIExternalException(TomatoMallException e) {
+        if (e.getStatus() == 500) {
+            e.printStackTrace();
+        }
         return ResponseEntity.status(e.getStatus()).body(ApiResponse.failure(e.getCode(), e.getMessage()));
     }
 }
