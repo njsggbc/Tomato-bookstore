@@ -41,4 +41,7 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
     @Modifying
     @Query("UPDATE Product p SET p.sales = p.sales - :decrement WHERE p.id = :id AND p.sales >= :decrement")
     void decreaseSalesById(@Param("id") int id, @Param("decrement") int decrement);
+
+    @Query("SELECT p.store.id FROM Product p WHERE p.id = :id")
+    Optional<Integer> findStoreIdById(int id);
 }

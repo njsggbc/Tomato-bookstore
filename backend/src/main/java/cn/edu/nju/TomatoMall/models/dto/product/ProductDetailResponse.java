@@ -21,11 +21,11 @@ public class ProductDetailResponse {
     String cover;
     List<String> images;
     BigDecimal price;
-    double rate;
+    Double rate;
     Map<String, String> specifications;
     int storeId;
     String createTime;
-    int sales;
+    Integer sales;
     InventoryStatus inventoryStatus;
 
     public ProductDetailResponse(Product product) {

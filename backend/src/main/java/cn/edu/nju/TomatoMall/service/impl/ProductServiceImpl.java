@@ -92,6 +92,8 @@ public class ProductServiceImpl implements ProductService {
                 .store(storeRepository.getReferenceById(params.getStoreId()))
                 .build();
 
+        product.createSnapshot();
+
         product.setInventory(Inventory.builder().product(product).build());
 
         productRepository.save(product);
@@ -118,7 +120,6 @@ public class ProductServiceImpl implements ProductService {
         }
         if (params.getImages() != null) {
             validateImages(params.getImages());
-            deleteImages(product.getImages());
             product.setImages(uploadImages(params.getImages()));
         }
         if (params.getSpecifications() != null) {
@@ -126,8 +127,7 @@ public class ProductServiceImpl implements ProductService {
             product.setSpecifications(params.getSpecifications());
         }
 
-        // 更新版本信息，并创建新的快照
-        product.update();
+        product.createSnapshot();
 
         productRepository.save(product);
     }
@@ -143,9 +143,6 @@ public class ProductServiceImpl implements ProductService {
         product.setDescription(null);
         product.setSpecifications(null);
         product.setRate(null);
-        if (product.getImages() != null) {
-            deleteImages(product.getImages().subList(1, product.getImages().size())); // 保留封面
-        }
         product.setInventory(null);
 
         productRepository.save(product);
@@ -170,9 +167,8 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public String updateStockpile(int productId, int stockpile) {
-        if (!securityUtil.getCurrentUser().getRole().equals(Role.ADMIN)) {
-            throw TomatoMallException.permissionDenied();
-        }
+        validatePermission(productRepository.findStoreIdById(productId)
+                .orElseThrow(TomatoMallException::productNotFound));
         inventoryService.setStock(productId, stockpile);
         return "调整库存成功";
     }
@@ -180,9 +176,8 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public void updateThreshold(int productId, int threshold) {
-        if (!securityUtil.getCurrentUser().getRole().equals(Role.ADMIN)) {
-            throw TomatoMallException.permissionDenied();
-        }
+        validatePermission(productRepository.findStoreIdById(productId)
+                .orElseThrow(TomatoMallException::productNotFound));
         inventoryService.setThreshold(productId, threshold);
     }
 

@@ -23,7 +23,7 @@ public class ProductSnapshot {
     private int id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false, updatable = false)
+    @JoinColumn(name = "product_id", updatable = false)
     private Product product;
 
     @Column(nullable = false, updatable = false)

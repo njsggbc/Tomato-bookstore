@@ -62,11 +62,11 @@ public class Product {
     @Builder.Default
     private InventoryStatus inventoryStatus = InventoryStatus.OUT_OF_STOCK;
 
-    @OneToMany
+    @OneToMany(mappedBy = "product", cascade = {CascadeType.MERGE, CascadeType.PERSIST})
     @Builder.Default
     private List<ProductSnapshot> snapshots = new ArrayList<>();
 
-    public void update() {
+    public void createSnapshot() {
         snapshots.add(ProductSnapshot.builder()
                         .product(this)
                         .name(name)

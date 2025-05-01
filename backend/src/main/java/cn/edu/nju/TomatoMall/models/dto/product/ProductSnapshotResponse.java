@@ -27,7 +27,7 @@ public class ProductSnapshotResponse {
 
     public ProductSnapshotResponse(ProductSnapshot productSnapshot) {
         this.id = productSnapshot.getId();
-        this.productId = productSnapshot.getId();
+        this.productId = productSnapshot.getProduct().getId();
         this.productName = productSnapshot.getName();
         this.description = productSnapshot.getDescription();
         this.images = productSnapshot.getImages();

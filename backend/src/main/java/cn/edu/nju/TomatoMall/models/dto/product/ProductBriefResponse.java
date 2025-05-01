@@ -17,8 +17,8 @@ public class ProductBriefResponse {
     String description;
     String cover;
     BigDecimal price;
-    double rate;
-    int sales;
+    Double rate;
+    Integer sales;
     InventoryStatus inventoryStatus;
 
     public ProductBriefResponse(Product product) {
