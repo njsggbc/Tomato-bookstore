@@ -14,14 +14,9 @@ import java.math.BigDecimal;
 
 @Service
 public interface PaymentService {
-    PaymentMethod getPaymentMethod();
-    String pay(String paymentId);
+    String pay(String paymentId, PaymentMethod paymentMethod);
     void cancel(String paymentId);
-    String handlePaymentNotify(HttpServletRequest request);
-    AlipayTradeQueryResponse queryTradeStatus(String paymentId);
-    AlipayTradeFastpayRefundQueryResponse queryRefundStatus(String paymentId, String orderNo);
-    @Async
-    void schedulePaymentTimeout(Payment payment);
-    @Scheduled(fixedRate = 300000)
-    void checkPaymentTimeout();
+    String handlePaymentNotify(HttpServletRequest request, PaymentMethod paymentMethod);
+    Object queryTradeStatus(String paymentId);
+    Object queryRefundStatus(String paymentId, String orderNo);
 }

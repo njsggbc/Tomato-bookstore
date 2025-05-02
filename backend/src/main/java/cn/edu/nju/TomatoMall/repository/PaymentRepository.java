@@ -8,12 +8,16 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface PaymentRepository extends JpaRepository<Payment, String> {
     // Add any custom query methods if needed
     // For example:
     // List<Payment> findByOrderId(Long orderId);
+
+    @Query("SELECT p FROM Payment p WHERE p.id = ?1 AND p.user.id = ?2")
+    Optional<Payment> findByIdAndUserId(String id, int userId);
 
     @Query("SELECT p FROM Payment p WHERE p.user.id = ?1 AND p.status = ?2")
     List<Payment> findByUserIdAndStatus(int userId, PaymentStatus status);

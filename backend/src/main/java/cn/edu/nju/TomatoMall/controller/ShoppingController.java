@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api")
 public class ShoppingController {
     private final OrderService orderService;
-    private final Map<PaymentMethod, PaymentService> paymentServiceMap;
+    private final PaymentService paymentService;
     private final PaymentRepository paymentRepository;
     private final SecurityUtil securityUtil;
 
@@ -35,16 +35,14 @@ public class ShoppingController {
      * 构造一个新的购物控制器，包含必要的服务和存储库
      *
      * @param orderService 订单操作服务
-     * @param paymentServiceList 支持不同支付方式的支付服务列表
+     * @param paymentService 支付服务
      * @param paymentRepository 支付数据操作存储库
      * @param securityUtil 安全操作工具
      */
     @Autowired
-    public ShoppingController(OrderService orderService, List<PaymentService> paymentServiceList, PaymentRepository paymentRepository, SecurityUtil securityUtil) {
+    public ShoppingController(OrderService orderService, PaymentService paymentService, PaymentRepository paymentRepository, SecurityUtil securityUtil) {
         this.orderService = orderService;
-        this.paymentServiceMap = new EnumMap<>(PaymentMethod.class);
-        paymentServiceList
-                .forEach(paymentService -> paymentServiceMap.put(paymentService.getPaymentMethod(), paymentService));
+        this.paymentService = paymentService;
         this.paymentRepository = paymentRepository;
         this.securityUtil = securityUtil;
     }
@@ -287,11 +285,7 @@ public class ShoppingController {
             @PathVariable String paymentId,
             @RequestParam PaymentMethod paymentMethod
     ) {
-        try {
-            return ApiResponse.success(paymentServiceMap.get(paymentMethod).pay(paymentId));
-        } catch (Exception e) {
-            throw TomatoMallException.invalidParameter();
-        }
+        return ApiResponse.success(paymentService.pay(paymentId, paymentMethod));
     }
 
     /**
@@ -305,12 +299,8 @@ public class ShoppingController {
     public ApiResponse<Void> cancelPayment(
             @PathVariable String paymentId
     ) {
-        try {
-            paymentServiceMap.get(paymentRepository.getPaymentMethodById(paymentId)).cancel(paymentId);
-            return ApiResponse.success();
-        } catch (Exception e) {
-            throw TomatoMallException.invalidParameter();
-        }
+        paymentService.cancel(paymentId);
+        return ApiResponse.success();
     }
 
     /**
@@ -321,17 +311,10 @@ public class ShoppingController {
      * @throws TomatoMallException 当支付参数无效时抛出异常
      */
     @GetMapping("/payment/{paymentId}/trade-status")
-    public ApiResponse<AlipayTradeQueryResponse> getTradeStatus(
+    public ApiResponse<Object> getTradeStatus(
             @PathVariable String paymentId
     ) {
-        try {
-            return ApiResponse.success(
-                    paymentServiceMap.get(paymentRepository.getPaymentMethodById(paymentId))
-                            .queryTradeStatus(paymentId)
-            );
-        } catch (Exception e) {
-            throw TomatoMallException.invalidParameter();
-        }
+        return ApiResponse.success(paymentService.queryTradeStatus(paymentId));
     }
 
     /**
@@ -343,18 +326,11 @@ public class ShoppingController {
      * @throws TomatoMallException 当支付参数无效时抛出异常
      */
     @GetMapping("/payment/{paymentId}/refund-status")
-    public ApiResponse<AlipayTradeFastpayRefundQueryResponse> getRefundStatus(
+    public ApiResponse<Object> getRefundStatus(
             @PathVariable String paymentId,
             @RequestParam String orderNo
     ) {
-        try {
-            return ApiResponse.success(
-                    paymentServiceMap.get(paymentRepository.getPaymentMethodById(paymentId))
-                            .queryRefundStatus(paymentId, orderNo)
-            );
-        } catch (Exception e) {
-            throw TomatoMallException.invalidParameter();
-        }
+        return ApiResponse.success(paymentService.queryRefundStatus(paymentId, orderNo));
     }
 
     /**
@@ -365,6 +341,6 @@ public class ShoppingController {
      */
     @PostMapping("/alipay/notify")
     public String handlePaymentNotify(HttpServletRequest request) {
-        return paymentServiceMap.get(PaymentMethod.ALIPAY).handlePaymentNotify(request);
+        return paymentService.handlePaymentNotify(request, PaymentMethod.ALIPAY);
     }
 }
