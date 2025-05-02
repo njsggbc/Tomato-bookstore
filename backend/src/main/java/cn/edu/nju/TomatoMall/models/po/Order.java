@@ -63,10 +63,21 @@ public class Order {
     @JoinColumn(name = "payment_id")
     private Payment payment;
 
-    @PrePersist
-    private void calculateTotalAmount() {
-        totalAmount = items.stream()
-                .map(OrderItem::getTotalPrice)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    public static OrderBuilder builder() {
+        return new OrderBuilder() {
+            @Override
+            public Order build() {
+                Order order = super.build();
+                if (order.items != null) {
+                    order.setTotalAmount(
+                            order.items.stream()
+                                    .map(OrderItem::getTotalPrice)
+                                    .reduce(BigDecimal.ZERO, BigDecimal::add)
+                    );
+                    order.items.forEach(item -> item.setOrder(order));
+                }
+                return order;
+            }
+        };
     }
 }

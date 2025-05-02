@@ -38,8 +38,19 @@ public class OrderItem {
     @Column(nullable = false)
     private BigDecimal totalPrice;
 
-    @PrePersist
-    private void calculateTotalPrice() {
-        this.totalPrice = productSnapshot.getPrice().multiply(BigDecimal.valueOf(quantity));
+    public static OrderItemBuilder builder() {
+        return new OrderItemBuilder() {
+            @Override
+            public OrderItem build() {
+                OrderItem item = super.build();
+                if (item.getProductSnapshot() != null && item.getQuantity() > 0) {
+                    item.setTotalPrice(
+                            item.getProductSnapshot().getPrice()
+                                    .multiply(BigDecimal.valueOf(item.getQuantity()))
+                    );
+                }
+                return item;
+            }
+        };
     }
 }

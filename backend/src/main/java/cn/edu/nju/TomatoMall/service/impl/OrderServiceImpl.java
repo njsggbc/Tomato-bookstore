@@ -1,7 +1,7 @@
 package cn.edu.nju.TomatoMall.service.impl;
 
 import cn.edu.nju.TomatoMall.enums.*;
-import cn.edu.nju.TomatoMall.events.order.OrderRefundEvent;
+import cn.edu.nju.TomatoMall.events.order.OrderCancelEvent;
 import cn.edu.nju.TomatoMall.events.order.OrderRefundSuccessEvent;
 import cn.edu.nju.TomatoMall.events.payment.PaymentCancelEvent;
 import cn.edu.nju.TomatoMall.events.payment.PaymentCreateEvent;
@@ -119,10 +119,10 @@ public class OrderServiceImpl implements OrderService {
                 .collect(Collectors.toList());
 
         // 为所有订单创建单一支付
-        Payment payment = new Payment(securityUtil.getCurrentUser(), orders);
-        orders.forEach(order -> order.setPayment(payment));
-
-        orderRepository.saveAll(orders);
+        Payment payment = Payment.builder()
+                .user(user)
+                .orders(orders)
+                .build();
 
         // 发布支付创建事件
         eventPublisher.publishEvent(new PaymentCreateEvent(payment));
@@ -297,7 +297,7 @@ public class OrderServiceImpl implements OrderService {
 
         orderRepository.save(order);
 
-        eventPublisher.publishEvent(new OrderRefundEvent(order, order.getTotalAmount(),"用户取消订单"));
+        eventPublisher.publishEvent(new OrderCancelEvent(order, order.getTotalAmount(),"用户取消订单"));
     }
 
     /**
@@ -475,7 +475,7 @@ public class OrderServiceImpl implements OrderService {
 
         orderRepository.save(order);
 
-        eventPublisher.publishEvent(new OrderRefundEvent(order, order.getTotalAmount(),"商家取消订单"));
+        eventPublisher.publishEvent(new OrderCancelEvent(order, order.getTotalAmount(),"商家取消订单"));
     }
 
     /**
@@ -574,7 +574,6 @@ public class OrderServiceImpl implements OrderService {
         payment.getOrders().forEach(order -> {
             order.getItems().forEach(item -> inventoryService.unlockStock(item.getProductId(), item.getQuantity()));
             order.setStatus(OrderStatus.CANCELLED);
-            order.setPayment(null);
             order.getLogs().add(OrderLog.builder()
                     .operator(securityUtil.getCurrentUser())
                     .order(order)
@@ -639,19 +638,16 @@ public class OrderServiceImpl implements OrderService {
         Order order = Order.builder()
                 .user(user)
                 .store(store)
+                .items(cartItems.stream()
+                        .map(this::buildOrderItem)
+                        .collect(Collectors.toList()))
                 .remark(remark)
-                .status(OrderStatus.AWAITING_SHIPMENT)
+                .status(OrderStatus.AWAITING_PAYMENT)
                 .build();
-
-        // 添加订单项
-        order.setItems(
-                cartItems.stream()
-                        .map(cartItem -> buildOrderItem(order, cartItem))
-                        .collect(Collectors.toList())
-        );
 
         // 添加收货信息
         order.getShippingInfos().add(ShippingInfo.builder()
+                .order(order)
                 .recipientName(getRecipientName(name, user))
                 .recipientPhone(getRecipientPhone(phone, user))
                 .deliveryAddress(getDeliveryAddress(address, user))
@@ -674,11 +670,10 @@ public class OrderServiceImpl implements OrderService {
      * 构建订单项
      * 锁定库存并从购物车中删除相应的购物车项
      *
-     * @param order 订单
      * @param cartItem 购物车项
      * @return 构建的订单项对象
      */
-    private OrderItem buildOrderItem(Order order, CartItem cartItem) {
+    private OrderItem buildOrderItem(CartItem cartItem) {
         int productId = cartItem.getProduct().getId();
         int quantity = cartItem.getQuantity();
         // 锁定库存
@@ -689,7 +684,6 @@ public class OrderServiceImpl implements OrderService {
                 .productId(productId)
                 .productSnapshot(cartItem.getProduct().getSnapshot())
                 .quantity(quantity)
-                .order(order)
                 .build();
     }
 

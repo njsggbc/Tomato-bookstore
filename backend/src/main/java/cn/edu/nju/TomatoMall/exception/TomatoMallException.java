@@ -44,8 +44,8 @@ public class TomatoMallException extends RuntimeException {
         return new TomatoMallException(500, 101, message);
     }
 
-    public static TomatoMallException pathError(String requestURI) {
-        return new TomatoMallException(400, 102, requestURI);
+    public static TomatoMallException pathOrParamError() {
+        return new TomatoMallException(400, 102, "路径或传参错误！");
     }
 
     public static TomatoMallException invalidOperation() {

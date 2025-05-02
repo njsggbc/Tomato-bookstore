@@ -26,19 +26,21 @@ public class Payment {
     @JoinColumn(name = "user_id", nullable = false)
     User user;
 
-    @OneToMany
+    @OneToMany(mappedBy = "payment", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @Column(nullable = false)
     List<Order> orders;
 
-    @NonNull
+    @Column(nullable = false)
     private BigDecimal amount;
 
-    @NonNull
+    @Column(nullable = false)
     @Enumerated(EnumType.STRING)
-    private PaymentStatus status;
+    @Builder.Default
+    private PaymentStatus status = PaymentStatus.PENDING;
 
-    @NonNull
-    private LocalDateTime createTime;
+    @Column(nullable = false)
+    @Builder.Default
+    private LocalDateTime createTime = LocalDateTime.now();
 
     private LocalDateTime paymentRequestTime;
 
@@ -47,14 +49,23 @@ public class Payment {
     private LocalDateTime transactionTime;
     private String tradeNo;
 
-    public Payment(User user, List<Order> orders) {
-        this.user = user;
-        this.orders = orders;
-        this.amount = orders.stream()
-                        .map(Order::getTotalAmount)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add)
-                        .setScale(2, RoundingMode.HALF_UP);
-        this.status = PaymentStatus.PENDING;
-        this.createTime = LocalDateTime.now();
+    public static PaymentBuilder builder() {
+        return new PaymentBuilder(){
+            @Override
+            public Payment build() {
+                Payment payment = super.build();
+                if (payment.getOrders() != null) {
+                    payment.getOrders().forEach(order -> order.setPayment(payment));
+                    payment.setAmount(
+                            payment.getOrders().stream()
+                                    .map(Order::getTotalAmount)
+                                    .reduce(BigDecimal.ZERO, BigDecimal::add)
+                                    .setScale(2, RoundingMode.HALF_UP)
+                    );
+                }
+
+                return payment;
+            }
+        };
     }
 }

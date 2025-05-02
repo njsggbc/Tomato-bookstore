@@ -3,7 +3,7 @@ package cn.edu.nju.TomatoMall.service.impl;
 import cn.edu.nju.TomatoMall.configure.AlipayConfig;
 import cn.edu.nju.TomatoMall.enums.PaymentMethod;
 import cn.edu.nju.TomatoMall.enums.PaymentStatus;
-import cn.edu.nju.TomatoMall.events.order.OrderRefundEvent;
+import cn.edu.nju.TomatoMall.events.order.OrderCancelEvent;
 import cn.edu.nju.TomatoMall.events.order.OrderRefundSuccessEvent;
 import cn.edu.nju.TomatoMall.events.payment.PaymentCancelEvent;
 import cn.edu.nju.TomatoMall.events.payment.PaymentCreateEvent;
@@ -343,7 +343,7 @@ public class AlipayServiceImpl implements PaymentService {
      */
     @EventListener
     @Transactional
-    public void handleOrderRefund(OrderRefundEvent event) {
+    public void handleOrderRefund(OrderCancelEvent event) {
         // 验证退款参数
         validateRefund(event.getOrder(), event.getRefundAmount());
         // 执行退款请求
