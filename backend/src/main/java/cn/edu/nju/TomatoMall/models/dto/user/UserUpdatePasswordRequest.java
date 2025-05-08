@@ -1,15 +1,13 @@
 package cn.edu.nju.TomatoMall.models.dto.user;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.NonNull;
-import lombok.Setter;
+import lombok.Data;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@NonNull
+import javax.validation.constraints.NotBlank;
+
+@Data
 public class UserUpdatePasswordRequest {
+    @NotBlank
     private String currentPassword;
+    @NotBlank
     private String newPassword;
 }

@@ -1,20 +1,14 @@
 package cn.edu.nju.TomatoMall.models.dto.product;
 
 import cn.edu.nju.TomatoMall.models.po.ProductSnapshot;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.NonNull;
-import lombok.Setter;
+import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@NonNull
+@Data
 public class ProductSnapshotResponse {
     private int id;
     private int productId;

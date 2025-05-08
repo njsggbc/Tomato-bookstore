@@ -3,49 +3,25 @@ package cn.edu.nju.TomatoMall.models.dto.order;
 import cn.edu.nju.TomatoMall.enums.OrderStatus;
 import cn.edu.nju.TomatoMall.enums.PaymentMethod;
 import cn.edu.nju.TomatoMall.models.po.Order;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.NonNull;
-import lombok.Setter;
+import lombok.Data;
+
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Getter
-@Setter
-@NoArgsConstructor
+@Data
 public class CustomerOrderInfoResponse {
-    @NonNull
     private int orderId;
-
-    @NonNull
     private String orderNo;
-
-    @NonNull
     private int storeId;
-
-    @NonNull
     private String storeName;
-
-    @NonNull
     private OrderStatus status;
-
-    @NonNull
     private List<OrderItemInfoResponse> items;
-
-    @NonNull
     private BigDecimal totalPrice;
-
-    @NonNull
     private String createTime;
-
-    @NonNull
     private List<OrderLogResponse> logs;
-
-    @NonNull
     private List<ShippingInfoResponse> shippingInfo;
-
     private String remark;
     private int paymentId;
     private PaymentMethod paymentMethod;

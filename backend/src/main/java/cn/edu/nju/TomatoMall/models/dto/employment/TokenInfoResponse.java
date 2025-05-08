@@ -2,13 +2,9 @@ package cn.edu.nju.TomatoMall.models.dto.employment;
 
 import cn.edu.nju.TomatoMall.models.dto.user.UserBriefResponse;
 import cn.edu.nju.TomatoMall.models.po.EmploymentToken;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.Data;
 
-@Getter
-@Setter
-@NoArgsConstructor
+@Data
 public class TokenInfoResponse {
     int id;
     String name;

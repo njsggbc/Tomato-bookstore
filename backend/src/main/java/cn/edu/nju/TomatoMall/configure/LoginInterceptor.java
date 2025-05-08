@@ -23,6 +23,7 @@ public class LoginInterceptor implements HandlerInterceptor {
         WHITELIST.put("/api/accounts/login", "POST");
         WHITELIST.put("/api/accounts/register", "POST");
         WHITELIST.put("/api/alipay/notify", "POST");
+        WHITELIST.put("/api/shipping", "POST");
     }
 
     private boolean isWhitelisted(String path, String method) {

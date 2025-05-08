@@ -2,17 +2,13 @@ package cn.edu.nju.TomatoMall.models.dto.order;
 
 import cn.edu.nju.TomatoMall.enums.ShippingCompany;
 import cn.edu.nju.TomatoMall.models.po.ShippingInfo;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.Data;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-@Getter
-@Setter
-@NoArgsConstructor
+@Data
 public class ShippingInfoResponse {
     private int id;
     private String trackingNumber;

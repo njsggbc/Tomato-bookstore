@@ -3,24 +3,16 @@ package cn.edu.nju.TomatoMall.models.dto.payment;
 import cn.edu.nju.TomatoMall.enums.PaymentMethod;
 import cn.edu.nju.TomatoMall.models.dto.order.OrderBriefResponse;
 import cn.edu.nju.TomatoMall.models.po.Payment;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.NonNull;
-import lombok.Setter;
+import lombok.Data;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Getter
-@Setter
-@NoArgsConstructor
+@Data
 public class PaymentInfoResponse {
-    @NonNull
     private int paymentId;
-    @NonNull
     private List<OrderBriefResponse> orderList;
-    @NonNull
     private BigDecimal totalAmount;
 
     private PaymentMethod paymentMethod;

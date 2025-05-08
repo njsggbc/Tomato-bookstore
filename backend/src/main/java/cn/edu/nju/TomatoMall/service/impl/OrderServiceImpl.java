@@ -8,6 +8,7 @@ import cn.edu.nju.TomatoMall.events.payment.PaymentSuccessEvent;
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
 import cn.edu.nju.TomatoMall.models.dto.payment.PaymentInfoResponse;
 import cn.edu.nju.TomatoMall.models.dto.order.*;
+import cn.edu.nju.TomatoMall.models.dto.shipment.*;
 import cn.edu.nju.TomatoMall.models.po.*;
 import cn.edu.nju.TomatoMall.repository.*;
 import cn.edu.nju.TomatoMall.service.InventoryService;
@@ -38,6 +39,7 @@ public class OrderServiceImpl implements OrderService {
     private final InventoryService inventoryService;
     private final ApplicationEventPublisher eventPublisher;
     private final PaymentRepository paymentRepository;
+    private final ShippingInfoRepository shippingInfoRepository;
 
     @Autowired
     public OrderServiceImpl(ProductRepository productRepository,
@@ -48,7 +50,9 @@ public class OrderServiceImpl implements OrderService {
                             EmploymentRepository employmentRepository,
                             InventoryService inventoryService,
                             ApplicationEventPublisher eventPublisher,
-                            PaymentRepository paymentRepository) {
+                            PaymentRepository paymentRepository,
+                            ShippingInfoRepository shippingInfoRepository
+    ) {
         this.productRepository = productRepository;
         this.cartItemRepository = cartItemRepository;
         this.orderRepository = orderRepository;
@@ -58,6 +62,7 @@ public class OrderServiceImpl implements OrderService {
         this.inventoryService = inventoryService;
         this.eventPublisher = eventPublisher;
         this.paymentRepository = paymentRepository;
+        this.shippingInfoRepository = shippingInfoRepository;
     }
 
     //---------------------------
@@ -149,19 +154,20 @@ public class OrderServiceImpl implements OrderService {
      *
      * @param productId 商品ID
      * @param quantity 数量
+     * @return 购物车项ID
      * @throws TomatoMallException 当操作无效时抛出异常
      */
     @Override
     @Transactional
-    public void addToCart(int productId, int quantity) {
+    public int addToCart(int productId, int quantity) {
         try {
-            cartItemRepository.save(
+            return cartItemRepository.save(
                     CartItem.builder()
                             .user(securityUtil.getCurrentUser())
                             .product(productRepository.getReferenceById(productId))
                             .quantity(quantity)
                             .build()
-            );
+            ).getId();
         } catch (Exception e) {
             throw TomatoMallException.invalidOperation();
         }
@@ -251,7 +257,7 @@ public class OrderServiceImpl implements OrderService {
                 statusList = Arrays.asList(OrderStatus.IN_TRANSIT, OrderStatus.AWAITING_RECEIPT);
                 break;
             case COMPLETED:
-                statusList = OrderStatus.terminalStatus();
+                statusList = Arrays.asList(OrderStatus.COMPLETED, OrderStatus.CLOSED);
                 break;
             case AFTER_SALE:
                 statusList = OrderStatus.afterSaleStatus();
@@ -362,7 +368,7 @@ public class OrderServiceImpl implements OrderService {
                 statusList = Arrays.asList(OrderStatus.IN_TRANSIT, OrderStatus.AWAITING_RECEIPT);
                 break;
             case COMPLETED:
-                statusList = OrderStatus.terminalStatus();
+                statusList = Arrays.asList(OrderStatus.COMPLETED, OrderStatus.CLOSED);
                 break;
             case AFTER_SALE:
                 statusList = OrderStatus.afterSaleStatus();
@@ -500,6 +506,26 @@ public class OrderServiceImpl implements OrderService {
 
         // TODO: 物流发货逻辑，验证并关联订单
 
+        ShippingInfo shippingInfo = order.getShippingInfos().get(0);
+        shippingInfo.setShippingCompany(params.getShippingCompany());
+        shippingInfo.setTrackingNumber(params.getTrackingNo());
+
+        String senderAddress = (params.getSenderAddress() == null || params.getSenderAddress().isEmpty()) ?
+                storeRepository.findAddressById(storeId) : params.getSenderAddress();
+        String senderName = (params.getSenderName() == null || params.getSenderName().isEmpty()) ?
+                securityUtil.getCurrentUser().getName() : params.getSenderName();
+        String senderPhone = (params.getSenderPhone() == null || params.getSenderPhone().isEmpty()) ?
+                securityUtil.getCurrentUser().getPhone() : params.getSenderPhone();
+
+
+        shippingInfo.getLogs().put(LocalDateTime.now(), "已发货," +
+                                                        "\n发货地址: " + senderAddress +
+                                                        "\n发货人: " + senderName +
+                                                        "\n联系电话 " + senderPhone
+                );
+
+        shippingInfoRepository.save(shippingInfo);
+
         // 更新销量
         order.getItems().forEach(item -> productRepository.increaseSalesById(item.getProductId(), item.getQuantity()));
 
@@ -509,7 +535,10 @@ public class OrderServiceImpl implements OrderService {
                 .order(order)
                 .event(OrderEvent.SHIP)
                 .afterEventStatus(OrderStatus.IN_TRANSIT)
-                .message("已发货")
+                .message("已发货," +
+                        "\n物流公司: " + params.getShippingCompany().toString() +
+                        "\n物流单号: " + params.getTrackingNo()
+                        )
                 .timestamp(LocalDateTime.now())
                 .build());
 
@@ -530,6 +559,45 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public void terminate(int orderId) {
         // TODO: 实现管理员终止订单功能
+    }
+
+    //-----------------------------
+    // 物流相关方法
+    //-----------------------------
+
+    @Override
+    public void updateShippingInfo(String trackingNo, ShippingUpdateRequest params) {
+        ShippingInfo shippingInfo = shippingInfoRepository.findByTrackingNumber(trackingNo)
+                .orElseThrow(TomatoMallException::shipmentRecordNotFound);
+
+        // TODO: 更新物流信息逻辑
+
+        shippingInfoRepository.save(shippingInfo);
+    }
+
+    @Override
+    public void confirmDelivery(String trackingNo, DeliveryConfirmRequest params) {
+        ShippingInfo shippingInfo = shippingInfoRepository.findByTrackingNumber(trackingNo)
+                .orElseThrow(TomatoMallException::shipmentRecordNotFound);
+
+        // TODO: 更新物流信息
+
+        // 更新订单状态
+        Order order = shippingInfo.getOrder();
+        order.setStatus(OrderStatus.AWAITING_RECEIPT);
+        order.getLogs().add(
+                OrderLog.builder()
+                        .order(order)
+                        .event(OrderEvent.DELIVER)
+                        .afterEventStatus(OrderStatus.AWAITING_RECEIPT)
+                        .message("已送达: " + params.getDeliveryLocation() + "\n" +
+                                "签收人: " + params.getSignedBy() + "\n" +
+                                "联系电话: " + params.getPhone() + "\n" +
+                                "备注: " + params.getRemark())
+                        .timestamp(params.getDeliveryTime())
+                        .build()
+        );
+        orderRepository.save(order);
     }
 
     //-----------------------------

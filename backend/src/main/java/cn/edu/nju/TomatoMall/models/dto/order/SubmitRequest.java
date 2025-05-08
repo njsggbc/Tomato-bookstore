@@ -1,24 +1,20 @@
 package cn.edu.nju.TomatoMall.models.dto.order;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.NonNull;
-import lombok.Setter;
+import lombok.Data;
 
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 import java.util.List;
 import java.util.Map;
 
-@Getter
-@Setter
-@NoArgsConstructor
+@Data
 public class SubmitRequest {
-    @NonNull
+    @NotNull
+    @Size(min=1)
     private List<Integer> cartItemIds;
-    @NonNull
+
     private String recipientName;
-    @NonNull
     private String recipientPhone;
-    @NonNull
     private String recipientAddress;
     private Map<Integer, String> storeRemarks;
 }

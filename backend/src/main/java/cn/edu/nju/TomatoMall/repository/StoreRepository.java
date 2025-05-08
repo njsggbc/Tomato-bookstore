@@ -36,4 +36,7 @@ public interface StoreRepository extends JpaRepository<Store, Integer> {
     List<Store> findByManagerId(int managerId);
 
     Store getReferenceById(@NonNull int storeId);
+
+    @Query("SELECT s.address FROM Store s WHERE s.id = ?1")
+    String findAddressById(int id);
 }

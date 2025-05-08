@@ -1,12 +1,10 @@
 package cn.edu.nju.TomatoMall.models.dto.order;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 
-@Getter
-@Setter
-@NoArgsConstructor
+@Data
 @AllArgsConstructor
-@NonNull
 public class CheckoutResponse {
     int cartItemId;
     int availableQuantity;

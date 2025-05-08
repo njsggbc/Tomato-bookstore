@@ -251,4 +251,12 @@ public class TomatoMallException extends RuntimeException {
     public static TomatoMallException noValidAddress(String message) {
         return new TomatoMallException(400, 506, message);
     }
+
+    public static TomatoMallException shipmentRecordNotFound() {
+        return new TomatoMallException(404, 507, "物流记录不存在!");
+    }
+
+    public static TomatoMallException shipmentRecordNotFound(String message) {
+        return new TomatoMallException(404, 507, message);
+    }
 }

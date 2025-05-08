@@ -2,19 +2,13 @@ package cn.edu.nju.TomatoMall.models.dto.order;
 
 import cn.edu.nju.TomatoMall.enums.OrderStatus;
 import cn.edu.nju.TomatoMall.models.po.Order;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.NonNull;
-import lombok.Setter;
+import lombok.Data;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@NonNull
+@Data
 public class OrderBriefResponse {
     private int orderId;
     private String orderNo;

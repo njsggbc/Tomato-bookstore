@@ -4,13 +4,16 @@ import cn.edu.nju.TomatoMall.enums.CustomerRequestOrderStatus;
 import cn.edu.nju.TomatoMall.enums.StoreRequestOrderStatus;
 import cn.edu.nju.TomatoMall.models.dto.payment.PaymentInfoResponse;
 import cn.edu.nju.TomatoMall.models.dto.order.*;
+import cn.edu.nju.TomatoMall.models.dto.shipment.*;
+
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface OrderService {
     /*---------------- 通用服务 ----------------*/
     List<CartItemInfoResponse> getCartItemList();
 
-    void addToCart(int productId, int quantity);
+    int addToCart(int productId, int quantity);
 
     void removeFromCart(int cartItemId);
 
@@ -41,4 +44,8 @@ public interface OrderService {
 
     /*---------------- 管理员服务 ----------------*/
     void terminate(int orderId);
+
+    /*---------------- 物流服务 ----------------*/
+    void updateShippingInfo(String trackingNo, ShippingUpdateRequest params);
+    void confirmDelivery(String trackingNo, DeliveryConfirmRequest params);
 }

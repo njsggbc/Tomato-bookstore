@@ -4,20 +4,19 @@ import cn.edu.nju.TomatoMall.enums.*;
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
 import cn.edu.nju.TomatoMall.models.dto.payment.PaymentInfoResponse;
 import cn.edu.nju.TomatoMall.models.dto.order.*;
+import cn.edu.nju.TomatoMall.models.dto.shipment.DeliveryConfirmRequest;
+import cn.edu.nju.TomatoMall.models.dto.shipment.ShipRequest;
+import cn.edu.nju.TomatoMall.models.dto.shipment.ShippingUpdateRequest;
 import cn.edu.nju.TomatoMall.models.vo.ApiResponse;
 import cn.edu.nju.TomatoMall.repository.PaymentRepository;
 import cn.edu.nju.TomatoMall.service.OrderService;
 import cn.edu.nju.TomatoMall.service.PaymentService;
 import cn.edu.nju.TomatoMall.util.SecurityUtil;
-import com.alipay.api.response.AlipayTradeFastpayRefundQueryResponse;
-import com.alipay.api.response.AlipayTradeQueryResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.EnumMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -68,10 +67,9 @@ public class ShoppingController {
      * @return 操作成功的空响应
      */
     @PostMapping("/cart")
-    public ApiResponse<Void> addToCart(@RequestParam int productId,
+    public ApiResponse<Integer> addToCart(@RequestParam int productId,
                                        @RequestParam int quantity) {
-        orderService.addToCart(productId, quantity);
-        return ApiResponse.success();
+        return ApiResponse.success(orderService.addToCart(productId, quantity));
     }
 
     /**
@@ -344,4 +342,39 @@ public class ShoppingController {
     public String handlePaymentNotify(HttpServletRequest request) {
         return paymentService.handlePaymentNotify(request, PaymentMethod.ALIPAY);
     }
+
+    /*------------------- 物流服务 ----------------*/
+
+    /**
+     * 更新物流信息
+     *
+     * @param trackingNo 物流单号
+     * @param params 请求参数
+     * @return 操作成功的空响应
+     */
+    @PostMapping("/shipping/{trackingNo}/update")
+    public ApiResponse<Void> updateShippingInfo(
+            @PathVariable String trackingNo,
+            @RequestBody ShippingUpdateRequest params
+    ) {
+        orderService.updateShippingInfo(trackingNo, params);
+        return ApiResponse.success();
+    }
+
+    /**
+     * 物流公司确认送达
+     *
+     * @param trackingNo 物流单号
+     * @param params 请求参数
+     * @return 操作成功的空响应
+     */
+    @PostMapping("/shipping/{trackingNo}/confirm-delivery")
+    public ApiResponse<Void> confirmDelivery(
+            @PathVariable String trackingNo,
+            @RequestBody DeliveryConfirmRequest params
+    ) {
+        orderService.confirmDelivery(trackingNo, params);
+        return ApiResponse.success();
+    }
+
 }

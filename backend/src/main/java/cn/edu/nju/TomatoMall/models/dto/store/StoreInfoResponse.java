@@ -1,13 +1,9 @@
 package cn.edu.nju.TomatoMall.models.dto.store;
 
 import cn.edu.nju.TomatoMall.models.po.Store;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.Data;
 
-@Getter
-@Setter
-@NoArgsConstructor
+@Data
 public class StoreInfoResponse {
     int id;
     String name;

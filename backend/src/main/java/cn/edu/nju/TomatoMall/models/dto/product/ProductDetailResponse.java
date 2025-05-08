@@ -2,17 +2,13 @@ package cn.edu.nju.TomatoMall.models.dto.product;
 
 import cn.edu.nju.TomatoMall.enums.InventoryStatus;
 import cn.edu.nju.TomatoMall.models.po.Product;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.Data;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
-@Getter
-@Setter
-@NoArgsConstructor
+@Data
 public class ProductDetailResponse {
 
     int id;
