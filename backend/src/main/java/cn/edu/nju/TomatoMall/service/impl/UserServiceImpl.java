@@ -240,10 +240,7 @@ public class UserServiceImpl implements UserService {
     }
 
     private void validateEmail(String email) {
-        if (email == null || email.isEmpty()) {
-            return;
-        }
-        if (!email.matches("^[\\w-\\.]+@[\\w-]+\\.[a-z]{2,4}$")) {
+        if (email == null || email.isEmpty() || !email.matches("^[\\w-\\.]+@[\\w-]+\\.[a-z]{2,4}$")) {
             throw TomatoMallException.invalidParameter("邮箱格式不正确");
         }
     }

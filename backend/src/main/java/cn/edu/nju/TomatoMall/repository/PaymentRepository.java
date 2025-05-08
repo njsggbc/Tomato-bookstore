@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,14 +17,21 @@ public interface PaymentRepository extends JpaRepository<Payment, String> {
     // For example:
     // List<Payment> findByOrderId(Long orderId);
 
+    Optional<Payment> findById(int id);
+
+    Optional<Payment> findByPaymentNo(String paymentNo);
+
     @Query("SELECT p FROM Payment p WHERE p.id = ?1 AND p.user.id = ?2")
-    Optional<Payment> findByIdAndUserId(String id, int userId);
+    Optional<Payment> findByIdAndUserId(int id, int userId);
+
+    Optional<Payment> findByPaymentNoAndUserId(String paymentNo, int userId);
 
     @Query("SELECT p FROM Payment p WHERE p.user.id = ?1 AND p.status = ?2")
     List<Payment> findByUserIdAndStatus(int userId, PaymentStatus status);
 
     List<Payment> findByStatus(PaymentStatus status);
 
-    @Query("SELECT p.paymentMethod FROM Payment p WHERE p.id = ?1")
-    PaymentMethod getPaymentMethodById(String id);
+    List<Payment> findByStatusAndPaymentMethodIsNullAndCreateTimeBefore(PaymentStatus paymentStatus, LocalDateTime timeoutThreshold);
+
+    List<Payment> findByStatusAndPaymentMethodIsNotNullAndPaymentRequestTimeBefore(PaymentStatus paymentStatus, LocalDateTime timeoutThreshold);
 }

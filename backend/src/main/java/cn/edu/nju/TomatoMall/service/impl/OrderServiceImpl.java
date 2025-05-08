@@ -4,7 +4,6 @@ import cn.edu.nju.TomatoMall.enums.*;
 import cn.edu.nju.TomatoMall.events.order.OrderCancelEvent;
 import cn.edu.nju.TomatoMall.events.order.OrderRefundSuccessEvent;
 import cn.edu.nju.TomatoMall.events.payment.PaymentCancelEvent;
-import cn.edu.nju.TomatoMall.events.payment.PaymentCreateEvent;
 import cn.edu.nju.TomatoMall.events.payment.PaymentSuccessEvent;
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
 import cn.edu.nju.TomatoMall.models.dto.payment.PaymentInfoResponse;
@@ -38,6 +37,7 @@ public class OrderServiceImpl implements OrderService {
     private final EmploymentRepository employmentRepository;
     private final InventoryService inventoryService;
     private final ApplicationEventPublisher eventPublisher;
+    private final PaymentRepository paymentRepository;
 
     @Autowired
     public OrderServiceImpl(ProductRepository productRepository,
@@ -47,8 +47,8 @@ public class OrderServiceImpl implements OrderService {
                             StoreRepository storeRepository,
                             EmploymentRepository employmentRepository,
                             InventoryService inventoryService,
-                            ApplicationEventPublisher eventPublisher
-    ) {
+                            ApplicationEventPublisher eventPublisher,
+                            PaymentRepository paymentRepository) {
         this.productRepository = productRepository;
         this.cartItemRepository = cartItemRepository;
         this.orderRepository = orderRepository;
@@ -57,6 +57,7 @@ public class OrderServiceImpl implements OrderService {
         this.employmentRepository = employmentRepository;
         this.inventoryService = inventoryService;
         this.eventPublisher = eventPublisher;
+        this.paymentRepository = paymentRepository;
     }
 
     //---------------------------
@@ -124,10 +125,9 @@ public class OrderServiceImpl implements OrderService {
                 .orders(orders)
                 .build();
 
-        // 发布支付创建事件
-        eventPublisher.publishEvent(new PaymentCreateEvent(payment));
+        paymentRepository.save(payment);
 
-        return new PaymentInfoResponse(payment);
+        return new PaymentInfoResponse(paymentRepository.findById(payment.getId()).orElseThrow(TomatoMallException::unexpectedError));
     }
 
     /**
@@ -575,7 +575,6 @@ public class OrderServiceImpl implements OrderService {
             order.getItems().forEach(item -> inventoryService.unlockStock(item.getProductId(), item.getQuantity()));
             order.setStatus(OrderStatus.CANCELLED);
             order.getLogs().add(OrderLog.builder()
-                    .operator(securityUtil.getCurrentUser())
                     .order(order)
                     .event(OrderEvent.CANCEL)
                     .afterEventStatus(OrderStatus.CANCELLED)
@@ -599,7 +598,6 @@ public class OrderServiceImpl implements OrderService {
         Order order = event.getOrder();
         order.setStatus(OrderStatus.CANCELLED);
         order.getLogs().add(OrderLog.builder()
-                .operator(securityUtil.getCurrentUser())
                 .order(order)
                 .event(OrderEvent.REFUND)
                 .afterEventStatus(OrderStatus.CANCELLED)
@@ -725,9 +723,12 @@ public class OrderServiceImpl implements OrderService {
      * @return 有效的收货地址
      */
     private String getDeliveryAddress(String paramAddress, User user) {
-        return Optional.ofNullable(paramAddress)
-                .orElse(Optional.ofNullable(user.getAddress())
-                        .orElseThrow(TomatoMallException::noValidAddress));
+        if (paramAddress == null || paramAddress.isEmpty()) {
+            return Optional.ofNullable(user.getAddress())
+                    .orElseThrow(TomatoMallException::noValidAddress);
+        }
+
+        return paramAddress;
     }
 
     /**
@@ -738,9 +739,10 @@ public class OrderServiceImpl implements OrderService {
      * @return 有效的收货人姓名
      */
     private String getRecipientName(String paramName, User user) {
-        return Optional.ofNullable(paramName)
-                .orElse(Optional.ofNullable(user.getName())
-                        .orElseGet(user::getUsername));
+        if (paramName == null || paramName.isEmpty()) {
+            return user.getUsername();
+        }
+        return paramName;
     }
 
     /**
@@ -751,8 +753,10 @@ public class OrderServiceImpl implements OrderService {
      * @return 有效的收货人电话
      */
     private String getRecipientPhone(String paramPhone, User user) {
-        return Optional.ofNullable(paramPhone)
-                .orElseGet(user::getPhone);
+        if (paramPhone == null || paramPhone.isEmpty()) {
+            return user.getPhone();
+        }
+        return paramPhone;
     }
 
     /**

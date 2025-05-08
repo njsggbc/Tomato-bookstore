@@ -277,15 +277,16 @@ public class ShoppingController {
      *
      * @param paymentId 支付单ID
      * @param paymentMethod 支付方式
-     * @return 支付URL或支付页面内容
+     * @return 支付URL
      * @throws TomatoMallException 当支付参数无效时抛出异常
      */
     @PostMapping("/payment/{paymentId}/pay")
     public ApiResponse<String> pay(
-            @PathVariable String paymentId,
+            @PathVariable int paymentId,
             @RequestParam PaymentMethod paymentMethod
     ) {
-        return ApiResponse.success(paymentService.pay(paymentId, paymentMethod));
+        String paymentUrl = paymentService.pay(paymentId, paymentMethod);
+        return ApiResponse.success(paymentUrl);
     }
 
     /**
@@ -297,7 +298,7 @@ public class ShoppingController {
      */
     @PostMapping("/payment/{paymentId}/cancel")
     public ApiResponse<Void> cancelPayment(
-            @PathVariable String paymentId
+            @PathVariable int paymentId
     ) {
         paymentService.cancel(paymentId);
         return ApiResponse.success();
@@ -306,31 +307,31 @@ public class ShoppingController {
     /**
      * 查询交易状态
      *
-     * @param paymentId 支付单ID
+     * @param paymentNo 支付单号
      * @return 支付宝交易查询响应
      * @throws TomatoMallException 当支付参数无效时抛出异常
      */
-    @GetMapping("/payment/{paymentId}/trade-status")
+    @GetMapping("/payment/trade-status")
     public ApiResponse<Object> getTradeStatus(
-            @PathVariable String paymentId
+            @RequestParam String paymentNo
     ) {
-        return ApiResponse.success(paymentService.queryTradeStatus(paymentId));
+        return ApiResponse.success(paymentService.queryTradeStatus(paymentNo));
     }
 
     /**
      * 查询退款状态
      *
-     * @param paymentId 支付单ID
+     * @param paymentNo 支付单号
      * @param orderNo 订单编号
      * @return 支付宝退款查询响应
      * @throws TomatoMallException 当支付参数无效时抛出异常
      */
-    @GetMapping("/payment/{paymentId}/refund-status")
+    @GetMapping("/payment/refund-status")
     public ApiResponse<Object> getRefundStatus(
-            @PathVariable String paymentId,
+            @RequestParam String paymentNo,
             @RequestParam String orderNo
     ) {
-        return ApiResponse.success(paymentService.queryRefundStatus(paymentId, orderNo));
+        return ApiResponse.success(paymentService.queryRefundStatus(paymentNo, orderNo));
     }
 
     /**

@@ -14,9 +14,9 @@ import java.math.BigDecimal;
 
 @Service
 public interface PaymentService {
-    String pay(String paymentId, PaymentMethod paymentMethod);
-    void cancel(String paymentId);
+    String pay(int paymentId, PaymentMethod paymentMethod);
+    void cancel(int paymentId);
     String handlePaymentNotify(HttpServletRequest request, PaymentMethod paymentMethod);
-    Object queryTradeStatus(String paymentId);
-    Object queryRefundStatus(String paymentId, String orderNo);
+    Object queryTradeStatus(String paymentNo);
+    Object queryRefundStatus(String paymentNo, String orderNo);
 }

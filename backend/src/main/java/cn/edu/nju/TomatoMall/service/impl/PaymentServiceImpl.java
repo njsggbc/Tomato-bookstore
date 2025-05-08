@@ -4,7 +4,6 @@ import cn.edu.nju.TomatoMall.enums.PaymentMethod;
 import cn.edu.nju.TomatoMall.enums.PaymentStatus;
 import cn.edu.nju.TomatoMall.events.order.OrderCancelEvent;
 import cn.edu.nju.TomatoMall.events.payment.PaymentCancelEvent;
-import cn.edu.nju.TomatoMall.events.payment.PaymentCreateEvent;
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
 import cn.edu.nju.TomatoMall.models.po.Order;
 import cn.edu.nju.TomatoMall.models.po.Payment;
@@ -14,11 +13,13 @@ import cn.edu.nju.TomatoMall.util.SecurityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -26,15 +27,16 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 @Service
 public abstract class PaymentServiceImpl implements PaymentService {
     // 支付超时时间，单位分钟
-    protected static final String PAYMENT_TIMEOUT = "5m";
+    protected static final int PAYMENT_TIMEOUT = 5;
 
     protected final PaymentRepository paymentRepository;
     protected final ApplicationEventPublisher eventPublisher;
@@ -47,37 +49,76 @@ public abstract class PaymentServiceImpl implements PaymentService {
         this.securityUtil = securityUtil;
     }
 
-    private final Map<PaymentMethod, PaymentServiceImpl> PAYMENT_STRATEGY = new HashMap<>();
+    // 使用单线程的定时执行器服务
+    private ScheduledExecutorService scheduler;
 
+    // 存储支付ID和对应的超时任务
+    private final Map<Integer, ScheduledFuture<?>> paymentTimeoutTasks = new ConcurrentHashMap<>();
+
+    // 用于处理事务的模板
     @Autowired
-    public void setPaymentStrategy(List<PaymentServiceImpl> paymentStrategy) {
-        for (PaymentServiceImpl strategy : paymentStrategy) {
-            PAYMENT_STRATEGY.put(strategy.getPaymentMethod(), strategy);
+    private TransactionTemplate transactionTemplate;
+
+    @PostConstruct
+    public void init() {
+        // 创建单线程调度器，用于处理支付超时任务
+        scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread thread = new Thread(r, "payment-timeout-thread");
+            thread.setDaemon(true); // 设置为守护线程，不阻止JVM退出
+            return thread;
+        });
+    }
+
+    @PreDestroy
+    public void cleanup() {
+        // 应用关闭时，关闭调度器
+        if (scheduler != null && !scheduler.isShutdown()) {
+            scheduler.shutdown();
+            try {
+                // 等待当前任务完成
+                if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+                    scheduler.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                scheduler.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
         }
     }
 
-    // 定时任务锁
-    private final Map<String, Lock> paymentLocks = new HashMap<>();
+    private final Map<PaymentMethod, PaymentServiceImpl> PAYMENT_STRATEGY = new HashMap<>();
+
+    @Autowired
+    public void setPaymentStrategy(
+            AlipayServiceImpl alipayServiceImpl
+    ) {
+        PAYMENT_STRATEGY.put(PaymentMethod.ALIPAY, alipayServiceImpl);
+    }
 
     // ====================================================================================
     // 接口方法实现
     // ====================================================================================
 
-
     @Override
-    public String pay(String paymentId, PaymentMethod paymentMethod) {
-       PaymentServiceImpl paymentStrategy = PAYMENT_STRATEGY.get(paymentMethod);
-       if (paymentStrategy == null) {
-           throw TomatoMallException.paymentFail("不支持的支付方式");
-       }
+    @Transactional
+    public String pay(int paymentId, PaymentMethod paymentMethod) {
+        PaymentServiceImpl paymentStrategy = PAYMENT_STRATEGY.get(paymentMethod);
+        if (paymentStrategy == null) {
+            throw TomatoMallException.paymentFail("不支持的支付方式");
+        }
 
-       Payment payment = paymentRepository.findByIdAndUserId(paymentId, securityUtil.getCurrentUser().getId())
-               .orElseThrow(TomatoMallException::paymentNotFound);
-       validatePayment(payment);
-       payment.setPaymentMethod(paymentMethod);
-       payment.setPaymentRequestTime(LocalDateTime.now());
+        Payment payment = paymentRepository.findByIdAndUserId(paymentId, securityUtil.getCurrentUser().getId())
+                .orElseThrow(TomatoMallException::paymentNotFound);
+        validatePayment(payment);
+        // 如果已有支付，先关闭交易
+        if (payment.getPaymentNo() != null) {
+            paymentStrategy.closeTrade(payment);
+        }
+        payment.setPaymentNo(String.valueOf(System.currentTimeMillis())); // 生成新的支付单号
+        payment.setPaymentMethod(paymentMethod);
+        payment.setPaymentRequestTime(LocalDateTime.now());
 
-       return paymentStrategy.createTrade(payment);
+        return paymentStrategy.createTrade(payment);
     }
 
     /**
@@ -86,7 +127,7 @@ public abstract class PaymentServiceImpl implements PaymentService {
      */
     @Override
     @Transactional
-    public void cancel(String paymentId) {
+    public void cancel(int paymentId) {
         // 获取支付信息
         Payment payment = paymentRepository.findByIdAndUserId(paymentId, securityUtil.getCurrentUser().getId())
                 .orElseThrow(TomatoMallException::paymentNotFound);
@@ -104,6 +145,7 @@ public abstract class PaymentServiceImpl implements PaymentService {
             }
             // 更新支付状态为已取消
             payment.setStatus(PaymentStatus.CANCELLED);
+            payment.setPaymentNo(null);
             paymentRepository.save(payment);
             // 通知所有关联订单支付取消
             eventPublisher.publishEvent(new PaymentCancelEvent(payment, "支付取消"));
@@ -113,39 +155,31 @@ public abstract class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
+    @Transactional
     public String handlePaymentNotify(HttpServletRequest request, PaymentMethod paymentMethod) {
         return PAYMENT_STRATEGY.get(paymentMethod).processNotify(request);
     }
 
     @Override
-    public Object queryTradeStatus(String paymentId) {
-        Payment payment = paymentRepository.findByIdAndUserId(paymentId, securityUtil.getCurrentUser().getId())
+    @Transactional(readOnly = true)
+    public Object queryTradeStatus(String paymentNo) {
+        Payment payment = paymentRepository.findByPaymentNoAndUserId(paymentNo, securityUtil.getCurrentUser().getId())
                 .orElseThrow(TomatoMallException::paymentNotFound);
-        return PAYMENT_STRATEGY.get(payment.getPaymentMethod()).processQueryTrade(paymentId);
+        return PAYMENT_STRATEGY.get(payment.getPaymentMethod()).processQueryTrade(paymentNo);
     }
 
     @Override
-    public Object queryRefundStatus(String paymentId, String orderNo) {
-        Payment payment = paymentRepository.findByIdAndUserId(paymentId, securityUtil.getCurrentUser().getId())
+    @Transactional(readOnly = true)
+    public Object queryRefundStatus(String paymentNo, String orderNo) {
+        Payment payment = paymentRepository.findByPaymentNoAndUserId(paymentNo, securityUtil.getCurrentUser().getId())
                 .orElseThrow(TomatoMallException::paymentNotFound);
 
-        return PAYMENT_STRATEGY.get(payment.getPaymentMethod()).processQueryRefund(paymentId, orderNo);
+        return PAYMENT_STRATEGY.get(payment.getPaymentMethod()).processQueryRefund(paymentNo, orderNo);
     }
 
     // ====================================================================================
     // 事件监听处理
     // ====================================================================================
-
-    /**
-     * 处理支付创建事件
-     * @param event 支付创建事件
-     */
-    @EventListener
-    @Transactional
-    public void handlePaymentCreate(PaymentCreateEvent event) {
-        paymentRepository.save(event.getPayment());
-        schedulePaymentTimeout(event.getPayment());
-    }
 
     /**
      * 处理订单退款事件
@@ -166,72 +200,86 @@ public abstract class PaymentServiceImpl implements PaymentService {
     // ====================================================================================
 
     /**
-     * 安排支付超时处理
-     * 异步执行，在指定时间后检查支付状态
-     * @param payment 支付对象
+     * 定时任务：检查支付超时订单
      */
-    @Async
-    public void schedulePaymentTimeout(Payment payment) {
-        // 移除之前的超时处理任务
-        removeSchedulePaymentTimeout(payment);
+    @Transactional
+    @Scheduled(fixedRate = 60000) // 每5分钟执行一次
+    public void checkTimeoutPayments() {
+        LocalDateTime timeoutThreshold = LocalDateTime.now().minusMinutes(PAYMENT_TIMEOUT);
 
-        CompletableFuture.runAsync(() -> {
+        // 查找未发起过支付且创建时间超过阈值的待支付订单
+        List<Payment> noMethodTimeoutPayments = paymentRepository.findByStatusAndPaymentMethodIsNullAndCreateTimeBefore(
+                PaymentStatus.PENDING, timeoutThreshold);
+
+        // 查找已发起过支付但处理时间超过阈值的待支付订单
+        List<Payment> methodTimeoutPayments = paymentRepository.findByStatusAndPaymentMethodIsNotNullAndPaymentRequestTimeBefore(
+                PaymentStatus.PENDING, timeoutThreshold);
+
+        for (Payment payment : noMethodTimeoutPayments) {
             try {
-                // 5分钟后检查支付状态
-                TimeUnit.MINUTES.sleep(5);
-                // 获取锁，确保并发安全
-                Lock lock = paymentLocks.computeIfAbsent(payment.getId(), k -> new ReentrantLock());
-                lock.lock();
-
-                try {
-                    // 检查支付是否仍处于等待状态
-                    if (payment.getStatus() == PaymentStatus.PENDING) {
-                        PAYMENT_STRATEGY.get(payment.getPaymentMethod()).processTimeOut(payment);
-                    }
-                } finally {
-                    // 释放锁
-                    lock.unlock();
-                    paymentLocks.remove(payment.getId());
-                }
+                // 移除已存在的超时任务（如果有）
+                removeSchedulePaymentTimeout(payment);
+                // 更新支付状态为超时
+                payment.setStatus(PaymentStatus.TIMEOUT);
+                paymentRepository.save(payment);
+                // 通知所有关联订单支付取消
+                eventPublisher.publishEvent(new PaymentCancelEvent(payment, "支付超时"));
             } catch (Exception e) {
+                // 记录异常，但继续处理下一个支付
                 e.printStackTrace();
             }
-        });
+        }
+
+        for (Payment payment : methodTimeoutPayments) {
+            try {
+                // 移除已存在的超时任务（如果有）
+                removeSchedulePaymentTimeout(payment);
+                // 支付超时处理
+                PAYMENT_STRATEGY.get(payment.getPaymentMethod()).processTimeout(payment);
+            } catch (Exception e) {
+                // 记录异常，但继续处理下一个支付
+                e.printStackTrace();
+            }
+        }
     }
 
     /**
-     * 定时检查支付超时
-     * 每5分钟执行一次，检查所有等待状态的支付
+     * 安排支付超时处理
+     * @param payment 支付对象
      */
-    @Scheduled(fixedRate = 300000)
-    public void checkPaymentTimeout() {
-        // 获取所有等待状态的支付
-        paymentRepository.findByStatus(PaymentStatus.PENDING).forEach(payment -> {
-            // 尝试获取锁，避免与其他任务冲突
-            Lock lock = paymentLocks.computeIfAbsent(payment.getId(), k -> new ReentrantLock());
-            if (lock.tryLock()) {
-                try {
-                    // 重新获取支付信息，确保数据最新
-                    Payment refreshedPayment = paymentRepository.findById(payment.getId())
-                            .orElse(null);
-                    if (refreshedPayment == null) {
-                        return;
+    public void schedulePaymentTimeout(Payment payment) {
+        if (payment == null || scheduler.isShutdown()) {
+            return;
+        }
+
+        // 如果已经存在超时任务，先移除
+        removeSchedulePaymentTimeout(payment);
+
+        // 创建一个新的超时任务
+        ScheduledFuture<?> task = scheduler.schedule(
+                () -> {
+                    try {
+                        // 使用事务模板在新事务中执行超时处理
+                        transactionTemplate.execute(status -> {
+                            // 从数据库获取最新的支付信息
+                            Payment freshPayment = paymentRepository.findById(payment.getId()).orElse(null);
+                            handleTimeout(freshPayment);
+                            return null;
+                        });
+                    } catch (Exception e) {
+                        // 记录错误，但不影响其他任务执行
+                        e.printStackTrace();
+                    } finally {
+                        // 无论成功失败，都从任务映射中移除
+                        paymentTimeoutTasks.remove(payment.getId());
                     }
-                    // 检查是否超时(创建时间+5分钟或支付请求时间+5分钟)
-                    if ((refreshedPayment.getPaymentMethod() == null &&
-                            refreshedPayment.getCreateTime().plusMinutes(5).isBefore(LocalDateTime.now())) ||
-                            (refreshedPayment.getStatus() == PaymentStatus.PENDING &&
-                                    refreshedPayment.getPaymentRequestTime().plusMinutes(5).isBefore(LocalDateTime.now()))
-                    ) {
-                        PAYMENT_STRATEGY.get(refreshedPayment.getPaymentMethod()).processTimeOut(payment);
-                    }
-                } finally {
-                    // 释放锁
-                    lock.unlock();
-                    paymentLocks.remove(payment.getId());
-                }
-            }
-        });
+                },
+                PAYMENT_TIMEOUT,
+                TimeUnit.MINUTES
+        );
+
+        // 存储任务以便后续可以取消
+        paymentTimeoutTasks.put(payment.getId(), task);
     }
 
     /**
@@ -239,12 +287,32 @@ public abstract class PaymentServiceImpl implements PaymentService {
      * @param payment 支付对象
      */
     public void removeSchedulePaymentTimeout(Payment payment) {
-        Lock existingLock = paymentLocks.remove(payment.getId());
-        if (existingLock instanceof ReentrantLock) {
-            ReentrantLock reentrantLock = (ReentrantLock) existingLock;
-            // 如果锁被当前线程持有，则释放它
-            if (reentrantLock.isHeldByCurrentThread()) {
-                reentrantLock.unlock();
+        if (payment == null) {
+            return;
+        }
+
+        // 获取并取消超时任务
+        ScheduledFuture<?> task = paymentTimeoutTasks.remove(payment.getId());
+        if (task != null && !task.isDone() && !task.isCancelled()) {
+            task.cancel(false); // 不中断正在执行的任务
+        }
+    }
+
+
+    /**
+     * 处理超时支付状态
+     */
+    @Transactional
+    public void handleTimeout(Payment payment) {
+        if (payment != null && payment.getStatus() == PaymentStatus.PENDING) {
+            if (payment.getPaymentMethod() != null) {
+                PAYMENT_STRATEGY.get(payment.getPaymentMethod()).processTimeout(payment);
+            } else {
+                // 如果没有支付方式，直接更新支付状态为超时
+                payment.setStatus(PaymentStatus.TIMEOUT);
+                paymentRepository.save(payment);
+                // 通知所有关联订单支付取消
+                eventPublisher.publishEvent(new PaymentCancelEvent(payment, "支付超时"));
             }
         }
     }
@@ -265,7 +333,8 @@ public abstract class PaymentServiceImpl implements PaymentService {
                 .setScale(2, RoundingMode.HALF_UP);
 
         // 比较支付金额与订单总金额
-        if (payment.getAmount().compareTo(totalAmount) != 0) {
+        BigDecimal diff = payment.getAmount().subtract(totalAmount).abs();
+        if (diff.compareTo(new BigDecimal("0.01")) > 0) {
             throw TomatoMallException.paymentFail("金额校验失败");
         }
     }
@@ -297,10 +366,9 @@ public abstract class PaymentServiceImpl implements PaymentService {
 
     public abstract void processRefund(Order order, BigDecimal amount, String reason);
 
-    public abstract void processTimeOut(Payment payment);
+    public abstract void processTimeout(Payment payment);
 
-    public abstract Object processQueryTrade(String paymentId);
+    public abstract Object processQueryTrade(String paymentNo);
 
-    public abstract Object processQueryRefund(String paymentId, String orderNo);
-
+    public abstract Object processQueryRefund(String paymentNo, String orderNo);
 }

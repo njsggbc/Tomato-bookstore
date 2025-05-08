@@ -38,7 +38,7 @@ public class OrderLog {
     private String message;
 
     @ManyToOne
-    @JoinColumn(name = "operator_id", nullable = false)
+    @JoinColumn(name = "operator_id")
     private User operator;
 
     @Column(nullable = false)

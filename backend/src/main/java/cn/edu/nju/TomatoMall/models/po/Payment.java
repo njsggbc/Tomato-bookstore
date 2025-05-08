@@ -19,8 +19,11 @@ import java.util.List;
 @Table(name = "payment")
 public class Payment {
     @Id
-    @Builder.Default
-    String id = String.valueOf(System.currentTimeMillis());
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    int id;
+
+    @Column(unique = true)
+    private String paymentNo;
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)

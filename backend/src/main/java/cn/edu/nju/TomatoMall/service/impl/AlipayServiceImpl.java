@@ -3,29 +3,22 @@ package cn.edu.nju.TomatoMall.service.impl;
 import cn.edu.nju.TomatoMall.configure.AlipayConfig;
 import cn.edu.nju.TomatoMall.enums.PaymentMethod;
 import cn.edu.nju.TomatoMall.enums.PaymentStatus;
-import cn.edu.nju.TomatoMall.events.order.OrderCancelEvent;
 import cn.edu.nju.TomatoMall.events.order.OrderRefundSuccessEvent;
 import cn.edu.nju.TomatoMall.events.payment.PaymentCancelEvent;
-import cn.edu.nju.TomatoMall.events.payment.PaymentCreateEvent;
 import cn.edu.nju.TomatoMall.events.payment.PaymentSuccessEvent;
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
 import cn.edu.nju.TomatoMall.models.po.Order;
 import cn.edu.nju.TomatoMall.models.po.Payment;
 import cn.edu.nju.TomatoMall.repository.PaymentRepository;
-import cn.edu.nju.TomatoMall.service.PaymentService;
 import cn.edu.nju.TomatoMall.util.SecurityUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.alipay.api.AlipayApiException;
 import com.alipay.api.AlipayClient;
-import com.alipay.api.internal.util.AlipaySignature;
 import com.alipay.api.request.*;
 import com.alipay.api.response.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,10 +29,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 /**
@@ -91,11 +81,6 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
         return PaymentMethod.ALIPAY;
     }
 
-    /**
-     * 执行支付操作
-     * @param payment
-     * @return 返回支付宝支付表单HTML字符串
-     */
     @Override
     @Transactional
     public String createTrade(Payment payment) {
@@ -109,10 +94,17 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
 
             // 构建支付业务参数
             JSONObject bizContent = buildPaymentBizContent(payment);
+            log.debug("支付请求业务参数: {}", bizContent.toString());
             request.setBizContent(bizContent.toString());
 
+            // 如果配置了加密密钥，设置加密相关参数
+            if (config.getEncryptKey() != null && !config.getEncryptKey().isEmpty()) {
+                request.setNeedEncrypt(true);  // 设置需要加密
+                // TODO
+            }
+
             // 执行API调用
-            AlipayTradePagePayResponse response = alipayClient.pageExecute(request);
+            AlipayTradePagePayResponse response = alipayClient.pageExecute(request, "GET");
             if (response.isSuccess()) {
                 // 支付请求成功，设置支付方式和请求时间
                 payment.setPaymentMethod(PaymentMethod.ALIPAY);
@@ -120,9 +112,11 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
                 paymentRepository.save(payment);
                 // 安排支付超时处理
                 schedulePaymentTimeout(payment);
+                log.debug("支付请求成功，返回URL: {}", response.getBody());
                 return response.getBody();
             }
             // 支付请求失败
+            log.error("支付请求失败: {}", response.getSubMsg());
             throw TomatoMallException.paymentFail(response.getSubMsg());
         } catch (AlipayApiException e) {
             log.error("支付宝API调用错误", e);
@@ -131,7 +125,6 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
     }
 
     /**
-     *
      * @param payment
      */
     @Override
@@ -139,8 +132,15 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
     public void closeTrade(Payment payment) {
         try {
             AlipayTradeCloseRequest request = new AlipayTradeCloseRequest();
-            request.setBizContent(new JSONObject().fluentPut("out_trade_no", payment.getId()).toString());
-            alipayClient.execute(request);
+            request.setBizContent(new JSONObject().fluentPut("out_trade_no", payment.getPaymentNo()).toString());
+
+            // 如果配置了加密密钥，设置加密相关参数
+            if (config.getEncryptKey() != null && !config.getEncryptKey().isEmpty()) {
+                request.setNeedEncrypt(true);
+                // TODO
+            }
+
+            alipayClient.certificateExecute(request);
         } catch (AlipayApiException e) {
             log.error("关闭交易失败", e);
         }
@@ -157,11 +157,19 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
         // 转换请求参数为Map
         Map<String, String> params = convertParams(request);
         try {
-            // 验证签名
-            verifySignature(params);
+            log.info("接收到支付宝异步通知");
+
+            // 使用配置类中的方法验证签名
+            if (!config.verifySignature(params)) {
+                log.error("签名验证失败: {}", params);
+                throw TomatoMallException.paymentFail("签名验证失败");
+            }
+            log.info("签名验证成功");
+
             // 获取交易状态和订单号
             String tradeStatus = params.get("trade_status");
             String outTradeNo = params.get("out_trade_no");
+            log.info("交易状态: {}, 商户订单号: {}", tradeStatus, outTradeNo);
 
             // 根据交易状态处理
             switch (tradeStatus) {
@@ -185,7 +193,8 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
 
     /**
      * 执行退款请求
-     * @param order 订单对象
+     *
+     * @param order  订单对象
      * @param amount 退款金额
      * @param reason 退款原因
      */
@@ -198,7 +207,14 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
             AlipayTradeRefundRequest request = new AlipayTradeRefundRequest();
             // 构建退款业务参数
             request.setBizContent(buildRefundContent(order, amount, reason).toString());
-            response = alipayClient.execute(request);
+
+            // 如果配置了加密密钥，设置加密相关参数
+            if (config.getEncryptKey() != null && !config.getEncryptKey().isEmpty()) {
+                request.setNeedEncrypt(true);
+                // TODO
+            }
+
+            response = alipayClient.certificateExecute(request);
         } catch (AlipayApiException e) {
             log.error("退款请求失败", e);
             throw TomatoMallException.refundFail(e.getMessage());
@@ -219,7 +235,14 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
                         TimeUnit.MILLISECONDS.sleep(RETRY_DELAY_MS * (i + 1));
                         // 构建重试请求
                         AlipayTradeRefundRequest retryRequest = buildRetryRequest(order, response);
-                        AlipayTradeRefundResponse retryResponse = alipayClient.execute(retryRequest);
+
+                        // 如果配置了加密密钥，设置加密相关参数
+                        if (config.getEncryptKey() != null && !config.getEncryptKey().isEmpty()) {
+                            retryRequest.setNeedEncrypt(true);
+                            // TODO
+                        }
+
+                        AlipayTradeRefundResponse retryResponse = alipayClient.certificateExecute(retryRequest);
                         if (retryResponse.isSuccess()) return;
                     } catch (Exception e) {
                         log.error("退款重试失败", e);
@@ -233,45 +256,44 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
 
     /**
      * 处理支付超时
+     *
      * @param payment 支付对象
      */
     @Override
     @Transactional
-    public void processTimeOut(Payment payment) {
-        // 还没有发起支付，直接更新状态为超时
-        if (payment.getPaymentMethod() == null) {
-            // 更新支付状态为超时
-            payment.setStatus(PaymentStatus.TIMEOUT);
-            paymentRepository.save(payment);
-            // 通知所有关联订单支付取消
-            eventPublisher.publishEvent(new PaymentCancelEvent(payment, "支付超时"));
-            return;
-        }
+    public void processTimeout(Payment payment) {
         // 查询交易状态
-        AlipayTradeQueryResponse response = (AlipayTradeQueryResponse) queryTradeStatus(payment.getId());
+        AlipayTradeQueryResponse response = processQueryTrade(payment.getPaymentNo());
         if (!isTradeSuccess(response)) {
             // 交易未成功，关闭交易
             closeTrade(payment);
-            // 更新支付状态为超时
+            // 更新支付状态为失败
             payment.setStatus(PaymentStatus.TIMEOUT);
             paymentRepository.save(payment);
-            // 通知所有关联订单支付取消
+            // 通知所有关联订单支付失败
             eventPublisher.publishEvent(new PaymentCancelEvent(payment, "支付超时"));
         }
     }
 
     /**
      * 查询交易状态
-     * @param paymentId 支付ID
+     * @param paymentNo 支付号
      * @return 支付宝交易查询响应
      */
     @Override
     @Transactional(readOnly = true)
-    public AlipayTradeQueryResponse processQueryTrade(String paymentId) {
+    public AlipayTradeQueryResponse processQueryTrade(String paymentNo) {
         try {
             AlipayTradeQueryRequest request = new AlipayTradeQueryRequest();
-            request.setBizContent(new JSONObject().fluentPut("out_trade_no", paymentId).toString());
-            return alipayClient.execute(request);
+            request.setBizContent(new JSONObject().fluentPut("out_trade_no", paymentNo).toString());
+
+            // 如果配置了加密密钥，设置加密相关参数
+            if (config.getEncryptKey() != null && !config.getEncryptKey().isEmpty()) {
+                request.setNeedEncrypt(true);
+                // TODO
+            }
+
+            return alipayClient.certificateExecute(request);
         } catch (AlipayApiException e) {
             throw TomatoMallException.operationFail("查询失败：" + e.getMessage());
         }
@@ -279,20 +301,27 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
 
     /**
      * 查询退款状态
-     * @param paymentId 支付ID
+     * @param paymentNo 支付号
      * @param orderNo 订单号
      * @return 支付宝退款查询响应
      */
     @Override
     @Transactional(readOnly = true)
-    public AlipayTradeFastpayRefundQueryResponse processQueryRefund(String paymentId, String orderNo) {
+    public AlipayTradeFastpayRefundQueryResponse processQueryRefund(String paymentNo, String orderNo) {
         try {
             AlipayTradeFastpayRefundQueryRequest request = new AlipayTradeFastpayRefundQueryRequest();
             JSONObject content = new JSONObject()
-                    .fluentPut("out_trade_no", paymentId)
+                    .fluentPut("out_trade_no", paymentNo)
                     .fluentPut("out_request_no", orderNo);
             request.setBizContent(content.toString());
-            return alipayClient.execute(request);
+
+            // 如果配置了加密密钥，设置加密相关参数
+            if (config.getEncryptKey() != null && !config.getEncryptKey().isEmpty()) {
+                request.setNeedEncrypt(true);
+                // TODO
+            }
+
+            return alipayClient.certificateExecute(request);
         } catch (AlipayApiException e) {
             throw TomatoMallException.operationFail("查询失败：" + e.getMessage());
         }
@@ -303,47 +332,15 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
     // ====================================================================================
 
     /**
-     * 构建支付宝支付请求业务参数
-     * @param payment 支付对象
-     * @return 业务参数JSON对象
-     */
-    private JSONObject buildPaymentBizContent(Payment payment) {
-        JSONObject content = new JSONObject();
-        // 商户订单号，即支付ID
-        content.put("out_trade_no", payment.getId());
-        // 订单总金额，保留两位小数
-        content.put("total_amount", payment.getAmount().setScale(2, RoundingMode.HALF_UP));
-        // 订单标题
-        content.put("subject", truncateSubject(payment.getOrders()));
-        // 产品码，固定值
-        content.put("product_code", "FAST_INSTANT_TRADE_PAY");
-        // 支付超时时间
-        content.put("timeout_express", PAYMENT_TIMEOUT);
-        return content;
-    }
-
-    /**
-     * 截断订单主题，确保不超过支付宝限制长度
-     * @param orders 订单列表
-     * @return 截断后的订单主题
-     */
-    private String truncateSubject(List<Order> orders) {
-        String subject = orders.stream()
-                .map(o -> "订单" + o.getOrderNo())
-                .collect(Collectors.joining(","));
-        // 支付宝限制主题长度为128个字符，超出则截断
-        return subject.length() > 128 ? subject.substring(0, 125) + "..." : subject;
-    }
-
-    /**
      * 处理支付成功的通知
      * @param params 通知参数
      * @return 处理结果
      */
-    private String handleSuccessfulPayment(Map<String, String> params) {
+    @Transactional
+    public String handleSuccessfulPayment(Map<String, String> params) {
         String outTradeNo = params.get("out_trade_no");
         // 获取支付信息
-        Payment payment = paymentRepository.findById(outTradeNo)
+        Payment payment = paymentRepository.findByPaymentNo(outTradeNo)
                 .orElseThrow(TomatoMallException::paymentNotFound);
 
         // 移除支付超时处理任务
@@ -358,7 +355,6 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
         BigDecimal receivedAmount = new BigDecimal(params.get("total_amount"))
                 .setScale(2, RoundingMode.HALF_UP);
         if (payment.getAmount().compareTo(receivedAmount) != 0) {
-            log.error("金额不一致: 本地={} 实际={}", payment.getAmount(), receivedAmount);
             payment.setStatus(PaymentStatus.FAILED);
             paymentRepository.save(payment);
             return "fail";
@@ -383,8 +379,9 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
      * @param outTradeNo 商户订单号
      * @return 处理结果
      */
-    private String handleClosedPayment(String outTradeNo) {
-        paymentRepository.findById(outTradeNo).ifPresent(payment -> {
+    @Transactional
+    public String handleClosedPayment(String outTradeNo) {
+        paymentRepository.findByPaymentNo(outTradeNo).ifPresent(payment -> {
             // 移除支付超时处理任务
             removeSchedulePaymentTimeout(payment);
             // 更新支付状态为失败
@@ -394,6 +391,47 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
             eventPublisher.publishEvent(new PaymentCancelEvent(payment, "交易关闭"));
         });
         return "success";
+    }
+
+
+    /**
+     * 构建支付宝支付请求业务参数
+     * @param payment 支付对象
+     * @return 业务参数JSON对象
+     */
+    private JSONObject buildPaymentBizContent(Payment payment) {
+        JSONObject content = new JSONObject();
+        // 商户订单号
+        content.put("out_trade_no", payment.getPaymentNo());
+        // 订单总金额，保留两位小数
+        content.put("total_amount", payment.getAmount().setScale(2, RoundingMode.HALF_UP).toString());
+        // 订单标题
+        content.put("subject", truncateSubject(payment.getOrders()));
+        // 产品码，固定值
+        content.put("product_code", "FAST_INSTANT_TRADE_PAY");
+        // 支付超时时间（分钟）
+        content.put("timeout_express", PAYMENT_TIMEOUT + "m");
+
+        // 记录关键参数用于调试
+        log.debug("支付请求业务参数: out_trade_no={}, total_amount={}, subject={}",
+                payment.getPaymentNo(),
+                payment.getAmount().setScale(2, RoundingMode.HALF_UP).toString(),
+                truncateSubject(payment.getOrders()));
+
+        return content;
+    }
+
+    /**
+     * 截断订单主题，确保不超过支付宝限制长度
+     * @param orders 订单列表
+     * @return 截断后的订单主题
+     */
+    private String truncateSubject(List<Order> orders) {
+        String subject = orders.stream()
+                .map(o -> "订单" + o.getOrderNo())
+                .collect(Collectors.joining(","));
+        // 支付宝限制主题长度为128个字符，超出则截断
+        return subject.length() > 128 ? subject.substring(0, 125) + "..." : subject;
     }
 
     // ====================================================================================
@@ -407,27 +445,16 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
      */
     private Map<String, String> convertParams(HttpServletRequest request) {
         Map<String, String> params = new HashMap<>();
-        request.getParameterMap().forEach((key, values) ->
-                params.put(key, String.join(",", values))
-        );
+        request.getParameterMap().forEach((key, values) -> {
+            String value = String.join(",", values);
+            params.put(key, value);
+        });
+
+        // 记录全部参数，便于调试
+        log.debug("收到支付宝回调参数: {}", params);
+
         return params;
     }
-
-    /**
-     * 验证支付宝通知签名
-     * @param params 通知参数
-     * @throws AlipayApiException 签名验证失败时抛出异常
-     */
-    private void verifySignature(Map<String, String> params) throws AlipayApiException {
-        boolean valid = AlipaySignature.rsaCheckV1(
-                params,
-                config.getAlipayPublicKey(),
-                config.getCharset(),
-                config.getSignType()
-        );
-        if (!valid) throw TomatoMallException.paymentFail("签名验证失败");
-    }
-
     /**
      * 判断交易是否成功
      * @param response 交易查询响应
@@ -453,7 +480,7 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
     private JSONObject buildRefundContent(Order order, BigDecimal amount, String reason) {
         JSONObject content = new JSONObject();
         // 商户订单号
-        content.put("out_trade_no", order.getPayment().getId());
+        content.put("out_trade_no", order.getPayment().getPaymentNo());
         // 支付宝交易号
         content.put("trade_no", order.getPayment().getTradeNo());
         // 退款金额
@@ -474,7 +501,7 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
     private AlipayTradeRefundRequest buildRetryRequest(Order order, AlipayTradeRefundResponse response) {
         AlipayTradeRefundRequest request = new AlipayTradeRefundRequest();
         JSONObject content = new JSONObject();
-        content.put("out_trade_no", order.getPayment().getId());
+        content.put("out_trade_no", order.getPayment().getPaymentNo());
         content.put("trade_no", order.getPayment().getTradeNo());
         content.put("refund_amount", response.getRefundFee());
         content.put("out_request_no", order.getOrderNo());

@@ -47,8 +47,9 @@ public class CustomerOrderInfoResponse {
     private List<ShippingInfoResponse> shippingInfo;
 
     private String remark;
-    private String paymentId; // 支付单号，对应于购物平台的合并支付单号
+    private int paymentId;
     private PaymentMethod paymentMethod;
+    private String paymentNo; // 支付单号，对应于购物平台的合并支付单号
     private String tradeNo; // 交易单号，对应于支付平台，如支付宝交易号
 
     public CustomerOrderInfoResponse(Order order) {
@@ -73,6 +74,7 @@ public class CustomerOrderInfoResponse {
         if (order.getPayment() != null) {
             this.paymentId = order.getPayment().getId();
             this.paymentMethod = order.getPayment().getPaymentMethod();
+            this.paymentNo = order.getPayment().getPaymentNo();
             this.tradeNo = order.getPayment().getTradeNo();
         }
     }

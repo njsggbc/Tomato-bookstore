@@ -17,13 +17,14 @@ import java.util.stream.Collectors;
 @NoArgsConstructor
 public class PaymentInfoResponse {
     @NonNull
-    private String paymentId;
+    private int paymentId;
     @NonNull
     private List<OrderBriefResponse> orderList;
     @NonNull
     private BigDecimal totalAmount;
 
     private PaymentMethod paymentMethod;
+    private String paymentNo;
     private String tradeNo;
 
 
@@ -34,6 +35,7 @@ public class PaymentInfoResponse {
                 .collect(Collectors.toList());
         this.totalAmount = payment.getAmount();
         this.paymentMethod = payment.getPaymentMethod();
+        this.paymentNo = payment.getPaymentNo();
         this.tradeNo = payment.getTradeNo();
     }
 }
