@@ -1,15 +1,12 @@
 package cn.edu.nju.TomatoMall.models.dto.employment;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.NonNull;
-import lombok.Setter;
+import lombok.Data;
 
-@Getter
-@Setter
-@NoArgsConstructor
+import javax.validation.constraints.NotBlank;
+
+@Data
 public class TokenGenerateRequest {
-    @NonNull
+    @NotBlank
     String name;
 
     String expireTime;

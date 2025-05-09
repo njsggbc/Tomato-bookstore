@@ -6,6 +6,7 @@ import cn.edu.nju.TomatoMall.repository.StoreRepository;
 import cn.edu.nju.TomatoMall.service.PermissionService;
 import cn.edu.nju.TomatoMall.util.SecurityUtil;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class PermissionServiceImpl implements PermissionService {
@@ -22,6 +23,7 @@ public class PermissionServiceImpl implements PermissionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public StoreRole getStoreRole(int storeId) {
         int userId = securityUtil.getCurrentUser().getId();
         if (storeRepository.existsByIdAndManagerId(storeId, userId)) {

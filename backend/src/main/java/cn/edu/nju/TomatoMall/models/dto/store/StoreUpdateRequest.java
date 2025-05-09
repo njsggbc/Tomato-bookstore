@@ -1,13 +1,11 @@
 package cn.edu.nju.TomatoMall.models.dto.store;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
-@Getter
-@Setter
+@Data
 public class StoreUpdateRequest {
     String name;
     String address;

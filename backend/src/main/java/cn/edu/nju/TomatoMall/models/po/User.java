@@ -1,9 +1,7 @@
 package cn.edu.nju.TomatoMall.models.po;
 
 import cn.edu.nju.TomatoMall.enums.Role;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
@@ -13,7 +11,9 @@ import java.util.List;
 @Entity
 @Getter
 @Setter
-@NoArgsConstructor
+@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Table(name = "user")
 public class User {
     @Id
@@ -37,6 +37,7 @@ public class User {
     private Role role;
 
     @Column(nullable = false, updatable = false)
+    @Builder.Default
     private LocalDateTime createTime = LocalDateTime.now();
 
     private String name;

@@ -1,8 +1,6 @@
 package cn.edu.nju.TomatoMall.models.po;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
@@ -10,7 +8,9 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @Setter
-@NoArgsConstructor
+@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Table(name = "employment", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"employee_id", "store_id"})
 })
@@ -27,6 +27,7 @@ public class Employment {
     @JoinColumn(name = "store_id", nullable = false)
     private Store store;
 
-    @Column(nullable = false)
-    private LocalDateTime startTime;
+    @Column(nullable = false, updatable = false)
+    @Builder.Default
+    private LocalDateTime startTime = LocalDateTime.now();
 }

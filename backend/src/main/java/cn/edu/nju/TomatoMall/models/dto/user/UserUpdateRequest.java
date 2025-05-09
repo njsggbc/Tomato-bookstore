@@ -1,11 +1,9 @@
 package cn.edu.nju.TomatoMall.models.dto.user;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 import org.springframework.web.multipart.MultipartFile;
 
-@Getter
-@Setter
+@Data
 public class UserUpdateRequest {
     String username;
     String name;

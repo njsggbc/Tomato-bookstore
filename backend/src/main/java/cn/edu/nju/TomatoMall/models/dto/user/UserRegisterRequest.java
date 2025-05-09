@@ -1,20 +1,17 @@
 package cn.edu.nju.TomatoMall.models.dto.user;
 
-import lombok.Getter;
-import lombok.NonNull;
-import lombok.Setter;
+import lombok.Data;
 import org.springframework.web.multipart.MultipartFile;
 
-@Getter
-@Setter
+import javax.validation.constraints.NotBlank;
+
+@Data
 public class UserRegisterRequest {
-    @NonNull
+    @NotBlank
     String username;
-
-    @NonNull
+    @NotBlank
     String phone;
-
-    @NonNull
+    @NotBlank
     String password;
 
     String location;

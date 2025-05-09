@@ -1,13 +1,9 @@
 package cn.edu.nju.TomatoMall.models.dto.store;
 
 import cn.edu.nju.TomatoMall.models.po.Store;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.Data;
 
-@Getter
-@Setter
-@NoArgsConstructor
+@Data
 public class StoreInfoResponse {
     int id;
     String name;
@@ -16,7 +12,7 @@ public class StoreInfoResponse {
     String logoUrl;
     String regTime;
     String status;
-    int score;
+    Integer score;
 
     public StoreInfoResponse(Store store) {
         this.id = store.getId();

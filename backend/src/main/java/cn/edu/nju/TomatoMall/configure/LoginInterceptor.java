@@ -8,11 +8,27 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.*;
 
 @Component
 public class LoginInterceptor implements HandlerInterceptor {
 
     private final SecurityUtil securityUtil;
+
+    private static final Map<String, String> WHITELIST = new HashMap<>();
+
+    static {
+        WHITELIST.put("/api/users/register", "POST");
+        WHITELIST.put("/api/users/login", "POST");
+        WHITELIST.put("/api/accounts/login", "POST");
+        WHITELIST.put("/api/accounts/register", "POST");
+        WHITELIST.put("/api/alipay/notify", "POST");
+        WHITELIST.put("/api/shipping", "POST");
+    }
+
+    private boolean isWhitelisted(String path, String method) {
+        return WHITELIST.entrySet().stream().anyMatch(e -> e.getKey().startsWith(path) && e.getValue().equals(method));
+    }
 
     public LoginInterceptor(SecurityUtil securityUtil) {
         this.securityUtil = securityUtil;
@@ -20,10 +36,11 @@ public class LoginInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        // HACK: 兼容测试用
-        if (request.getServletPath().startsWith("/api/accounts/login") ||
-                (request.getServletPath().startsWith("/api/accounts") && request.getMethod().equals("POST")))
-        {
+        if (request.getRequestURI().startsWith("/error")) {
+            throw TomatoMallException.pathOrParamError();
+        }
+
+        if (isWhitelisted(request.getRequestURI(), request.getMethod())) {
             return true;
         }
 

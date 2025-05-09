@@ -27,9 +27,24 @@ app:
 server:
   port: 8080
 
-aliyun:
-  oss: # 添加必要配置
+aliyun: #添加必要配置！！
+  oss:
     endpoint:
     accessKeyId:
     accessKeySecret:
     bucketName:
+
+alipay:
+  app-id: 2021000148608088
+  gateway: https://openapi-sandbox.dl.alipaydev.com/gateway.do
+  notify-url: https://gator-cunning-implicitly.ngrok-free.app/api/alipay/notify
+  sign-type: RSA2
+  charset: UTF-8
+  app-cert-path: classpath:alipay/appPublicCert.crt
+  alipay-cert-path: classpath:alipay/alipayPublicCert.crt
+  alipay-root-cert-path: classpath:alipay/alipayRootCert.crt
+  private-key-path: classpath:alipay/appPrivateKey.txt
+
+logging:
+  level:
+    root: INFO

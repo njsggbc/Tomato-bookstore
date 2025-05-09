@@ -2,13 +2,9 @@ package cn.edu.nju.TomatoMall.models.dto.employment;
 
 import cn.edu.nju.TomatoMall.models.dto.user.UserBriefResponse;
 import cn.edu.nju.TomatoMall.models.po.EmploymentToken;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.Data;
 
-@Getter
-@Setter
-@NoArgsConstructor
+@Data
 public class TokenInfoResponse {
     int id;
     String name;
@@ -21,8 +17,8 @@ public class TokenInfoResponse {
         this.id = employmentToken.getId();
         this.name = employmentToken.getName();
         this.createTime = employmentToken.getCreatedAt().toString();
-        this.expireTime = employmentToken.getExpiresAt().toString();
+        this.expireTime = employmentToken.getExpiresAt() == null ? null : employmentToken.getExpiresAt().toString();
         this.expired = employmentToken.isValid();
-        this.consumer = new UserBriefResponse(employmentToken.getConsumer());
+        this.consumer = employmentToken.getConsumer() == null ? null : new UserBriefResponse(employmentToken.getConsumer());
     }
 }

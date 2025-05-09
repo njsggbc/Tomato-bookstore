@@ -61,15 +61,13 @@ public class EmploymentServiceImpl implements EmploymentService {
             token = UUID.randomUUID().toString();
         } while (employmentTokenRepository.existsByTokenAndStoreId(token, storeId));
 
-        EmploymentToken employmentToken = new EmploymentToken();
-        employmentToken.setToken(token);
-        employmentToken.setName(params.getName());
-        employmentToken.setStore(storeRef);
-        employmentToken.setCreatedAt(LocalDateTime.now());
-        employmentToken.setExpiresAt(
-                params.getExpireTime() == null ? null : LocalDateTime.parse(params.getExpireTime())
-        );
-        employmentToken.setValid(true);
+        EmploymentToken employmentToken = EmploymentToken.builder()
+                .token(token)
+                .name(params.getName())
+                .store(storeRef)
+                .expiresAt(params.getExpireTime() == null ? null : LocalDateTime.parse(params.getExpireTime()))
+                .valid(true)
+                .build();
 
         employmentTokenRepository.save(employmentToken);
 
@@ -92,6 +90,10 @@ public class EmploymentServiceImpl implements EmploymentService {
     public void authToken(int storeId, String tokenValue) {
         User user = securityUtil.getCurrentUser();
 
+        if (storeRepository.existsByIdAndManagerId(storeId, user.getId())) {
+            throw TomatoMallException.invalidOperation();
+        }
+
         // 显式检查雇佣关系是否存在
         if (employmentRepository.existsByStoreIdAndEmployeeId(storeId, user.getId())) {
             throw TomatoMallException.storeStaffAlreadyExists();
@@ -107,10 +109,10 @@ public class EmploymentServiceImpl implements EmploymentService {
         }
 
         // 创建雇佣关系
-        Employment employment = new Employment();
-        employment.setEmployee(user);
-        employment.setStore(token.getStore());
-        employment.setStartTime(LocalDateTime.now());
+        Employment employment = Employment.builder()
+                .employee(user)
+                .store(token.getStore())
+                .build();
 
         // 标记 Token 为已使用
         token.setValid(false);
@@ -134,7 +136,7 @@ public class EmploymentServiceImpl implements EmploymentService {
     @Override
     @Transactional(readOnly = true)
     public List<UserBriefResponse> getStaffList(int storeId) {
-        return employmentRepository.findEmployeeByStoreId(storeId)
+        return employmentRepository.getEmployeeByStoreId(storeId)
                 .stream()
                 .map(UserBriefResponse::new)
                 .collect(Collectors.toList());

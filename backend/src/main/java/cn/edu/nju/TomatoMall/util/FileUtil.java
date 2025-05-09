@@ -27,6 +27,9 @@ public class FileUtil {
     private String bucketName;
 
     public String upload(int userId, MultipartFile file) {
+        if (file.isEmpty()) {
+            return null;
+        }
         String objectName = userId + "/" + UUID.randomUUID().toString() + '.' + file.getOriginalFilename().split("\\.")[1];
         OSS ossClient = new OSSClientBuilder().build(endpoint, accessKeyId, accessKeySecret);
         try {

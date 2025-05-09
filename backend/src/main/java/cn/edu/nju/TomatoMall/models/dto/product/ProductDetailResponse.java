@@ -1,16 +1,14 @@
 package cn.edu.nju.TomatoMall.models.dto.product;
 
+import cn.edu.nju.TomatoMall.enums.InventoryStatus;
 import cn.edu.nju.TomatoMall.models.po.Product;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.Data;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
-@Getter
-@Setter
-@NoArgsConstructor
+@Data
 public class ProductDetailResponse {
 
     int id;
@@ -18,13 +16,13 @@ public class ProductDetailResponse {
     String description;
     String cover;
     List<String> images;
-    double price;
-    int stock;
-    double rate;
-    int sales;
+    BigDecimal price;
+    Double rate;
     Map<String, String> specifications;
     int storeId;
     String createTime;
+    Integer sales;
+    InventoryStatus inventoryStatus;
 
     public ProductDetailResponse(Product product) {
         this.id = product.getId();
@@ -33,11 +31,11 @@ public class ProductDetailResponse {
         this.images = product.getImages();
         this.cover = images.get(0);
         this.price = product.getPrice();
-        this.stock = product.getStock();
         this.rate = product.getRate();
-        this.sales = product.getSales();
         this.specifications = product.getSpecifications();
         this.storeId = product.getStore().getId();
+        this.sales = product.getSales();
+        this.inventoryStatus = product.getInventoryStatus();
         this.createTime = product.getCreateTime().toString();
     }
 }
