@@ -74,4 +74,8 @@ public class TomatoMallException extends RuntimeException{
     public static TomatoMallException unexpectedError() {
         return new TomatoMallException(500, "意外错误!");
     }
+
+    public static TomatoMallException advertisementNotFound() {
+        return new TomatoMallException(404, "广告不存在!");
+    }
 }

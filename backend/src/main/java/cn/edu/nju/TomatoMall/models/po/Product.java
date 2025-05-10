@@ -45,6 +45,9 @@ public class Product {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createTime;
 
+    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE}, orphanRemoval = true)
+    private List<Advertisement> advertisements;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "store_id", nullable = false)
     private Store store;
