@@ -1,19 +1,18 @@
 package cn.edu.nju.TomatoMall.models.po;
 
 import cn.edu.nju.TomatoMall.enums.AdPlacementStatus;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
-@Data
+@Table(name = "advertisement_placements")
+@Getter
+@Setter
 @Builder
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public class AdvertisementPlacement {
     @Id

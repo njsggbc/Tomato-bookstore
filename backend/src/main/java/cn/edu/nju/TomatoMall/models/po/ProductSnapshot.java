@@ -1,22 +1,22 @@
 package cn.edu.nju.TomatoMall.models.po;
 
-import jdk.nashorn.internal.ir.annotations.Immutable;
 import lombok.*;
+import org.hibernate.annotations.Immutable;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 @Entity
+@Table(name = "product_snapshots")
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-@Table(name = "product_snapshot")
+@Immutable
 public class ProductSnapshot {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

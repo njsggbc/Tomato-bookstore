@@ -1,11 +1,7 @@
 package cn.edu.nju.TomatoMall.models.po;
 
 import cn.edu.nju.TomatoMall.enums.AdSpaceType;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,12 +9,12 @@ import javax.persistence.*;
 import java.io.Serializable;
 import java.util.List;
 
-@Slf4j
 @Entity
-@Builder
+@Table(name = "advertisement_spaces")
 @Getter
 @Setter
-@NoArgsConstructor
+@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public class AdvertisementSpace implements Serializable {
     @Id

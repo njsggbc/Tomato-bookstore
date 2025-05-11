@@ -1,7 +1,7 @@
 package cn.edu.nju.TomatoMall.models.po;
 
-import jdk.nashorn.internal.ir.annotations.Immutable;
 import lombok.*;
+import org.hibernate.annotations.Immutable;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
@@ -9,12 +9,12 @@ import java.math.BigDecimal;
 // 订单项，订单为空时表示在购物车中
 
 @Entity
+@Table(name = "order_items")
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-@Table(name = "order_item")
 @Immutable
 public class OrderItem {
     @Id

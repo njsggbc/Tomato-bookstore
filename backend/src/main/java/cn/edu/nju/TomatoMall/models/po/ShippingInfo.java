@@ -9,12 +9,12 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Entity
+@Table(name = "shipping_infos")
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-@Table(name = "shipping_info")
 public class ShippingInfo {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

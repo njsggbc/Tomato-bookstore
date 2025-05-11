@@ -6,14 +6,14 @@ import javax.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
+@Table(name = "employments", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"employee_id", "store_id"})
+})
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-@Table(name = "employment", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"employee_id", "store_id"})
-})
 public class Employment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -5,12 +5,12 @@ import lombok.*;
 import javax.persistence.*;
 
 @Entity
+@Table(name = "cart_items")
 @Getter
 @Setter
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
-@Table(name = "cart_item")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public class CartItem {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

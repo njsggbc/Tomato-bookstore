@@ -6,10 +6,11 @@ import javax.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Data
+@Table(name = "advertisement_slots")
+@Getter
+@Setter
 @Builder
-@NoArgsConstructor
-@EqualsAndHashCode(exclude = {"prev", "next"})
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public class AdvertisementSlot {
     @Id

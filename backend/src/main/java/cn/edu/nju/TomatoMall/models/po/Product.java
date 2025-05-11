@@ -9,12 +9,12 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 @Entity
+@Table(name = "products")
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-@Table(name = "product")
 public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
