@@ -259,4 +259,37 @@ public class TomatoMallException extends RuntimeException {
     public static TomatoMallException shipmentRecordNotFound(String message) {
         return new TomatoMallException(404, 507, message);
     }
+
+    // Advertisement-related Exceptions (600–699)
+    public static TomatoMallException advertisementNotFound() {
+        return new TomatoMallException(404, 600, "广告不存在!");
+    }
+
+    public static TomatoMallException advertisementNotFound(String message) {
+        return new TomatoMallException(404, 600, message);
+    }
+
+    public static TomatoMallException adSpaceNotFound() {
+        return new TomatoMallException(404, 601, "广告位不存在!");
+    }
+
+    public static TomatoMallException adSpaceNotFound(String message) {
+        return new TomatoMallException(404, 601, message);
+    }
+
+    public static TomatoMallException labelAlreadyExists() {
+        return new TomatoMallException(409, 602, "标签已经存在!");
+    }
+
+    public static TomatoMallException labelAlreadyExists(String message) {
+        return new TomatoMallException(409, 602, message);
+    }
+
+    public static  TomatoMallException adPlacementNotFound() {
+        return new TomatoMallException(404, 603, "广告投放不存在!");
+    }
+
+    public static TomatoMallException adPlacementNotFound(String message) {
+        return new TomatoMallException(404, 603, message);
+    }
 }
