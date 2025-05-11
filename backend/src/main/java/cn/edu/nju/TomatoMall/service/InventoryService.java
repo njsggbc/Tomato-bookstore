@@ -1,5 +1,8 @@
 package cn.edu.nju.TomatoMall.service;
 
+/**
+ * 库存管理服务接口
+ */
 public interface InventoryService {
 
     /**
