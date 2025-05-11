@@ -8,6 +8,7 @@ import cn.edu.nju.TomatoMall.models.dto.shipment.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 public interface OrderService {
     /*---------------- 通用服务 ----------------*/
@@ -21,7 +22,13 @@ public interface OrderService {
 
     List<CheckoutResponse> checkout(List<Integer> cartItemIds);
 
-    PaymentInfoResponse submit(SubmitRequest params);
+    PaymentInfoResponse submit(
+            List<Integer> cartItemIds,
+            String recipientName,
+            String recipientPhone,
+            String recipientAddress,
+            Map<Integer, String> storeRemarks
+    );
 
     CustomerOrderInfoResponse getOrderInfo(Integer orderId, String orderNo);
 

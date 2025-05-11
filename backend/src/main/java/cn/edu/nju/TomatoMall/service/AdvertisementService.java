@@ -3,6 +3,7 @@ package cn.edu.nju.TomatoMall.service;
 import cn.edu.nju.TomatoMall.enums.AdSpaceType;
 import cn.edu.nju.TomatoMall.models.dto.advertisement.*;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -13,10 +14,10 @@ public interface AdvertisementService {
     AdInfoResponse getAdvertisement(int adId);
 
     @Transactional
-    void createAdvertisement(AdCreateRequest params);
+    void createAdvertisement(int storeId, String title, MultipartFile content, String linkUrl);
 
     @Transactional
-    void updateAdvertisement(int adId, AdUpdateRequest params);
+    void updateAdvertisement(int adId, String title, MultipartFile content, String linkUrl);
 
     @Transactional
     void deleteAdvertisement(int adId);
@@ -37,7 +38,7 @@ public interface AdvertisementService {
     List<AdSpaceInfoResponse> getAdSpaceList(AdSpaceType adSpaceType);
 
     @Transactional
-    void createAdSpace(AdSpaceCreateRequest params);
+    void createAdSpace(String label, AdSpaceType adSpaceType, int cycleInDay, int segmentInHour);
 
     @Transactional
     void setAdSlotStatus(Integer spaceId, List<Integer> slotIds, Boolean available, Boolean active);

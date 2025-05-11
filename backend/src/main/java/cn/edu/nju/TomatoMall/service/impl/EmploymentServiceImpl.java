@@ -52,7 +52,7 @@ public class EmploymentServiceImpl implements EmploymentService {
 
     @Override
     @Transactional
-    public String generateToken(int storeId, TokenGenerateRequest params) {
+    public String generateToken(int storeId, String name, LocalDateTime expiration) {
         validatePermission(storeId);
 
         Store storeRef = storeRepository.getReferenceById(storeId);
@@ -63,9 +63,9 @@ public class EmploymentServiceImpl implements EmploymentService {
 
         EmploymentToken employmentToken = EmploymentToken.builder()
                 .token(token)
-                .name(params.getName())
+                .name(name)
                 .store(storeRef)
-                .expiresAt(params.getExpireTime() == null ? null : LocalDateTime.parse(params.getExpireTime()))
+                .expiresAt(expiration)
                 .valid(true)
                 .build();
 

@@ -96,17 +96,27 @@ public class OrderServiceImpl implements OrderService {
      * 提交订单
      * 创建订单并初始化支付
      *
-     * @param params 提交请求参数
+     * @param cartItemIds 购物车项ID列表
+     * @param recipientName 收货人姓名
+     * @param recipientPhone 收货人电话
+     * @param recipientAddress 收货地址
+     * @param storeRemarks 店铺备注
      * @return 支付信息响应
      * @throws TomatoMallException 当购物车项无效时抛出异常
      */
     @Override
     @Transactional
-    public PaymentInfoResponse submit(SubmitRequest params) {
+    public PaymentInfoResponse submit(
+            List<Integer> cartItemIds,
+            String recipientName,
+            String recipientPhone,
+            String recipientAddress,
+            Map<Integer, String> storeRemarks
+    ) {
         User user = securityUtil.getCurrentUser();
 
         // 获取并验证购物车项
-        List<CartItem> cartItems = getValidCartItems(user, params.getCartItemIds());
+        List<CartItem> cartItems = getValidCartItems(user, cartItemIds);
         if (cartItems.isEmpty()) {
             throw TomatoMallException.invalidCartItem();
         }
@@ -117,10 +127,10 @@ public class OrderServiceImpl implements OrderService {
                         user,
                         entry.getKey(),
                         entry.getValue(),
-                        params.getRecipientAddress(),
-                        params.getRecipientName(),
-                        params.getRecipientPhone(),
-                        params.getStoreRemarks().get(entry.getKey().getId())
+                        recipientAddress,
+                        recipientPhone,
+                        recipientName,
+                        storeRemarks.get(entry.getKey().getId())
                 ))
                 .collect(Collectors.toList());
 

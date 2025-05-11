@@ -2,6 +2,8 @@ package cn.edu.nju.TomatoMall.service;
 
 import cn.edu.nju.TomatoMall.models.dto.store.*;
 import org.springframework.data.domain.Page;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -14,9 +16,9 @@ public interface StoreService {
 
     StoreInfoResponse getInfo(int storeId);
 
-    void createStore(StoreCreateRequest params);
+    void createStore(String name, String description, MultipartFile logo, String address, List<MultipartFile> qualifications);
 
-    void updateStore(int storeId, StoreUpdateRequest params);
+    void updateStore(int storeId, String name, String description, MultipartFile logo, String address, List<MultipartFile> qualifications);
 
     void deleteStore(int storeId);
 

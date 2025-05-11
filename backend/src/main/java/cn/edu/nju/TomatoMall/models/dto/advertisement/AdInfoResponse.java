@@ -3,6 +3,8 @@ package cn.edu.nju.TomatoMall.models.dto.advertisement;
 import cn.edu.nju.TomatoMall.models.po.Advertisement;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
 public class AdInfoResponse {
     private Integer id;
@@ -11,8 +13,7 @@ public class AdInfoResponse {
     private String linkUrl; // 跳转链接
     private String status;
     private Integer storeId;
-    private String storeName;
-    private String createTime;
+    private LocalDateTime createTime;
 
     public AdInfoResponse(Advertisement ad) {
         this.id = ad.getId();
@@ -21,7 +22,6 @@ public class AdInfoResponse {
         this.linkUrl = ad.getLinkUrl();
         this.status = ad.getStatus().toString();
         this.storeId = ad.getStore().getId();
-        this.storeName = ad.getStore().getName();
-        this.createTime = ad.getCreateTime().toString();
+        this.createTime = ad.getCreateTime();
     }
 }

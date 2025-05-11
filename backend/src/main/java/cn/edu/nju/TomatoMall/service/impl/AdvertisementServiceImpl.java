@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.PostConstruct;
 import java.time.LocalDateTime;
@@ -100,20 +101,20 @@ public class AdvertisementServiceImpl implements AdvertisementService {
 
     @Transactional
     @Override
-    public void createAdvertisement(AdCreateRequest params) {
+    public void createAdvertisement(int storeId, String title, MultipartFile content, String linkUrl) {
         // 验证当前用户对该商店的权限
-        StoreRole role = permissionService.getStoreRole(params.getStoreId());
+        StoreRole role = permissionService.getStoreRole(storeId);
         if (role != StoreRole.MANAGER) {
             throw TomatoMallException.permissionDenied();
         }
 
-        Store store = storeRepository.findById(params.getStoreId())
+        Store store = storeRepository.findById(storeId)
                 .orElseThrow(TomatoMallException::storeNotFound);
 
         Advertisement ad = Advertisement.builder()
-                .title(params.getTitle())
-                .content(fileUtil.upload(securityUtil.getCurrentUser().getId(), params.getContent()))
-                .linkUrl(params.getLinkUrl())
+                .title(title)
+                .content(fileUtil.upload(securityUtil.getCurrentUser().getId(), content))
+                .linkUrl(linkUrl)
                 .store(store)
                 .build();
 
@@ -122,7 +123,7 @@ public class AdvertisementServiceImpl implements AdvertisementService {
 
     @Transactional
     @Override
-    public void updateAdvertisement(int adId, AdUpdateRequest params) {
+    public void updateAdvertisement(int adId, String title, MultipartFile content, String linkUrl) {
         Advertisement ad = advertisementRepository.findById(adId)
                 .orElseThrow(TomatoMallException::advertisementNotFound);
 
@@ -136,17 +137,17 @@ public class AdvertisementServiceImpl implements AdvertisementService {
             throw TomatoMallException.invalidOperation("当前广告状态不允许修改");
         }
 
-        if (params.getTitle() != null && !params.getTitle().isEmpty()) {
-            ad.setTitle(params.getTitle());
+        if (title != null && !title.isEmpty()) {
+            ad.setTitle(title);
         }
 
-        if (params.getLinkUrl() != null && !params.getLinkUrl().isEmpty()) {
-            ad.setLinkUrl(params.getLinkUrl());
+        if (linkUrl != null && !linkUrl.isEmpty()) {
+            ad.setLinkUrl(linkUrl);
         }
 
-        if (params.getContent() != null && !params.getContent().isEmpty()) {
+        if (content != null && !content.isEmpty()) {
             fileUtil.delete(ad.getContent());
-            String imageUrl = fileUtil.upload(securityUtil.getCurrentUser().getId(), params.getContent());
+            String imageUrl = fileUtil.upload(securityUtil.getCurrentUser().getId(), content);
             ad.setContent(imageUrl);
         }
 
@@ -360,23 +361,23 @@ public class AdvertisementServiceImpl implements AdvertisementService {
 
     @Transactional
     @Override
-    public void createAdSpace(AdSpaceCreateRequest params) {
+    public void createAdSpace(String label, AdSpaceType type, int cycleInDay, int segmentInHour) {
         // 检查当前用户是否为管理员
         if (securityUtil.getCurrentUser().getRole() != Role.ADMIN) {
             throw TomatoMallException.permissionDenied();
         }
 
         // 检查标签是否已存在
-        if (advertisementSpaceRepository.findByLabel(params.getLabel()).isPresent()) {
+        if (advertisementSpaceRepository.findByLabel(label).isPresent()) {
             throw TomatoMallException.labelAlreadyExists();
         }
 
         // 创建广告位
         AdvertisementSpace space = AdvertisementSpace.builder()
-                .label(params.getLabel())
-                .type(params.getType())
-                .cycle(params.getCycleInDay())
-                .segment(params.getSegmentInHour())
+                .label(label)
+                .type(type)
+                .cycle(cycleInDay)
+                .segment(segmentInHour)
                 .build();
 
         // 创建槽位
@@ -416,7 +417,7 @@ public class AdvertisementServiceImpl implements AdvertisementService {
 
         space.setSlots(slots);
         space.setCurrent(slots.get(0));
-        space.setForbiddenEdge(slots.get(24 / params.getSegmentInHour()));
+        space.setForbiddenEdge(slots.get(24 / segmentInHour));
 
         advertisementSpaceRepository.save(space);
     }

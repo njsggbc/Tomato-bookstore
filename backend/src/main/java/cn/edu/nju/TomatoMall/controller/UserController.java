@@ -27,7 +27,14 @@ public class UserController {
      */
     @PostMapping(path = "/register", consumes = "multipart/form-data")
     public ApiResponse<Void> register(@ModelAttribute UserRegisterRequest params) {
-        userService.register(params);
+        userService.register(
+                params.getUsername(),
+                params.getPhone(),
+                params.getPassword(),
+                params.getLocation(),
+                params.getName(),
+                params.getEmail(),
+                params.getAvatar());
         return ApiResponse.success();
     }
 
@@ -36,7 +43,12 @@ public class UserController {
      */
     @PostMapping("/login")
     public ApiResponse<String> login(@RequestBody UserLoginRequest params, HttpServletResponse response) {
-        String token = userService.login(params);
+        String token = userService.login(
+                params.getUsername(),
+                params.getPhone(),
+                params.getEmail(),
+                params.getPassword());
+
         response.addCookie(securityUtil.getCookie(token));
         return ApiResponse.success(token);
     }
@@ -62,7 +74,13 @@ public class UserController {
      */
     @PutMapping(consumes = "multipart/form-data")
     public ApiResponse<Void> updateInformation(@ModelAttribute UserUpdateRequest params) {
-        userService.updateInformation(params);
+        userService.updateInformation(
+                params.getUsername(),
+                params.getName(),
+                params.getPhone(),
+                params.getEmail(),
+                params.getLocation(),
+                params.getAvatar());
         return ApiResponse.success();
     }
 

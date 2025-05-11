@@ -74,22 +74,22 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    public void createProduct(ProductCreateRequest params) {
-        validatePermission(params.getStoreId());
+    public void createProduct(int storeId, String title, String description, List<MultipartFile> images, BigDecimal price, Map<String, String> specifications) {
+        validatePermission(storeId);
 
-        validateName(params.getTitle());
-        validatePrice(params.getPrice());
-        validateDescription(params.getDescription());
-        validateImages(params.getImages());
-        validateSpecifications(params.getSpecifications());
+        validateName(title);
+        validatePrice(price);
+        validateDescription(description);
+        validateImages(images);
+        validateSpecifications(specifications);
 
         Product product = Product.builder()
-                .name(params.getTitle())
-                .price(params.getPrice())
-                .description(params.getDescription())
-                .images(uploadImages(params.getImages()))
-                .specifications(params.getSpecifications())
-                .store(storeRepository.getReferenceById(params.getStoreId()))
+                .name(title)
+                .price(price)
+                .description(description)
+                .images(uploadImages(images))
+                .specifications(specifications)
+                .store(storeRepository.getReferenceById(storeId))
                 .build();
 
         product.createSnapshot();
@@ -101,30 +101,30 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    public void updateProduct(int productId, ProductUpdateRequest params) {
+    public void updateProduct(int productId, String title, String description, List<MultipartFile> images, BigDecimal price, Map<String, String> specifications) {
         Product product = productRepository.findByIdAndOnSaleIsTrue(productId).orElseThrow(TomatoMallException::productNotFound);
 
         validatePermission(product.getStore().getId());
 
-        if (params.getTitle() != null) {
-            validateName(params.getTitle());
-            product.setName(params.getTitle());
+        if (title != null) {
+            validateName(title);
+            product.setName(title);
         }
-        if (params.getDescription() != null) {
-            validateDescription(params.getDescription());
-            product.setDescription(params.getDescription());
+        if (description != null) {
+            validateDescription(description);
+            product.setDescription(description);
         }
-        if (params.getPrice() != null) {
-            validatePrice(params.getPrice());
-            product.setPrice(params.getPrice());
+        if (price != null) {
+            validatePrice(price);
+            product.setPrice(price);
         }
-        if (params.getImages() != null) {
-            validateImages(params.getImages());
-            product.setImages(uploadImages(params.getImages()));
+        if (images != null) {
+            validateImages(images);
+            product.setImages(uploadImages(images));
         }
-        if (params.getSpecifications() != null) {
-            validateSpecifications(params.getSpecifications());
-            product.setSpecifications(params.getSpecifications());
+        if (specifications != null) {
+            validateSpecifications(specifications);
+            product.setSpecifications(specifications);
         }
 
         product.createSnapshot();

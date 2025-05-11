@@ -3,9 +3,7 @@ package cn.edu.nju.TomatoMall.service.impl;
 import cn.edu.nju.TomatoMall.enums.Role;
 import cn.edu.nju.TomatoMall.enums.StoreStatus;
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
-import cn.edu.nju.TomatoMall.models.dto.store.StoreCreateRequest;
 import cn.edu.nju.TomatoMall.models.dto.store.StoreInfoResponse;
-import cn.edu.nju.TomatoMall.models.dto.store.StoreUpdateRequest;
 import cn.edu.nju.TomatoMall.models.po.Store;
 import cn.edu.nju.TomatoMall.models.po.User;
 import cn.edu.nju.TomatoMall.repository.EmploymentRepository;
@@ -86,13 +84,12 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional
-    public void createStore(StoreCreateRequest params) {
-        String name = params.getName();
+    public void createStore(String name,  String description, MultipartFile logo, String address,List<MultipartFile> qualifications) {
         validateName(name);
-        validateLogo(params.getLogo());
-        validateAddress(params.getAddress());
-        validateDescription(params.getDescription());
-        validateQualifications(params.getQualification());
+        validateLogo(logo);
+        validateAddress(address);
+        validateDescription(description);
+        validateQualifications(qualifications);
 
         if (storeRepository.existsByName(name)) {
             throw TomatoMallException.storeNameAlreadyExists();
@@ -100,13 +97,13 @@ public class StoreServiceImpl implements StoreService {
 
         User user = securityUtil.getCurrentUser();
         Store store = Store.builder()
-                .name(params.getName())
+                .name(name)
                 .manager(user)
                 .status(StoreStatus.PENDING)
-                .logoUrl(fileUtil.upload(user.getId(), params.getLogo()))
-                .address(params.getAddress())
-                .description(params.getDescription())
-                .qualifications(params.getQualification().stream()
+                .logoUrl(fileUtil.upload(user.getId(), logo))
+                .address(address)
+                .description(description)
+                .qualifications(qualifications.stream()
                         .map(qualification -> fileUtil.upload(user.getId(), qualification))
                         .collect(Collectors.toList()))
                 .build();
@@ -114,35 +111,35 @@ public class StoreServiceImpl implements StoreService {
         storeRepository.save(store);
     }
 
-    @Override
     @Transactional
-    public void updateStore(int storeId, StoreUpdateRequest params) {
+    @Override
+    public void updateStore(int storeId, String name, String description, MultipartFile logo, String address, List<MultipartFile> qualifications) {
         Store store = storeRepository.findById(storeId).orElseThrow(TomatoMallException::storeNotFound);
         validatePermission(store);
 
-        if (params.getName() != null) {
-            validateName(params.getName());
-            store.setName(params.getName());
+        if (name != null) {
+            validateName(name);
+            store.setName(name);
         }
-        if (params.getLogo() != null) {
-            validateLogo(params.getLogo());
+        if (logo != null) {
+            validateLogo(logo);
             if(store.getLogoUrl() != null){
                 fileUtil.delete(store.getLogoUrl());
             }
-            store.setLogoUrl(fileUtil.upload(store.getManager().getId(), params.getLogo()));
+            store.setLogoUrl(fileUtil.upload(store.getManager().getId(), logo));
         }
-        if (params.getAddress() != null) {
-            validateAddress(params.getAddress());
-            store.setAddress(params.getAddress());
+        if (address != null) {
+            validateAddress(address);
+            store.setAddress(address);
         }
-        if (params.getDescription() != null) {
-            validateDescription(params.getDescription());
-            store.setDescription(params.getDescription());
+        if (description != null) {
+            validateDescription(description);
+            store.setDescription(description);
         }
-        if (params.getQualification() != null) {
-            validateQualifications(params.getQualification());
+        if (qualifications != null) {
+            validateQualifications(qualifications);
             store.getQualifications().forEach(fileUtil::delete);
-            store.setQualifications(params.getQualification().stream()
+            store.setQualifications(qualifications.stream()
                     .map(qualification -> fileUtil.upload(store.getManager().getId(), qualification))
                     .collect(Collectors.toList())
             );

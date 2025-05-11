@@ -64,7 +64,12 @@ public class StoreController {
      */
     @PostMapping(consumes = "multipart/form-data")
     public ApiResponse<Void> createStore(@ModelAttribute StoreCreateRequest params) {
-        storeService.createStore(params);
+        storeService.createStore(
+                params.getName(),
+                params.getDescription(),
+                params.getLogo(),
+                params.getAddress(),
+                params.getQualification());
         return ApiResponse.success();
     }
 
@@ -81,7 +86,7 @@ public class StoreController {
      */
     @PatchMapping(path = "/{storeId}", consumes = "multipart/form-data")
     public ApiResponse<Void> updateStore(@PathVariable int storeId, @ModelAttribute StoreUpdateRequest params) {
-        storeService.updateStore(storeId, params);
+        storeService.updateStore(storeId, params.getName(), params.getDescription(), params.getLogo(), params.getAddress(), params.getQualification());
         return ApiResponse.success();
     }
 
@@ -108,8 +113,11 @@ public class StoreController {
      */
     @PostMapping("/{storeId}/tokens")
     public ApiResponse<String> generateToken(@PathVariable int storeId,
-                                             @RequestBody TokenGenerateRequest request) {
-        String token = employmentService.generateToken(storeId, request);
+                                             @RequestBody TokenGenerateRequest params) {
+        String token = employmentService.generateToken(
+                storeId,
+                params.getName(),
+                params.getExpireTime());
         return ApiResponse.success(token);
     }
 

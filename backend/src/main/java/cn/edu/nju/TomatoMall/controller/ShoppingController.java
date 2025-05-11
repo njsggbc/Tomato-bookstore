@@ -118,7 +118,15 @@ public class ShoppingController {
      */
     @PostMapping("/orders")
     public ApiResponse<PaymentInfoResponse> submit(@RequestBody SubmitRequest params) {
-        return ApiResponse.success(orderService.submit(params));
+        return ApiResponse.success(
+                orderService.submit(
+                        params.getCartItemIds(),
+                        params.getRecipientName(),
+                        params.getRecipientPhone(),
+                        params.getRecipientAddress(),
+                        params.getStoreRemarks()
+                )
+        );
     }
 
     /**

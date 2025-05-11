@@ -42,7 +42,11 @@ public class AdvertisementController {
      */
     @PostMapping(consumes = "multipart/form-data")
     public ApiResponse<Void> createAdvertisement(@ModelAttribute AdCreateRequest params) {
-        advertisementService.createAdvertisement(params);
+        advertisementService.createAdvertisement(
+                params.getStoreId(),
+                params.getTitle(),
+                params.getContent(),
+                params.getLinkUrl());
         return ApiResponse.success();
     }
 
@@ -53,7 +57,11 @@ public class AdvertisementController {
     public ApiResponse<Void> updateAdvertisement(
             @PathVariable("adId") int adId,
             @ModelAttribute AdUpdateRequest params) {
-        advertisementService.updateAdvertisement(adId, params);
+        advertisementService.updateAdvertisement(
+                adId,
+                params.getTitle(),
+                params.getContent(),
+                params.getLinkUrl());
         return ApiResponse.success();
     }
 
@@ -159,7 +167,11 @@ public class AdvertisementController {
      */
     @PostMapping("/space")
     public ApiResponse<Void> createAdSpace(@RequestBody AdSpaceCreateRequest params) {
-        advertisementService.createAdSpace(params);
+        advertisementService.createAdSpace(
+                params.getLabel(),
+                params.getType(),
+                params.getCycleInDay(),
+                params.getSegmentInHour());
         return ApiResponse.success();
     }
 

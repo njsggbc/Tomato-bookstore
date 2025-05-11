@@ -54,7 +54,13 @@ public class ProductController {
      */
     @PostMapping(path = "/create", consumes = "multipart/form-data")
     public ApiResponse<Void> createProduct(@ModelAttribute ProductCreateRequest params) {
-        productService.createProduct(params);
+        productService.createProduct(
+                params.getStoreId(),
+                params.getTitle(),
+                params.getDescription(),
+                params.getImages(),
+                params.getPrice(),
+                params.getSpecifications());
         return ApiResponse.success();
     }
 
@@ -71,7 +77,13 @@ public class ProductController {
      */
     @PatchMapping(path = "/{productId}", consumes = "multipart/form-data")
     public ApiResponse<Void> updateProduct(@PathVariable int productId, @ModelAttribute ProductUpdateRequest params) {
-        productService.updateProduct(productId, params);
+        productService.updateProduct(
+                productId,
+                params.getTitle(),
+                params.getDescription(),
+                params.getImages(),
+                params.getPrice(),
+                params.getSpecifications());
         return ApiResponse.success();
     }
 

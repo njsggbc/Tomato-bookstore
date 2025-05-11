@@ -46,20 +46,15 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
     @Override
+    @Transactional
     public void setThreshold(int productId, int threshold) {
         if (threshold < 0) {
             throw TomatoMallException.invalidOperation();
         }
 
-        Inventory inventory = inventoryRepository.findByProductIdWithLock(productId)
-                .orElseThrow(TomatoMallException::productNotFound);
-
-        inventory.setThresholdQuantity(threshold);
-
-        inventoryRepository.save(inventory);
-
+        inventoryRepository.updateThresholdQuantityByProductId(productId, threshold);
         productRepository.setInventoryStatusById(productId,
-                InventoryStatus.getInventoryStatus(getAvailableStock(productId), inventory.getThresholdQuantity())
+                InventoryStatus.getInventoryStatus(getAvailableStock(productId), threshold)
         );
     }
 

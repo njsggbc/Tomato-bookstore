@@ -11,6 +11,7 @@ import cn.edu.nju.TomatoMall.util.SecurityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 
@@ -29,20 +30,17 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public void register(UserRegisterRequest params) {
-        String phone = params.getPhone();
+    public void register(String username, String phone, String password, String location, String name, String email, MultipartFile avatar) {
         validatePhone(phone);
         if (userRepository.existsByPhone(phone)) {
             throw TomatoMallException.phoneAlreadyExists();
         }
 
-        String username = params.getUsername();
         validateUsername(username);
         if (userRepository.existsByUsername(username)) {
             throw TomatoMallException.usernameAlreadyExists();
         }
 
-        String email = params.getEmail();
         if (email != null) {
             validateEmail(email);
             if (userRepository.existsByEmail(email)) {
@@ -55,36 +53,36 @@ public class UserServiceImpl implements UserService {
                .username(username)
                .email(email)
                // TODO: 加密存储
-               .password(params.getPassword())
-               .name(params.getName())
-               .address(params.getLocation())
+               .password(password)
+               .name(name)
+               .address(location)
                .role(Role.USER)
                .build();
 
         userRepository.save(user);
 
-        if(params.getAvatar() != null && !params.getAvatar().isEmpty()){
-            user.setAvatarUrl(fileUtil.upload(user.getId(), params.getAvatar()));
+        if(avatar != null && !avatar.isEmpty()){
+            user.setAvatarUrl(fileUtil.upload(user.getId(), avatar));
         }
     }
 
     @Override
     @Transactional(readOnly = true)
-    public String login(UserLoginRequest params) {
+    public String login(String username, String phone, String email, String password) {
         User user = null;
-        if (params.getUsername() != null ) {
-            user = userRepository.findByUsername(params.getUsername()).orElse(null);
-        } else if (params.getPhone() != null) {
-            user = userRepository.findByPhone(params.getPhone()).orElse(null);
-        } else if (params.getEmail() != null) {
-            user = userRepository.findByEmail(params.getEmail()).orElse(null);
+        if (username != null ) {
+            user = userRepository.findByUsername(username).orElse(null);
+        } else if (phone != null) {
+            user = userRepository.findByPhone(phone).orElse(null);
+        } else if (email != null) {
+            user = userRepository.findByEmail(email).orElse(null);
         }
 
         if (user == null) {
             throw TomatoMallException.userNotFound();
         }
 
-        if (!user.getPassword().equals(params.getPassword())) {
+        if (!user.getPassword().equals(password)) {
             throw TomatoMallException.phoneOrPasswordError();
         }
 
@@ -107,12 +105,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public void updateInformation(UserUpdateRequest params) {
+    public void updateInformation(String username, String name, String phone, String email, String location, MultipartFile avatar) {
         User user = securityUtil.getCurrentUser();
-
-        String phone = params.getPhone();
-        String username = params.getUsername();
-        String email = params.getEmail();
 
         if (phone != null) {
             validatePhone(phone);
@@ -138,18 +132,18 @@ public class UserServiceImpl implements UserService {
             user.setEmail(email);
         }
 
-        if(params.getName() != null){
-            user.setName(params.getName());
+        if(name != null){
+            user.setName(name);
         }
-        if(params.getLocation() != null){
-            user.setAddress(params.getLocation());
+        if(location != null){
+            user.setAddress(location);
         }
-        if(params.getAvatar() != null){
+        if(avatar != null){
             String oldAvatar = user.getAvatarUrl();
             if (oldAvatar != null) {
                 fileUtil.delete(oldAvatar);
             }
-            user.setAvatarUrl(fileUtil.upload(user.getId(), params.getAvatar()));
+            user.setAvatarUrl(fileUtil.upload(user.getId(), avatar));
         }
 
         userRepository.save(user);
@@ -174,16 +168,18 @@ public class UserServiceImpl implements UserService {
     public String accountCreate(Map<String, String> params) {
         UserRegisterRequest registerRequest = new UserRegisterRequest();
 
-        String username = params.get("username");
-        registerRequest.setUsername(username);
-        registerRequest.setPassword(params.get("password"));
-        registerRequest.setName(params.get("name"));
-        registerRequest.setEmail(params.get("email"));
-        registerRequest.setPhone(params.get("telephone"));
-        registerRequest.setLocation(params.get("location"));
-        register(registerRequest);
+        register(
+                params.get("username"),
+                params.get("telephone"),
+                params.get("password"),
+                params.get("location"),
+                params.get("name"),
+                params.get("email"),
+                null
+        );
+
         // 兼容测试，创建用户时可以设置角色
-        User user = userRepository.findByUsername(username).get();
+        User user = userRepository.findByUsername(params.get("username")).get();
         user.setRole(Role.valueOf(params.get("role").toUpperCase()));
         userRepository.save(user);
 
@@ -199,21 +195,21 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void accountUpdate(Map<String, String> params) {
-        UserUpdateRequest userUpdateRequest = new UserUpdateRequest();
-        userUpdateRequest.setUsername(params.get("username"));
-        userUpdateRequest.setPhone(params.get("telephone"));
-        userUpdateRequest.setEmail(params.get("email"));
-        userUpdateRequest.setName(params.get("name"));
-        userUpdateRequest.setLocation(params.get("location"));
-
-        User user = userRepository.findByUsername(userUpdateRequest.getUsername()).orElseThrow(TomatoMallException::userNotFound);
+        User user = userRepository.findByUsername(params.get("username")).orElseThrow(TomatoMallException::userNotFound);
 
         if (params.get("password") != null) {
             user.setPassword(params.get("password"));
             userRepository.save(user);
         }
 
-        updateInformation(userUpdateRequest);
+        updateInformation(
+                params.get("username"),
+                params.get("name"),
+                params.get("telephone"),
+                params.get("email"),
+                params.get("location"),
+                null
+        );
     }
 
     @Override
