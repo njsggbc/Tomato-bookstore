@@ -13,6 +13,7 @@ import cn.edu.nju.TomatoMall.service.OrderService;
 import cn.edu.nju.TomatoMall.service.PaymentService;
 import cn.edu.nju.TomatoMall.util.SecurityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -39,7 +40,7 @@ public class ShoppingController {
      * @param securityUtil 安全操作工具
      */
     @Autowired
-    public ShoppingController(OrderService orderService, PaymentService paymentService, PaymentRepository paymentRepository, SecurityUtil securityUtil) {
+    public ShoppingController(OrderService orderService, @Qualifier("paymentServiceImpl") PaymentService paymentService, PaymentRepository paymentRepository, SecurityUtil securityUtil) {
         this.orderService = orderService;
         this.paymentService = paymentService;
         this.paymentRepository = paymentRepository;
@@ -54,7 +55,7 @@ public class ShoppingController {
      *
      * @return 购物车中的商品项列表
      */
-    @GetMapping("/cart")
+    @GetMapping("/carts")
     public ApiResponse<List<CartItemInfoResponse>> getCartItems() {
         return ApiResponse.success(orderService.getCartItemList());
     }
@@ -66,7 +67,7 @@ public class ShoppingController {
      * @param quantity 商品数量
      * @return 操作成功的空响应
      */
-    @PostMapping("/cart")
+    @PostMapping("/carts")
     public ApiResponse<Integer> addToCart(@RequestParam int productId,
                                        @RequestParam int quantity) {
         return ApiResponse.success(orderService.addToCart(productId, quantity));
@@ -78,7 +79,7 @@ public class ShoppingController {
      * @param cartItemId 要移除的购物车项ID
      * @return 操作成功的空响应
      */
-    @DeleteMapping("/cart/{cartItemId}")
+    @DeleteMapping("/carts/{cartItemId}")
     public ApiResponse<Void> removeFromCart(@PathVariable int cartItemId) {
         orderService.removeFromCart(cartItemId);
         return ApiResponse.success();
@@ -91,7 +92,7 @@ public class ShoppingController {
      * @param quantity 新的商品数量
      * @return 操作成功的空响应
      */
-    @PatchMapping("/cart/{cartItemId}")
+    @PatchMapping("/carts/{cartItemId}")
     public ApiResponse<Void> updateCartQuantity(
             @PathVariable int cartItemId,
             @RequestParam int quantity) {
@@ -105,7 +106,7 @@ public class ShoppingController {
      * @param cartItemIds 购物车项ID列表
      * @return 包含支付信息的响应
      */
-    @PostMapping("/cart/checkout")
+    @PostMapping("/carts/checkout")
     public ApiResponse<List<CheckoutResponse>> checkout(@RequestBody List<Integer> cartItemIds) {
         return ApiResponse.success(orderService.checkout(cartItemIds));
     }
@@ -206,7 +207,7 @@ public class ShoppingController {
      * @param orderNo 可选的订单编号
      * @return 店铺订单详细信息
      */
-    @GetMapping("/store/{storeId}/orders/{orderId}")
+    @GetMapping("orders/store/{storeId}/{orderId}")
     public ApiResponse<StoreOrderInfoResponse> getStoreOrderDetail(
             @PathVariable int storeId,
             @PathVariable int orderId,
@@ -221,7 +222,7 @@ public class ShoppingController {
      * @param orderId 要确认的订单ID
      * @return 操作成功的空响应
      */
-    @PostMapping("/store/{storeId}/orders/{orderId}/confirm")
+    @PostMapping("/orders/store/{storeId}/{orderId}/confirm")
     public ApiResponse<Void> confirmOrder(
             @PathVariable int storeId,
             @PathVariable int orderId) {
@@ -237,7 +238,7 @@ public class ShoppingController {
      * @param reason 拒绝原因
      * @return 操作成功的空响应
      */
-    @PostMapping("/store/{storeId}/orders/{orderId}/refuse")
+    @PostMapping("/orders/store/{storeId}/{orderId}/refuse")
     public ApiResponse<Void> refuseOrder(
             @PathVariable int storeId,
             @PathVariable int orderId,
@@ -254,7 +255,7 @@ public class ShoppingController {
      * @param params 发货请求参数，包含物流公司和物流单号等信息
      * @return 操作成功的空响应
      */
-    @PostMapping("/store/{storeId}/orders/{orderId}/ship")
+    @PostMapping("/orders/store/{storeId}/{orderId}/ship")
     public ApiResponse<Void> shipOrder(
             @PathVariable int storeId,
             @PathVariable int orderId,
@@ -270,7 +271,7 @@ public class ShoppingController {
      *
      * @return 未支付的支付信息列表
      */
-    @GetMapping("/payment/pending")
+    @GetMapping("/payments/pending")
     public List<PaymentInfoResponse> getPendingPayments() {
         return paymentRepository.findByUserIdAndStatus(securityUtil.getCurrentUser().getId(), PaymentStatus.PENDING)
                 .stream()
@@ -286,7 +287,7 @@ public class ShoppingController {
      * @return 支付URL
      * @throws TomatoMallException 当支付参数无效时抛出异常
      */
-    @PostMapping("/payment/{paymentId}/pay")
+    @PostMapping("/payments/{paymentId}/pay")
     public ApiResponse<String> pay(
             @PathVariable int paymentId,
             @RequestParam PaymentMethod paymentMethod
@@ -302,7 +303,7 @@ public class ShoppingController {
      * @return 操作成功的空响应
      * @throws TomatoMallException 当支付参数无效时抛出异常
      */
-    @PostMapping("/payment/{paymentId}/cancel")
+    @PostMapping("/payments/{paymentId}/cancel")
     public ApiResponse<Void> cancelPayment(
             @PathVariable int paymentId
     ) {
@@ -317,7 +318,7 @@ public class ShoppingController {
      * @return 支付宝交易查询响应
      * @throws TomatoMallException 当支付参数无效时抛出异常
      */
-    @GetMapping("/payment/trade-status")
+    @GetMapping("/payments/status/trade")
     public ApiResponse<Object> getTradeStatus(
             @RequestParam String paymentNo
     ) {
@@ -332,7 +333,7 @@ public class ShoppingController {
      * @return 支付宝退款查询响应
      * @throws TomatoMallException 当支付参数无效时抛出异常
      */
-    @GetMapping("/payment/refund-status")
+    @GetMapping("/payments/status/refund")
     public ApiResponse<Object> getRefundStatus(
             @RequestParam String paymentNo,
             @RequestParam String orderNo

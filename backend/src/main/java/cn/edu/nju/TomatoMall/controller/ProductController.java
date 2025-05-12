@@ -23,7 +23,7 @@ public class ProductController {
     /**
      * 获取商品列表
      */
-    @GetMapping("/all")
+    @GetMapping
     public ApiResponse<Page<ProductBriefResponse>> getProductList(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "0") int size,
@@ -52,7 +52,7 @@ public class ProductController {
     /**
      * 创建新商品
      */
-    @PostMapping(path = "/create", consumes = "multipart/form-data")
+    @PostMapping(consumes = "multipart/form-data")
     public ApiResponse<Void> createProduct(@ModelAttribute ProductCreateRequest params) {
         productService.createProduct(
                 params.getStoreId(),
@@ -90,7 +90,7 @@ public class ProductController {
     /**
      * 获取商品快照信息
      */
-    @GetMapping("/snapshot/{snapshotId}")
+    @GetMapping("/snapshots/{snapshotId}")
     public ApiResponse<ProductSnapshotResponse> getProductSnapshot(@PathVariable int snapshotId) {
         return ApiResponse.success(productService.getSnapshot(snapshotId));
     }
@@ -131,27 +131,27 @@ public class ProductController {
 
     /*------ HACK: 以下为兼容测试用接口 ------*/
 
-    /**
-     * 兼容测试用：更新商品信息
-     */
-    @PutMapping
-    public ApiResponse<String> updateProduct(@RequestBody Map<String, Object> params) {
-        return ApiResponse.success(productService.updateProduct(params));
-    }
+//    /**
+//     * 兼容测试用：更新商品信息
+//     */
+//    @PutMapping
+//    public ApiResponse<String> updateProduct(@RequestBody Map<String, Object> params) {
+//        return ApiResponse.success(productService.updateProduct(params));
+//    }
 
-    /**
-     * 兼容测试用：创建商品
-     */
-    @PostMapping
-    public ApiResponse<ProductBriefResponse> createProduct(@RequestBody Map<String, Object> params) {
-        return ApiResponse.success(productService.createProduct(params));
-    }
+//    /**
+//     * 兼容测试用：创建商品
+//     */
+//    @PostMapping
+//    public ApiResponse<ProductBriefResponse> createProduct(@RequestBody Map<String, Object> params) {
+//        return ApiResponse.success(productService.createProduct(params));
+//    }
 
-    /**
-     * 兼容测试用：获取商品列表
-     */
-    @GetMapping
-    public ApiResponse<List<ProductBriefResponse>> getProductList() {
-        return ApiResponse.success(productService.getProductList(0, 0, "id", true).getContent());
-    }
+//    /**
+//     * 兼容测试用：获取商品列表
+//     */
+//    @GetMapping
+//    public ApiResponse<List<ProductBriefResponse>> getProductList() {
+//        return ApiResponse.success(productService.getProductList(0, 0, "id", true).getContent());
+//    }
 }

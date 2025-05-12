@@ -13,7 +13,7 @@ import java.util.List;
  * 广告管理相关接口
  */
 @RestController
-@RequestMapping("/api/advertisement")
+@RequestMapping("/api/advertisements")
 public class AdvertisementController {
 
     @Autowired
@@ -88,84 +88,26 @@ public class AdvertisementController {
     // --------------------- 广告投放 ---------------------
 
     /**
-     * 获取广告位的可用槽位信息
-     */
-    @GetMapping("/space/{adSpaceId}/slot")
-    public ApiResponse<List<AdSlotInfoResponse>> getAdSlot(@PathVariable("adSpaceId") int adSpaceId) {
-        return ApiResponse.success(advertisementService.getAdSlot(adSpaceId));
-    }
-
-    /**
-     * 投放广告
-     */
-    @PostMapping("/{adId}/placements/{adSpaceId}")
-    public ApiResponse<Void> deliverAdvertisement(
-            @PathVariable("adId") int adId,
-            @PathVariable("adSpaceId") int adSpaceId,
-            @RequestBody List<Integer> slotIds) {
-        advertisementService.deliverAdvertisement(adId, adSpaceId, slotIds);
-        return ApiResponse.success();
-    }
-
-    /**
-     * 取消广告投放
-     */
-    @DeleteMapping("/placement/{placementId}")
-    public ApiResponse<Void> cancelDeliverAdvertisement(@PathVariable("placementId") int placementId) {
-        advertisementService.cancelDeliverAdvertisement(placementId);
-        return ApiResponse.success();
-    }
-
-    /**
-     * 审核广告投放
-     */
-    @PatchMapping("/placement/{placementId}/review")
-    public ApiResponse<Void> reviewAdvertisementPlacement(
-            @PathVariable("placementId") int placementId,
-            @RequestParam("pass") boolean isPass) {
-        advertisementService.reviewAdvertisementPlacement(placementId, isPass);
-        return ApiResponse.success();
-    }
-
-    // --------------------- 广告投放记录管理 ---------------------
-
-    /**
-     * 获取商店的广告投放记录
-     */
-    @GetMapping("/placement/store/{storeId}")
-    public ApiResponse<List<AdPlacementInfoResponse>> getStorePlacementList(@PathVariable("storeId") int storeId) {
-        return ApiResponse.success(advertisementService.getStorePlacementList(storeId));
-    }
-
-    /**
-     * 获取广告位的广告投放记录
-     */
-    @GetMapping("/placement/space/{adSpaceId}")
-    public ApiResponse<List<AdPlacementInfoResponse>> getAdSpacePlacementList(@PathVariable("adSpaceId") int adSpaceId) {
-        return ApiResponse.success(advertisementService.getAdSpacePlacementList(adSpaceId));
-    }
-
-    /**
-     * 获取所有待审核的广告投放记录
-     */
-    @GetMapping("/placement/pending")
-    public ApiResponse<List<AdPlacementInfoResponse>> getAllPendingPlacements() {
-        return ApiResponse.success(advertisementService.getAllPendingPlacements());
-    }
-
-    /**
      * 获取广告位列表
      */
-    @GetMapping("/space")
+    @GetMapping("/spaces")
     public ApiResponse<List<AdSpaceInfoResponse>> getAdSpaceList(
             @RequestParam(value = "type", required = false) AdSpaceType adSpaceType) {
         return ApiResponse.success(advertisementService.getAdSpaceList(adSpaceType));
     }
 
     /**
+     * 获取广告位的可用槽位信息
+     */
+    @GetMapping("/spaces/{spaceId}/slots")
+    public ApiResponse<List<AdSlotInfoResponse>> getAdSlot(@PathVariable("spaceId") int spaceId) {
+        return ApiResponse.success(advertisementService.getAdSlot(spaceId));
+    }
+
+    /**
      * 创建广告位
      */
-    @PostMapping("/space")
+    @PostMapping("/spaces")
     public ApiResponse<Void> createAdSpace(@RequestBody AdSpaceCreateRequest params) {
         advertisementService.createAdSpace(
                 params.getLabel(),
@@ -178,18 +120,78 @@ public class AdvertisementController {
     /**
      * 设置广告槽位状态
      */
-    @PatchMapping("/space/slot/status")
-    public ApiResponse<Void> setAdSlotStatus(@RequestBody AdSlotStatusUpdateRequest params) {
-        advertisementService.setAdSlotStatus(params.getSpaceId(), params.getSlotIds(), params.getAvailable(), params.getActive());
+    @PatchMapping("/spaces/{spaceId}/slots/status")
+    public ApiResponse<Void> setAdSlotStatus(
+            @PathVariable("spaceId") int spaceId,
+            @RequestBody AdSlotStatusUpdateRequest params
+    ) {
+        advertisementService.setAdSlotStatus(spaceId, params.getSlotIds(), params.getAvailable(), params.getActive());
         return ApiResponse.success();
     }
 
     /**
      * 删除广告位
      */
-    @DeleteMapping("space/{adSpaceId}")
-    public ApiResponse<Void> deleteAdSpace(@PathVariable("adSpaceId") int adSpaceId) {
-        advertisementService.deleteAdSpace(adSpaceId);
+    @DeleteMapping("spaces/{spaceId}")
+    public ApiResponse<Void> deleteAdSpace(@PathVariable("spaceId") int spaceId) {
+        advertisementService.deleteAdSpace(spaceId);
         return ApiResponse.success();
+    }
+
+    /**
+     * 投放广告
+     */
+    @PostMapping("/placements")
+    public ApiResponse<Void> deliverAdvertisement(
+            @RequestBody AdPlacementRequest params) {
+        advertisementService.deliverAdvertisement(
+                params.getAdId(),
+                params.getAdSpaceId(),
+                params.getAdSlotIds());
+        return ApiResponse.success();
+    }
+
+    /**
+     * 取消广告投放
+     */
+    @DeleteMapping("/placements/{placementId}")
+    public ApiResponse<Void> cancelDeliverAdvertisement(@PathVariable("placementId") int placementId) {
+        advertisementService.cancelDeliverAdvertisement(placementId);
+        return ApiResponse.success();
+    }
+
+    /**
+     * 审核广告投放
+     */
+    @PatchMapping("/placements/{placementId}/review")
+    public ApiResponse<Void> reviewAdvertisementPlacement(
+            @PathVariable("placementId") int placementId,
+            @RequestParam("pass") boolean isPass) {
+        advertisementService.reviewAdvertisementPlacement(placementId, isPass);
+        return ApiResponse.success();
+    }
+
+    /**
+     * 获取商店的广告投放记录
+     */
+    @GetMapping("/placements/store/{storeId}")
+    public ApiResponse<List<AdPlacementInfoResponse>> getStorePlacementList(@PathVariable("storeId") int storeId) {
+        return ApiResponse.success(advertisementService.getStorePlacementList(storeId));
+    }
+
+    /**
+     * 获取广告位的广告投放记录
+     */
+    @GetMapping("/placements/space/{adSpaceId}")
+    public ApiResponse<List<AdPlacementInfoResponse>> getAdSpacePlacementList(@PathVariable("adSpaceId") int adSpaceId) {
+        return ApiResponse.success(advertisementService.getAdSpacePlacementList(adSpaceId));
+    }
+
+    /**
+     * 获取所有待审核的广告投放记录
+     */
+    @GetMapping("/placements/pending")
+    public ApiResponse<List<AdPlacementInfoResponse>> getAllPendingPlacements() {
+        return ApiResponse.success(advertisementService.getAllPendingPlacements());
     }
 }
