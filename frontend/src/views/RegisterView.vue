@@ -2,18 +2,20 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/User'
+import { ROLES, ROLE_OPTIONS } from '../constants/roles'
 
 const username = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 const email = ref('')
+const role = ref(ROLES.CUSTOMER) // 使用常量
 const errorMessage = ref('')
 const userStore = useUserStore()
 const router = useRouter()
 
 const register = async () => {
   // 表单验证
-  if (!username.value || !password.value || !confirmPassword.value || !email.value) {
+  if (!username.value || !password.value || !confirmPassword.value || !email.value || !role.value) {
     errorMessage.value = '请填写所有必填字段'
     return
   }
@@ -27,9 +29,10 @@ const register = async () => {
     await userStore.register({
       username: username.value,
       password: password.value,
-      email: email.value
+      email: email.value,
+      role: role.value // 包含角色字段
     })
-    router.push('/login')
+    await router.push('/login')
   } catch (error: any) {
     errorMessage.value = error.message || '注册失败，请重试'
   }
@@ -89,6 +92,15 @@ const register = async () => {
         />
       </div>
 
+      <div class="form-group">
+        <label for="role">身份</label>
+        <select id="role" v-model="role" required>
+          <option v-for="option in ROLE_OPTIONS" :key="option.value" :value="option.value">
+            {{ option.label }}
+          </option>
+        </select>
+      </div>
+
       <div class="form-actions">
         <button type="submit" class="btn-primary">注册</button>
         <RouterLink to="/login" class="login-link">
@@ -127,7 +139,7 @@ label {
   font-size: 16px;
 }
 
-input {
+input, select {
   width: 100%;
   padding: 14px;
   border: 1px solid var(--color-border);
@@ -171,4 +183,3 @@ input {
   font-size: 18px;
 }
 </style>
-

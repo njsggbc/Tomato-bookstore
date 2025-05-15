@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useUserStore } from '../stores/User'
+import { ROLE_NAMES } from '../constants/roles'
 
 const userStore = useUserStore()
 const username = ref('')
@@ -9,6 +10,7 @@ const phone = ref('')
 const address = ref('')
 const errorMessage = ref('')
 const successMessage = ref('')
+const roleName = ref('')
 
 onMounted(async () => {
   if (userStore.isLoggedIn) {
@@ -18,6 +20,8 @@ onMounted(async () => {
       email.value = userStore.user?.email || ''
       phone.value = userStore.user?.phone || ''
       address.value = userStore.user?.address || ''
+      // 获取角色名称
+      roleName.value = userStore.user?.role ? ROLE_NAMES[userStore.user.role] : ''
     } catch (error: any) {
       errorMessage.value = '获取用户信息失败'
     }
@@ -78,6 +82,17 @@ const updateProfile = async () => {
         </div>
 
         <div class="form-group">
+          <label for="role">用户身份</label>
+          <input
+            id="role"
+            v-model="roleName"
+            type="text"
+            placeholder="用户身份"
+            readonly
+          />
+        </div>
+
+        <div class="form-group">
           <label for="email">邮箱</label>
           <input
             id="email"
@@ -121,6 +136,16 @@ const updateProfile = async () => {
   max-width: 600px;
   margin: 0 auto;
   padding: 20px;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+}
+
+h1 {
+  text-align: center;
+  font-size: 26px;
+  margin-bottom: 25px;
+  color: #ff6347; /* 番茄红 */
 }
 
 .form-group {
@@ -129,15 +154,17 @@ const updateProfile = async () => {
 
 label {
   display: block;
-  margin-bottom: 5px;
+  margin-bottom: 8px;
   font-weight: bold;
+  font-size: 16px;
 }
 
 input, textarea {
   width: 100%;
-  padding: 10px;
+  padding: 14px;
   border: 1px solid var(--color-border);
-  border-radius: 4px;
+  border-radius: 8px;
+  font-size: 16px;
 }
 
 textarea {
@@ -145,39 +172,45 @@ textarea {
 }
 
 .form-actions {
-  margin-top: 20px;
+  margin-top: 30px;
+  text-align: center;
 }
 
 .btn-primary {
-  background-color: var(--color-text);
+  background-color: #ff6347; /* 番茄红 */
   color: white;
   border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
+  padding: 14px 28px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 18px;
+  font-weight: bold;
   display: inline-block;
   text-decoration: none;
+  transition: all 0.3s ease;
 }
 
 .btn-primary:hover {
-  opacity: 0.9;
+  background-color: #ff4500; /* 深番茄红 */
+  transform: scale(1.05);
 }
 
 .error-message {
   color: red;
-  margin-bottom: 15px;
-  padding: 10px;
+  margin-bottom: 20px;
+  padding: 14px;
   background-color: rgba(255, 0, 0, 0.1);
-  border-radius: 4px;
+  border-radius: 8px;
+  text-align: center;
 }
 
 .success-message {
   color: green;
-  margin-bottom: 15px;
-  padding: 10px;
+  margin-bottom: 20px;
+  padding: 14px;
   background-color: rgba(0, 128, 0, 0.1);
-  border-radius: 4px;
+  border-radius: 8px;
+  text-align: center;
 }
 
 .not-logged-in {

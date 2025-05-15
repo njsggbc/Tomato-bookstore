@@ -8,6 +8,7 @@ interface User {
   email: string
   phone?: string
   address?: string
+  role: string
 }
 
 // 注册表单接口
@@ -15,6 +16,7 @@ interface RegisterForm {
   username: string
   password: string
   email: string
+  role: string
 }
 
 // 用户信息更新接口

@@ -1,3 +1,4 @@
+// src/router/index.ts
 import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '../stores/User'
 
@@ -20,16 +21,60 @@ const router = createRouter({
       component: () => import('../views/UserProfileView.vue'),
       meta: { requiresAuth: true }
     },
-    // 重定向根路径到登录页面
+    {
+      path: '/home',
+      name: 'home',
+      component: () => import('../views/HomePage.vue'),
+      meta: { requiresAuth: true } // 添加登录验证
+    },
+    {
+      path: '/store/:id',
+      name: 'store',
+      component: () => import('../views/StoreView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/book/:id',
+      name: 'book',
+      component: () => import('../views/BookDetailView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/store/create',
+      name: 'store-create',
+      component: () => import('../views/StoreCreateView.vue'),
+      meta: { requiresAuth: true, roles: ['admin'] }
+    },
+    {
+      path: '/store/:storeId/book/create',
+      name: 'book-create',
+      component: () => import('../views/BookCreateView.vue'),
+      meta: { requiresAuth: true, roles: ['merchant'] }
+    },
+    {
+      path: '/search/:type',
+      name: 'search',
+      component: () => import('../views/SearchResultsView.vue'),
+      meta: { requiresAuth: true }
+    },
     {
       path: '/',
       redirect: '/login'
     },
-    // 捕获所有未匹配的路由
     {
       path: '/:pathMatch(.*)*',
       redirect: '/login'
-    }
+    },
+    {
+      path: '/advertisements',
+      name: 'advertisements',
+      component: () => import('../views/AdvertisementView.vue')
+    },
+    {
+      path: '/cart',
+      name: 'cart',
+      component: () => import('../views/CartView.vue')
+    },
   ],
 })
 
@@ -38,8 +83,13 @@ router.beforeEach((to, from, next) => {
   const userStore = useUserStore()
 
   if (to.meta.requiresAuth && !userStore.isLoggedIn) {
-    // 需要登录但用户未登录，重定向到登录页
     next({ name: 'login' })
+  } else if (to.meta.roles && Array.isArray(to.meta.roles) &&
+    userStore.user && !to.meta.roles.includes(userStore.user.role)) {
+    // 角色权限验证
+    next({ name: 'home' })
+  } else if (userStore.isLoggedIn && (to.name === 'login' || to.name === 'register')) {
+    next({ name: 'home' })
   } else {
     next()
   }

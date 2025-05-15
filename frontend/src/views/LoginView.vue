@@ -17,11 +17,12 @@ const login = async () => {
 
   try {
     await userStore.login(username.value, password.value)
-    router.push('/')
+    await router.push('/home') // 修改为跳转到home而不是根路径
   } catch (error: any) {
     errorMessage.value = error.message || '登录失败，请重试'
   }
 }
+
 </script>
 
 <template>
