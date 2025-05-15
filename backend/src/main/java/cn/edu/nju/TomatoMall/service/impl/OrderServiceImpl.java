@@ -130,7 +130,7 @@ public class OrderServiceImpl implements OrderService {
                         recipientAddress,
                         recipientPhone,
                         recipientName,
-                        storeRemarks.get(entry.getKey().getId())
+                        storeRemarks == null ? "" : storeRemarks.get(entry.getKey().getId())
                 ))
                 .collect(Collectors.toList());
 

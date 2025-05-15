@@ -13,7 +13,6 @@ import cn.edu.nju.TomatoMall.service.OrderService;
 import cn.edu.nju.TomatoMall.service.PaymentService;
 import cn.edu.nju.TomatoMall.util.SecurityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -40,7 +39,7 @@ public class ShoppingController {
      * @param securityUtil 安全操作工具
      */
     @Autowired
-    public ShoppingController(OrderService orderService, @Qualifier("paymentServiceImpl") PaymentService paymentService, PaymentRepository paymentRepository, SecurityUtil securityUtil) {
+    public ShoppingController(OrderService orderService, PaymentService paymentService, PaymentRepository paymentRepository, SecurityUtil securityUtil) {
         this.orderService = orderService;
         this.paymentService = paymentService;
         this.paymentRepository = paymentRepository;
