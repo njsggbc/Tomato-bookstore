@@ -44,6 +44,16 @@ public class LoginInterceptor implements HandlerInterceptor {
             return true;
         }
 
+        // 使用Authorization进行身份验证
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            if (securityUtil.verifyToken(token)) {
+                request.getSession().setAttribute("currentUser", securityUtil.getUser(token));
+                return true;
+            }
+        }
+
         // 使用Cookie进行身份验证
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
@@ -55,13 +65,6 @@ public class LoginInterceptor implements HandlerInterceptor {
                     }
                 }
             }
-        }
-
-        // 使用token进行身份验证
-        String token = request.getHeader("token");
-        if (token != null && securityUtil.verifyToken(token)) {
-            request.getSession().setAttribute("currentUser", securityUtil.getUser(token));
-            return true;
         }
 
         throw TomatoMallException.notLogin(request.getServletPath());

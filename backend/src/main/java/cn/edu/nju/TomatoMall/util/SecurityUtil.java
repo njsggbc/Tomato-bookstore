@@ -92,6 +92,10 @@ public class SecurityUtil {
      * 验证token是否有效
      */
     public boolean verifyToken(String token) {
+        if (token == null) {
+            return false;
+        }
+
         try {
             // 从JWT中提取用户ID
             Integer userId = Integer.parseInt(JWT.decode(token).getAudience().get(0));
