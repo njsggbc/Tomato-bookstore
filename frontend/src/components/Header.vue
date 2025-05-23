@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useUserStore } from '../stores/User'
+import { ROLES } from '../constants/roles'
+
+
 
 const router = useRouter()
 const searchQuery = ref('')
 const searchType = ref('store') // 'store' 或 'book'
+const userStore = useUserStore()
 
 // 搜索函数
 const search = () => {
@@ -62,6 +67,9 @@ const goToCategories = () => router.push('/categories')
       </button>
       <button class="nav-button" @click="router.push('/advertisements')">
         精选推广
+      </button>
+      <button v-if="userStore.user && userStore.user.role === ROLES.ADMIN" class="nav-button admin-button" @click="router.push('/admin/dashboard')">
+        管理后台
       </button>
     </div>
   </header>

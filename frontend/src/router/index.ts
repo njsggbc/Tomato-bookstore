@@ -1,6 +1,7 @@
 // src/router/index.ts
 import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '../stores/User'
+import {ROLES} from "@/constants/roles.ts";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -74,6 +75,39 @@ const router = createRouter({
       path: '/cart',
       name: 'cart',
       component: () => import('../views/CartView.vue')
+    },
+    {
+      path: '/store/apply',
+      name: 'StoreApplication',
+      component: () => import('../views/StoreApplicationView.vue'),
+      meta: {
+        requiresAuth: true,
+        roles: [ROLES.MERCHANT]
+      }
+    },
+    {
+      path: '/ad/apply',
+      name: 'adApply',
+      component: () => import('../views/AdvertisementApplyView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/admin/dashboard',
+      name: 'AdminDashboard',
+      component: () => import('../views/admin/AdminDashboardView.vue'),
+      meta: { requiresAdmin: true }
+    },
+    {
+      path: '/admin/stores/approval',
+      name: 'StoreApproval',
+      component: () => import('../views/admin/StoreApprovalView.vue'),
+      meta: { requiresAdmin: true }
+    },
+    {
+      path: '/admin/ads/approval',
+      name: 'AdApproval',
+      component: () => import('../views/admin/AdApprovalView.vue'),
+      meta: { requiresAdmin: true }
     },
   ],
 })

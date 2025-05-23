@@ -5,6 +5,8 @@ import { useUserStore } from '../stores/User'
 import { useStoreStore } from '../stores/Store'
 import { ROLES } from '../constants/roles'
 import AdvertisementCarousel from '../components/AdvertisementCarousel.vue'
+import UserNotifications from '../components/UserNotifications.vue'
+
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -62,6 +64,7 @@ onMounted(() => {
     <div v-if="userStore.user?.role === ROLES.ADMIN" class="admin-controls">
       <button class="add-button" @click="router.push('/store/new')">添加新店铺</button>
     </div>
+    <UserNotifications />
   </div>
 </template>
 

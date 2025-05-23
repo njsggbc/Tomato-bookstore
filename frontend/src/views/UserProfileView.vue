@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useUserStore } from '../stores/User'
-import { ROLE_NAMES } from '../constants/roles'
+import { ROLE_NAMES ,ROLES} from '../constants/roles'
+import UserNotifications from '../components/UserNotifications.vue'
 
 const userStore = useUserStore()
 const username = ref('')
@@ -11,6 +12,7 @@ const address = ref('')
 const errorMessage = ref('')
 const successMessage = ref('')
 const roleName = ref('')
+const activeTab = ref('info') // 默认选中个人信息标签
 
 onMounted(async () => {
   if (userStore.isLoggedIn) {
@@ -68,6 +70,10 @@ const updateProfile = async () => {
       <div v-if="successMessage" class="success-message">
         {{ successMessage }}
       </div>
+
+      <router-link v-if="userStore.user?.role === ROLES.MERCHANT" to="/store/apply" class="nav-button">
+        申请开店
+      </router-link>
 
       <form @submit.prevent="updateProfile">
         <div class="form-group">

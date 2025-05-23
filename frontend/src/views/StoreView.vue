@@ -5,6 +5,7 @@ import { useStoreStore } from '../stores/Store'
 import { useUserStore } from '../stores/User'
 import {useBookStore} from "../stores/Book.ts";
 import { ROLES } from '../constants/roles'
+import StoreComments from "@/components/StoreComments.vue";
 
 const route = useRoute()
 const router = useRouter()
@@ -111,6 +112,10 @@ onMounted(async () => {
       </div>
     </div>
   </div>
+  <StoreComments
+    :storeId="Number(storeId)"
+    :storeMerchantId="storeStore.currentStore?.merchantId"
+  />
 </template>
 
 <style scoped>

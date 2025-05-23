@@ -81,6 +81,22 @@ export const useStoreStore = defineStore('store', () => {
       loading.value = false
     }
   }
+  // 获取我的店铺
+  const fetchStoresByOwner = async () => {
+    loading.value = true
+    error.value = ''
+
+    try {
+      const response = await api.get('/stores/my-stores')
+      return response.data
+    } catch (err: any) {
+      error.value = '获取我的店铺失败'
+      console.error(err)
+      return []
+    } finally {
+      loading.value = false
+    }
+  }
 
   // 获取单个店铺详情
   const fetchStoreById = async (storeId: number) => {
@@ -212,6 +228,7 @@ export const useStoreStore = defineStore('store', () => {
     fetchBooksByStore,
     createStore,
     searchStores,
-    deleteStore
+    deleteStore,
+    fetchStoresByOwner,
   }
 })
