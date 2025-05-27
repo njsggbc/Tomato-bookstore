@@ -292,4 +292,21 @@ public class TomatoMallException extends RuntimeException {
     public static TomatoMallException adPlacementNotFound(String message) {
         return new TomatoMallException(404, 603, message);
     }
+
+    // Message-related Exceptions (700–799)
+    public static TomatoMallException messageNotFound() {
+        return new TomatoMallException(404, 700, "消息不存在!");
+    }
+
+    public static TomatoMallException messageNotFound(String message) {
+        return new TomatoMallException(404, 700, message);
+    }
+
+    public static TomatoMallException messageTypeNotSupported() {
+        return new TomatoMallException(400, 701, "不支持的消息类型!");
+    }
+
+    public static TomatoMallException messageTypeNotSupported(String message) {
+        return new TomatoMallException(400, 701, message);
+    }
 }

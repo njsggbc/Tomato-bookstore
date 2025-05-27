@@ -4,7 +4,7 @@ import cn.edu.nju.TomatoMall.models.po.Order;
 import lombok.Getter;
 
 @Getter
-public class OrderEvent {
+public abstract class OrderEvent {
     private final Order order;
 
     public OrderEvent(Order order) {

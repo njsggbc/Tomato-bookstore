@@ -1,6 +1,7 @@
 package cn.edu.nju.TomatoMall.service.impl;
 
 import cn.edu.nju.TomatoMall.enums.*;
+import cn.edu.nju.TomatoMall.events.advertisement.*;
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
 import cn.edu.nju.TomatoMall.models.dto.advertisement.*;
 import cn.edu.nju.TomatoMall.models.po.*;
@@ -11,6 +12,7 @@ import cn.edu.nju.TomatoMall.util.FileUtil;
 import cn.edu.nju.TomatoMall.util.SecurityUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +35,7 @@ public class AdvertisementServiceImpl implements AdvertisementService {
     private final PermissionService permissionService;
     private final FileUtil fileUtil;
     private final SecurityUtil securityUtil;
+    private final ApplicationEventPublisher eventPublisher;
     private final AdvertisementSlotRepository advertisementSlotRepository;
 
     @Autowired
@@ -44,6 +47,7 @@ public class AdvertisementServiceImpl implements AdvertisementService {
             PermissionService permissionService,
             FileUtil fileUtil,
             SecurityUtil securityUtil,
+            ApplicationEventPublisher eventPublisher,
             AdvertisementSlotRepository advertisementSlotRepository) {
         this.advertisementRepository = advertisementRepository;
         this.advertisementSpaceRepository = advertisementSpaceRepository;
@@ -52,6 +56,7 @@ public class AdvertisementServiceImpl implements AdvertisementService {
         this.permissionService = permissionService;
         this.fileUtil = fileUtil;
         this.securityUtil = securityUtil;
+        this.eventPublisher = eventPublisher;
         this.advertisementSlotRepository = advertisementSlotRepository;
     }
 
@@ -246,6 +251,9 @@ public class AdvertisementServiceImpl implements AdvertisementService {
 
         // 更新广告状态
         updateAdStatus(ad);
+
+        // 发布投放事件
+        eventPublisher.publishEvent(new AdvertisingEvent(placement));
     }
 
     @Transactional
@@ -295,7 +303,7 @@ public class AdvertisementServiceImpl implements AdvertisementService {
 
     @Transactional
     @Override
-    public void reviewAdvertisementPlacement(int placementId, boolean isPass) {
+    public void reviewAdvertisementPlacement(int placementId, boolean isPass, String comment) {
         // 检查当前用户是否为管理员
         if (securityUtil.getCurrentUser().getRole() != Role.ADMIN) {
             throw TomatoMallException.permissionDenied();
@@ -326,10 +334,16 @@ public class AdvertisementServiceImpl implements AdvertisementService {
                 slot.setAvailable(slot.getStartTime().isAfter(minimumAvailableTime));
             });
         }
+
+        placement.setComment(comment);
+
         advertisementSlotRepository.saveAll(placement.getSlotList());
 
         // 更新广告状态
         updateAdStatus(placement.getAdvertisement());
+
+        // 发布审核事件
+        eventPublisher.publishEvent(new AdvertisingReviewEvent(placement, isPass, comment));
     }
 
     // --------------------- 广告位管理 ---------------------

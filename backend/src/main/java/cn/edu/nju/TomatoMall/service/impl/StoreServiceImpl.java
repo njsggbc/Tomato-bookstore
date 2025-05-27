@@ -2,6 +2,8 @@ package cn.edu.nju.TomatoMall.service.impl;
 
 import cn.edu.nju.TomatoMall.enums.Role;
 import cn.edu.nju.TomatoMall.enums.StoreStatus;
+import cn.edu.nju.TomatoMall.events.store.StoreStatusChangeEvent;
+import cn.edu.nju.TomatoMall.events.store.StoreReviewEvent;
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
 import cn.edu.nju.TomatoMall.models.dto.store.StoreInfoResponse;
 import cn.edu.nju.TomatoMall.models.po.Store;
@@ -12,6 +14,7 @@ import cn.edu.nju.TomatoMall.service.StoreService;
 import cn.edu.nju.TomatoMall.util.FileUtil;
 import cn.edu.nju.TomatoMall.util.SecurityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -31,13 +34,19 @@ public class StoreServiceImpl implements StoreService {
     private final FileUtil fileUtil;
     private static final List<StoreStatus> AWAITING_REVIEW_STATUS = Arrays.asList(StoreStatus.PENDING, StoreStatus.UPDATING);
     private final EmploymentRepository employmentRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Autowired
-    public StoreServiceImpl(StoreRepository storeRepository, SecurityUtil securityUtil, FileUtil fileUtil, EmploymentRepository employmentRepository) {
+    public StoreServiceImpl(StoreRepository storeRepository,
+                            SecurityUtil securityUtil,
+                            FileUtil fileUtil,
+                            EmploymentRepository employmentRepository,
+                            ApplicationEventPublisher eventPublisher) {
         this.storeRepository = storeRepository;
         this.securityUtil = securityUtil;
         this.fileUtil = fileUtil;
         this.employmentRepository = employmentRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -109,6 +118,9 @@ public class StoreServiceImpl implements StoreService {
                 .build();
 
         storeRepository.save(store);
+
+        // 发布店铺创建事件
+        eventPublisher.publishEvent(new StoreStatusChangeEvent(store));
     }
 
     @Transactional
@@ -148,6 +160,9 @@ public class StoreServiceImpl implements StoreService {
         store.setStatus(StoreStatus.UPDATING);
 
         storeRepository.save(store);
+
+        // 发布店铺更新事件
+        eventPublisher.publishEvent(new StoreStatusChangeEvent(store));
     }
 
     @Override
@@ -174,7 +189,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional
-    public void review(int storeId, boolean pass) {
+    public void review(int storeId, boolean pass, String comment) {
         if (!securityUtil.getCurrentUser().getRole().equals(Role.ADMIN)) {
             throw TomatoMallException.permissionDenied();
         }
@@ -208,6 +223,9 @@ public class StoreServiceImpl implements StoreService {
                 break;
             default: throw TomatoMallException.invalidOperation();
         }
+
+        // 发布审核事件
+        eventPublisher.publishEvent(new StoreReviewEvent(store, pass, comment));
     }
 
     @Override

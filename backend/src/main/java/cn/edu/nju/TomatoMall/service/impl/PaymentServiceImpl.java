@@ -7,6 +7,7 @@ import cn.edu.nju.TomatoMall.events.payment.PaymentCancelEvent;
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
 import cn.edu.nju.TomatoMall.models.po.Order;
 import cn.edu.nju.TomatoMall.models.po.Payment;
+import cn.edu.nju.TomatoMall.repository.OrderRepository;
 import cn.edu.nju.TomatoMall.repository.PaymentRepository;
 import cn.edu.nju.TomatoMall.service.PaymentService;
 import cn.edu.nju.TomatoMall.util.SecurityUtil;
@@ -39,12 +40,17 @@ public abstract class PaymentServiceImpl implements PaymentService {
     protected static final int PAYMENT_TIMEOUT = 5;
 
     protected final PaymentRepository paymentRepository;
+    protected final OrderRepository orderRepository;
     protected final ApplicationEventPublisher eventPublisher;
     protected final SecurityUtil securityUtil;
 
     @Autowired
-    public PaymentServiceImpl(PaymentRepository paymentRepository, ApplicationEventPublisher eventPublisher, SecurityUtil securityUtil) {
+    public PaymentServiceImpl(PaymentRepository paymentRepository,
+                              OrderRepository orderRepository,
+                              ApplicationEventPublisher eventPublisher,
+                              SecurityUtil securityUtil) {
         this.paymentRepository = paymentRepository;
+        this.orderRepository = orderRepository;
         this.eventPublisher = eventPublisher;
         this.securityUtil = securityUtil;
     }
@@ -109,7 +115,6 @@ public abstract class PaymentServiceImpl implements PaymentService {
 
         Payment payment = paymentRepository.findByIdAndUserId(paymentId, securityUtil.getCurrentUser().getId())
                 .orElseThrow(TomatoMallException::paymentNotFound);
-        validatePayment(payment);
         // 如果已有支付，先关闭交易
         if (payment.getPaymentNo() != null) {
             paymentStrategy.closeTrade(payment);
@@ -156,6 +161,22 @@ public abstract class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional
+    public void refund(String orderNo, String reason) {
+        // 获取支付信息
+        Order order = orderRepository.findByOrderNo(orderNo)
+                .orElseThrow(TomatoMallException::orderNotFound);
+
+        // 验证支付状态
+        if (order.getPayment().getStatus() != PaymentStatus.SUCCESS) {
+            throw TomatoMallException.paymentFail("仅成功支付的订单可以退款");
+        }
+
+        // 执行退款逻辑
+        PAYMENT_STRATEGY.get(order.getPayment().getPaymentMethod()).processRefund(order, order.getTotalAmount(), reason);
+    }
+
+    @Override
+    @Transactional
     public String handlePaymentNotify(HttpServletRequest request, PaymentMethod paymentMethod) {
         return PAYMENT_STRATEGY.get(paymentMethod).processNotify(request);
     }
@@ -175,24 +196,6 @@ public abstract class PaymentServiceImpl implements PaymentService {
                 .orElseThrow(TomatoMallException::paymentNotFound);
 
         return PAYMENT_STRATEGY.get(payment.getPaymentMethod()).processQueryRefund(paymentNo, orderNo);
-    }
-
-    // ====================================================================================
-    // 事件监听处理
-    // ====================================================================================
-
-    /**
-     * 处理订单退款事件
-     * @param event 退款事件
-     */
-    @EventListener
-    @Transactional
-    public void handleOrderRefund(OrderCancelEvent event) {
-        // 验证退款参数
-        validateRefund(event.getOrder(), event.getRefundAmount());
-
-        PAYMENT_STRATEGY.get(event.getOrder().getPayment().getPaymentMethod())
-                .processRefund(event.getOrder(), event.getRefundAmount(), event.getReason());
     }
 
     // ====================================================================================
@@ -314,41 +317,6 @@ public abstract class PaymentServiceImpl implements PaymentService {
                 // 通知所有关联订单支付取消
                 eventPublisher.publishEvent(new PaymentCancelEvent(payment, "支付超时"));
             }
-        }
-    }
-
-    /**
-     * 验证支付信息
-     * 检查支付金额是否与订单总金额一致
-     * @param payment 支付对象
-     */
-    private void validatePayment(Payment payment) {
-        if (payment.getStatus() != PaymentStatus.PENDING) {
-            throw TomatoMallException.paymentFail("支付状态不允许操作");
-        }
-        // 计算订单总金额
-        BigDecimal totalAmount = payment.getOrders().stream()
-                .map(Order::getTotalAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .setScale(2, RoundingMode.HALF_UP);
-
-        // 比较支付金额与订单总金额
-        BigDecimal diff = payment.getAmount().subtract(totalAmount).abs();
-        if (diff.compareTo(new BigDecimal("0.01")) > 0) {
-            throw TomatoMallException.paymentFail("金额校验失败");
-        }
-    }
-
-    /**
-     * 验证退款参数
-     * @param order 订单对象
-     * @param amount 退款金额
-     */
-    private void validateRefund(Order order, BigDecimal amount) {
-        // 检查退款金额是否合法（大于0且不超过订单总额）
-        if (amount.compareTo(BigDecimal.ZERO) <= 0 ||
-                amount.compareTo(order.getTotalAmount()) > 0) {
-            throw TomatoMallException.refundFail("退款金额无效");
         }
     }
 

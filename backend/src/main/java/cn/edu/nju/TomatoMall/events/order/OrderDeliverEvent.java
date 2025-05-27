@@ -1,0 +1,14 @@
+package cn.edu.nju.TomatoMall.events.order;
+
+import cn.edu.nju.TomatoMall.models.po.Order;
+
+public class OrderDeliverEvent extends OrderEvent {
+    private final String deliveryTime;
+    private final String deliveryAddress;
+
+    public OrderDeliverEvent(Order order, String deliveryTime, String deliveryAddress) {
+        super(order);
+        this.deliveryTime = deliveryTime;
+        this.deliveryAddress = deliveryAddress;
+    }
+}

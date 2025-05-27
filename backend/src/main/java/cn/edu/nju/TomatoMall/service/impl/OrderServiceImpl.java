@@ -1,10 +1,8 @@
 package cn.edu.nju.TomatoMall.service.impl;
 
 import cn.edu.nju.TomatoMall.enums.*;
-import cn.edu.nju.TomatoMall.events.order.OrderCancelEvent;
-import cn.edu.nju.TomatoMall.events.order.OrderRefundSuccessEvent;
-import cn.edu.nju.TomatoMall.events.payment.PaymentCancelEvent;
-import cn.edu.nju.TomatoMall.events.payment.PaymentSuccessEvent;
+import cn.edu.nju.TomatoMall.enums.OrderEvent;
+import cn.edu.nju.TomatoMall.events.order.*;
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
 import cn.edu.nju.TomatoMall.models.dto.payment.PaymentInfoResponse;
 import cn.edu.nju.TomatoMall.models.dto.order.*;
@@ -16,7 +14,6 @@ import cn.edu.nju.TomatoMall.service.OrderService;
 import cn.edu.nju.TomatoMall.util.SecurityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -295,18 +292,26 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findByIdAndUserId(orderId, securityUtil.getCurrentUser().getId())
                 .orElseThrow(TomatoMallException::orderNotFound);
 
-        if (order.getStatus() != OrderStatus.PROCESSING
-                && order.getStatus() != OrderStatus.AWAITING_SHIPMENT) {
-            throw TomatoMallException.invalidOperation();
+        switch (order.getStatus()) {
+            case CANCELLED:
+                return;
+            case AWAITING_PAYMENT:
+                order.setStatus(OrderStatus.CANCELLED);
+                break;
+            case PROCESSING:
+            case AWAITING_SHIPMENT:
+                order.getItems().forEach(item -> inventoryService.unlockStock(item.getProductId(), item.getQuantity()));
+                order.setStatus(OrderStatus.REFUND_PROCESSING);
+                break;
+            default:
+                throw TomatoMallException.invalidOperation();
         }
 
-        order.getItems().forEach(item -> inventoryService.unlockStock(item.getProductId(), item.getQuantity()));
-        order.setStatus(OrderStatus.REFUND_PROCESSING);
         order.getLogs().add(OrderLog.builder()
                 .operator(securityUtil.getCurrentUser())
                 .order(order)
                 .event(OrderEvent.CANCEL)
-                .afterEventStatus(OrderStatus.REFUND_PROCESSING)
+                .afterEventStatus(order.getStatus())
                 .message("用户取消订单: " + reason)
                 .timestamp(LocalDateTime.now())
                 .build());
@@ -454,6 +459,9 @@ public class OrderServiceImpl implements OrderService {
                 .timestamp(LocalDateTime.now())
                 .build());
 
+        // 发布订单确认事件
+        eventPublisher.publishEvent(new OrderConfirmEvent(order));
+
         orderRepository.save(order);
     }
 
@@ -553,6 +561,9 @@ public class OrderServiceImpl implements OrderService {
                 .build());
 
         orderRepository.save(order);
+
+        // 发布订单发货事件
+        eventPublisher.publishEvent(new OrderShipEvent(order, params.getTrackingNo(), params.getShippingCompany().toString()));
     }
 
     //-----------------------------
@@ -608,87 +619,32 @@ public class OrderServiceImpl implements OrderService {
                         .build()
         );
         orderRepository.save(order);
+
+        // 发布送达事件
+        eventPublisher.publishEvent(new OrderDeliverEvent(order, params.getDeliveryTime().toString(), params.getDeliveryLocation()));
+    }
+
+    // -----------------------------
+    // 公共辅助方法
+    //-----------------------------
+
+    @Override
+    public void updateStatus(Order order, User operator, OrderEvent event, OrderStatus status, String message) {
+        order.setStatus(status);
+        order.getLogs().add(
+                OrderLog.builder()
+                        .order(order)
+                        .operator(operator)
+                        .event(event)
+                        .afterEventStatus(status)
+                        .message(message)
+                        .timestamp(LocalDateTime.now())
+                        .build()
+        );
     }
 
     //-----------------------------
-    // 事件监听处理
-    //-----------------------------
-
-    /**
-     * 处理支付成功事件
-     * 更新订单状态为处理中
-     *
-     * @param event 支付成功事件
-     */
-    @EventListener
-    @Transactional
-    public void handlePaymentSuccess(PaymentSuccessEvent event) {
-        Payment payment = event.getPayment();
-        payment.getOrders().forEach(order -> {
-            order.setStatus(OrderStatus.PROCESSING);
-            order.getLogs().add(OrderLog.builder()
-                    .operator(order.getUser())
-                    .order(order)
-                    .event(OrderEvent.PAY)
-                    .afterEventStatus(OrderStatus.PROCESSING)
-                    .message("交易号：" + payment.getTradeNo())
-                    .timestamp(LocalDateTime.now())
-                    .build());
-        });
-
-        orderRepository.saveAll(payment.getOrders());
-    }
-
-    /**
-     * 处理支付取消事件
-     * 释放库存并更新订单状态为已取消
-     *
-     * @param event 支付取消事件
-     */
-    @EventListener
-    @Transactional
-    public void handlePaymentCancel(PaymentCancelEvent event) {
-        Payment payment = event.getPayment();
-        payment.getOrders().forEach(order -> {
-            order.getItems().forEach(item -> inventoryService.unlockStock(item.getProductId(), item.getQuantity()));
-            order.setStatus(OrderStatus.CANCELLED);
-            order.getLogs().add(OrderLog.builder()
-                    .order(order)
-                    .event(OrderEvent.CANCEL)
-                    .afterEventStatus(OrderStatus.CANCELLED)
-                    .message("支付取消: " + event.getReason())
-                    .timestamp(LocalDateTime.now())
-                    .build());
-        });
-
-        orderRepository.saveAll(payment.getOrders());
-    }
-
-    /**
-     * 处理订单退款成功事件
-     * 更新订单状态为已取消
-     *
-     * @param event 订单退款成功事件
-     */
-    @EventListener
-    @Transactional
-    public void handleOrderRefundSuccess(OrderRefundSuccessEvent event) {
-        Order order = event.getOrder();
-        order.setStatus(OrderStatus.CANCELLED);
-        order.getLogs().add(OrderLog.builder()
-                .order(order)
-                .event(OrderEvent.REFUND)
-                .afterEventStatus(OrderStatus.CANCELLED)
-                .message("已退款: " + event.getRefundAmount() + "\n" +
-                        "交易号：" + event.getTradeNo())
-                .timestamp(LocalDateTime.now())
-                .build());
-
-        orderRepository.save(order);
-    }
-
-    //-----------------------------
-    // 辅助方法
+    // 私有辅助方法
     //-----------------------------
 
     /**

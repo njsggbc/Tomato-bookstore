@@ -3,12 +3,13 @@ package cn.edu.nju.TomatoMall.service.impl;
 import cn.edu.nju.TomatoMall.configure.AlipayConfig;
 import cn.edu.nju.TomatoMall.enums.PaymentMethod;
 import cn.edu.nju.TomatoMall.enums.PaymentStatus;
-import cn.edu.nju.TomatoMall.events.order.OrderRefundSuccessEvent;
-import cn.edu.nju.TomatoMall.events.payment.PaymentCancelEvent;
+import cn.edu.nju.TomatoMall.events.payment.RefundSuccessEvent;
+import cn.edu.nju.TomatoMall.events.payment.*;
 import cn.edu.nju.TomatoMall.events.payment.PaymentSuccessEvent;
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
 import cn.edu.nju.TomatoMall.models.po.Order;
 import cn.edu.nju.TomatoMall.models.po.Payment;
+import cn.edu.nju.TomatoMall.repository.OrderRepository;
 import cn.edu.nju.TomatoMall.repository.PaymentRepository;
 import cn.edu.nju.TomatoMall.util.SecurityUtil;
 import com.alibaba.fastjson.JSONObject;
@@ -60,10 +61,11 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
     public AlipayServiceImpl(AlipayConfig config,
                              AlipayClient alipayClient,
                              PaymentRepository paymentRepository,
+                             OrderRepository orderRepository,
                              ApplicationEventPublisher eventPublisher,
                              SecurityUtil securityUtil
     ) {
-        super(paymentRepository, eventPublisher, securityUtil);
+        super(paymentRepository, orderRepository, eventPublisher, securityUtil);
         this.config = config;
         this.alipayClient = alipayClient;
     }
@@ -222,8 +224,8 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
 
         // 处理退款响应
         if (response.isSuccess()) {
-            // 退款成功，通知订单服务
-            eventPublisher.publishEvent(new OrderRefundSuccessEvent(order, new BigDecimal(response.getRefundFee()), response.getTradeNo()));
+            // 发布退款成功事件
+            eventPublisher.publishEvent(new RefundSuccessEvent(order, new BigDecimal(response.getRefundFee()), response.getTradeNo()));
         } else {
             // 退款失败，尝试重试
             // 判断是否需要重试
@@ -250,6 +252,7 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
                 }
             }
             // 所有重试都失败，抛出异常
+            eventPublisher.publishEvent(new RefundFailEvent(order, new BigDecimal(response.getRefundFee()), response.getTradeNo()));
             throw TomatoMallException.refundFail(response.getSubMsg());
         }
     }
@@ -357,6 +360,10 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
         if (payment.getAmount().compareTo(receivedAmount) != 0) {
             payment.setStatus(PaymentStatus.FAILED);
             paymentRepository.save(payment);
+
+            // 发布支付失败事件
+            eventPublisher.publishEvent(new PaymentFailEvent(payment));
+
             return "fail";
         }
 
@@ -368,7 +375,7 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
         payment.setTransactionTime(LocalDateTime.now());
         paymentRepository.save(payment);
 
-        // 通知关联订单支付成功
+        // 发布支付成功事件
         eventPublisher.publishEvent(new PaymentSuccessEvent(payment));
 
         return "success";

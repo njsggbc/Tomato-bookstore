@@ -44,8 +44,9 @@ public interface EmploymentService {
      * 解雇商店员工
      * @param storeId 商店ID
      * @param userId 用户ID
+     * @param reason 解雇原因
      */
-    void dismiss(int storeId, int userId);
+    void dismiss(int storeId, int userId, String reason);
 
     /**
      * 获取商店员工列表
