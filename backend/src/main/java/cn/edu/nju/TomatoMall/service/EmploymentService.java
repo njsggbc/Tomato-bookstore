@@ -49,6 +49,13 @@ public interface EmploymentService {
     void dismiss(int storeId, int userId, String reason);
 
     /**
+     * 员工主动辞职
+     * @param storeId 商店ID
+     * @param reason 辞职原因
+     */
+    void resign(int storeId, String reason);
+
+    /**
      * 获取商店员工列表
      * @param storeId 商店ID
      * @return 员工简要信息列表

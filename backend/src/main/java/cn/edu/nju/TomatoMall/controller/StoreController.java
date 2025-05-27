@@ -154,6 +154,16 @@ public class StoreController {
     }
 
     /**
+     * 员工主动辞职
+     */
+    @DeleteMapping("/{storeId}/resign")
+    public ApiResponse<Void> resign(@PathVariable int storeId,
+                                    @RequestBody String reason) {
+        employmentService.resign(storeId, reason);
+        return ApiResponse.success();
+    }
+
+    /**
      * 获取商店员工列表
      */
     @GetMapping("/{storeId}/staff")

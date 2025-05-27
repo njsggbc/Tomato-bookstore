@@ -147,6 +147,19 @@ public class EmploymentServiceImpl implements EmploymentService {
     }
 
     @Override
+    @Transactional
+    public void resign(int storeId, String reason) {
+        User user = securityUtil.getCurrentUser();
+        Employment employment = employmentRepository.findByStoreIdAndEmployeeId(storeId, user.getId())
+                .orElseThrow(TomatoMallException::invalidOperation);
+        Store store = employment.getStore();
+        employmentRepository.delete(employment);
+
+        // 发布辞职事件
+        eventPublisher.publishEvent(new EmployeeResignedEvent(store, user, reason));
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<UserBriefResponse> getStaffList(int storeId) {
         return employmentRepository.getEmployeeByStoreId(storeId)
