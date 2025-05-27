@@ -71,7 +71,7 @@ public class MessageServiceImpl implements MessageService {
 
         // 使用WebSocket推送消息
         if (type != MessageType.BROADCAST) {
-            tomatoMallWebSocketHandler.sendToUser(recipient.getId(), TomatoMallWebSocketMessage.newMessage(message));
+            tomatoMallWebSocketHandler.sendToUser(recipient.getId(), TomatoMallWebSocketMessage.newMessage(new MessageResponse(message)));
         }
     }
 
