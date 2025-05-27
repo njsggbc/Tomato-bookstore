@@ -44,7 +44,7 @@ public class PaymentListener {
         });
 
         // 通知用户支付成功
-        messageService.sendMessage(
+        messageService.sendNotification(
                 MessageType.SHOPPING,
                 payment.getUser(),
                 "支付成功",
@@ -56,7 +56,7 @@ public class PaymentListener {
 
         // 通知商户有订单待处理
         payment.getOrders().forEach(order -> {
-            messageService.broadcastMessageToStore(
+            messageService.broadcastNotificationToStore(
                     MessageType.BUSINESS,
                     order.getStore(),
                     "新订单",
@@ -71,7 +71,7 @@ public class PaymentListener {
     @EventListener
     @Transactional
     public void handlePaymentFailEvent(PaymentFailEvent event) {
-        messageService.sendMessage(
+        messageService.sendNotification(
                 MessageType.SHOPPING,
                 event.getPayment().getUser(),
                 "支付失败",
@@ -115,7 +115,7 @@ public class PaymentListener {
         );
 
         // 通知用户退款成功
-        messageService.sendMessage(
+        messageService.sendNotification(
                 MessageType.SHOPPING,
                 event.getOrder().getUser(),
                 "退款成功",
@@ -129,7 +129,7 @@ public class PaymentListener {
     @EventListener
     @Transactional
     public void handleRefundFailEvent(RefundFailEvent event) {
-        messageService.sendMessage(
+        messageService.sendNotification(
                 MessageType.SHOPPING,
                 event.getPayment().getUser(),
                 "退款失败",

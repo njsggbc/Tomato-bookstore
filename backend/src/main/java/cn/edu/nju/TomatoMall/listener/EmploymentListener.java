@@ -22,7 +22,7 @@ public class EmploymentListener {
 
     @EventListener
     public void handleEmployeeDismissedEvent(EmployeeDismissedEvent event) {
-        messageService.sendMessage(
+        messageService.sendNotification(
                 MessageType.BUSINESS,
                 event.getUser(),
                 "您已被解雇",
@@ -37,7 +37,7 @@ public class EmploymentListener {
 
     @EventListener
     public void handleEmployeeResignedEvent(EmployeeResignedEvent event) {
-        messageService.sendMessage(
+        messageService.sendNotification(
                 MessageType.BUSINESS,
                 event.getStore().getManager(),
                 "员工离职通知",
@@ -51,7 +51,7 @@ public class EmploymentListener {
 
     @EventListener
     public void handleEmployeeHiredEvent(EmployeeHiredEvent event) {
-        messageService.sendMessage(
+        messageService.sendNotification(
                 MessageType.BUSINESS,
                 event.getEmployment().getStore().getManager(),
                 "员工入职通知",

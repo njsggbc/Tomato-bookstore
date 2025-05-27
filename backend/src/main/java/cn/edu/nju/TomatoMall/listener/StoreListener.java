@@ -31,7 +31,7 @@ public class StoreListener {
     public void handleStoreCreateEvent(StoreStatusChangeEvent event) {
         List<User> administrators = userRepository.findAllByRole(Role.ADMIN);
         administrators.forEach(administrator -> {
-            messageService.sendMessage(
+            messageService.sendNotification(
                     MessageType.BUSINESS,
                     administrator,
                     "店铺审核通知",
@@ -46,7 +46,7 @@ public class StoreListener {
     @EventListener
     @Transactional
     public void handleStoreReviewEvent(StoreReviewEvent event) {
-        messageService.sendMessage(
+        messageService.sendNotification(
                 MessageType.BUSINESS,
                 event.getStore().getManager(),
                 "店铺审核结果",

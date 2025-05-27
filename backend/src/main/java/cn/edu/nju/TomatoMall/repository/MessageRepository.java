@@ -12,6 +12,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface MessageRepository extends JpaRepository<Message, Integer> {
@@ -19,33 +20,33 @@ public interface MessageRepository extends JpaRepository<Message, Integer> {
 
     @Query("SELECT m FROM Message m WHERE " +
             "(m.recipient IS NOT NULL AND m.recipient.id = :recipientId) " +
-            "AND (:type IS NULL OR m.type = :type) " +
+            "AND (m.type IN :types) " +
             "AND (:status IS NULL OR m.status = :status) " +
             "AND (:entityType IS NULL OR m.relatedEntityType = :entityType)")
     Page<Message> findByRecipientIdWithFilters(@Param("recipientId") int recipientId,
-                                               @Param("type") MessageType type,
+                                               @Param("types") List<MessageType> types,
                                                @Param("status") MessageStatus status,
                                                @Param("entityType") EntityType entityType,
                                                Pageable pageable);
 
     @Query("SELECT COUNT(m) FROM Message m WHERE " +
             "(m.recipient IS NOT NULL AND m.recipient.id = :recipientId) " +
-            "AND (:type IS NULL OR m.type = :type) " +
+            "AND (m.type IN :types) " +
             "AND (:status IS NULL OR m.status = :status) " +
             "AND (:entityType IS NULL OR m.relatedEntityType = :entityType)")
     int countByRecipientIdWithFilters(@Param("recipientId") int recipientId,
-                                      @Param("type") MessageType type,
+                                      @Param("types") List<MessageType> types,
                                       @Param("status") MessageStatus status,
                                       @Param("entityType") EntityType entityType);
 
     @Modifying
     @Query("UPDATE Message m SET m.status = :newStatus " +
             "WHERE (m.recipient IS NOT NULL AND m.recipient.id = :recipientId) " +
-            "AND (:type IS NULL OR m.type = :type) " +
+            "AND (m.type IN :types) " +
             "AND (:entityType IS NULL OR m.relatedEntityType = :entityType) " +
             "AND m.status = :status")
     void updateStatusByRecipientIdWithFilters(@Param("recipientId") int recipientId,
-                                      @Param("type") MessageType type,
+                                      @Param("types") List<MessageType> types,
                                       @Param("entityType") EntityType entityType,
                                       @Param("status") MessageStatus status,
                                       @Param("newStatus") MessageStatus newStatus);

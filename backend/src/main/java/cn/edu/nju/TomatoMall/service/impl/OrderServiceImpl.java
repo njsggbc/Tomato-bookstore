@@ -318,7 +318,7 @@ public class OrderServiceImpl implements OrderService {
 
         orderRepository.save(order);
 
-        eventPublisher.publishEvent(new OrderCancelEvent(order, order.getTotalAmount(),"用户取消订单"));
+        eventPublisher.publishEvent(new OrderCancelEvent(order, order.getTotalAmount(),"用户取消订单: " + reason));
     }
 
     /**
@@ -499,7 +499,7 @@ public class OrderServiceImpl implements OrderService {
 
         orderRepository.save(order);
 
-        eventPublisher.publishEvent(new OrderCancelEvent(order, order.getTotalAmount(),"商家取消订单"));
+        eventPublisher.publishEvent(new OrderCancelEvent(order, order.getTotalAmount(),"商家取消订单" + message));
     }
 
     /**

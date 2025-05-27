@@ -22,7 +22,7 @@ public class ProductListener {
     @EventListener
     @Transactional
     public void handleProductLowStockEvent(ProductLowStockEvent event) {
-        messageService.broadcastMessageToStore(
+        messageService.broadcastNotificationToStore(
                 MessageType.BUSINESS,
                 event.getProduct().getStore(),
                 "商品库存不足",

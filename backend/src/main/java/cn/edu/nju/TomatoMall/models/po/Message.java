@@ -34,15 +34,15 @@ public class Message {
     @JoinColumn(name = "recipient_id", nullable = false)
     private User recipient;
 
-    @Column(nullable = false)
+    // 聊天时为null
     private String title;
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    private EntityType relatedEntityType; // 相关实体类型
+    private EntityType relatedEntityType; // 相关实体类型, 聊天时为null
 
-    private Integer relatedEntityId; // 相关实体ID
+    private Integer relatedEntityId; // 相关实体ID, 聊天时为null
 
     @Builder.Default
     @Column(nullable = false)

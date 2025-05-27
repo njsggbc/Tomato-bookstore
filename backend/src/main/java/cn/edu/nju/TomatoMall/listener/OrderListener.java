@@ -27,7 +27,7 @@ public class OrderListener {
     @EventListener
     @Transactional
     public void handleOrderConfirmEvent(OrderConfirmEvent event) {
-        messageService.sendMessage(
+        messageService.sendNotification(
                 MessageType.SHOPPING,
                 event.getOrder().getUser(),
                 "商家已确认订单",
@@ -47,7 +47,7 @@ public class OrderListener {
         if (order.getStatus() == OrderStatus.REFUND_PROCESSING) {
             paymentService.refund(order.getOrderNo(), event.getReason());
             // 通知商户订单取消
-            messageService.broadcastMessageToStore(
+            messageService.broadcastNotificationToStore(
                     MessageType.BUSINESS,
                     order.getStore(),
                     "订单取消",
@@ -68,7 +68,7 @@ public class OrderListener {
     @EventListener
     @Transactional
     public void handleOrderShipEvent(OrderShipEvent event) {
-        messageService.sendMessage(
+        messageService.sendNotification(
                 MessageType.SHOPPING,
                 event.getOrder().getUser(),
                 "订单已发货",
@@ -82,7 +82,7 @@ public class OrderListener {
     @EventListener
     @Transactional
     public void handleOrderDeliverEvent(OrderDeliverEvent event) {
-        messageService.sendMessage(
+        messageService.sendNotification(
                 MessageType.SHOPPING,
                 event.getOrder().getUser(),
                 "订单已送达",

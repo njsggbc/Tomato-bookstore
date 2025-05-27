@@ -20,24 +20,24 @@ public class MessageController {
     private MessageService messageService;
 
     /**
-     * 获取用户消息列表
+     * 获取用户通知列表
      *
      * @param page 页码
      * @param size 每页大小
      * @param type 消息类型
      * @param status 消息状态
      * @param relatedEntityType 相关实体类型
-     * @return 用户消息列表
+     * @return 用户通知列表
      */
-    @GetMapping
-    public ApiResponse<Page<MessageResponse>> getMessages(
+    @GetMapping("/notifications")
+    public ApiResponse<Page<MessageResponse>> getNotifications(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam MessageType type,
-            @RequestParam MessageStatus status,
-            @RequestParam EntityType relatedEntityType
+            @RequestParam(required = false) MessageType type,
+            @RequestParam(required = false) MessageStatus status,
+            @RequestParam(required = false) EntityType relatedEntityType
     ) {
-        return ApiResponse.success(messageService.getUserMessages(
+        return ApiResponse.success(messageService.getNotifications(
                 page,
                 size,
                 type,
@@ -47,18 +47,47 @@ public class MessageController {
     }
 
     /**
-     * 获取未读消息数量
+     * 删除通知
+     *
+     * @param messageId 消息ID
+     * @return 成功响应
+     */
+    @DeleteMapping("/notifications/{messageId}")
+    public ApiResponse<Void> deleteMessage(
+            @PathVariable int messageId
+    ) {
+        messageService.deleteNotification(messageId);
+        return ApiResponse.success();
+    }
+
+    /**
+     * 获取未读通知数量
      *
      * @param type 消息类型
      * @param relatedEntityType 相关实体类型
-     * @return 未读消息数量
+     * @return 未读通知数量
      */
-    @GetMapping("/unread/count")
-    public ApiResponse<Integer> getUnreadMessageCount(
+    @GetMapping("/notifications/unread/count")
+    public ApiResponse<Integer> getUnreadNotificationCount(
             @RequestParam(required = false) MessageType type,
             @RequestParam(required = false) EntityType relatedEntityType
     ) {
-        return ApiResponse.success(messageService.getUnreadMessageCount(type, relatedEntityType));
+        return ApiResponse.success(messageService.getUnreadNotificationCount(type, relatedEntityType));
+    }
+
+    /**
+     * 标记所有指定类型的通知为已读
+     *
+     * @param type 消息类型
+     * @param relatedEntityType 相关实体类型
+     */
+    @PostMapping("/notifications/read/all")
+    public ApiResponse<Void> markAllNotificationsAsRead(
+            @RequestParam(required = false) MessageType type,
+            @RequestParam(required = false) EntityType relatedEntityType
+    ) {
+        messageService.markAllNotificationsAsRead(type, relatedEntityType);
+        return ApiResponse.success();
     }
 
     /**
@@ -70,35 +99,6 @@ public class MessageController {
             @PathVariable int messageId
     ) {
         messageService.markMessageAsRead(messageId);
-        return ApiResponse.success();
-    }
-
-    /**
-     * 标记所有指定类型的消息为已读
-     *
-     * @param type 消息类型
-     * @param relatedEntityType 相关实体类型
-     */
-    @PostMapping("/read/all")
-    public ApiResponse<Void> markAllMessagesAsRead(
-            @RequestParam(required = false) MessageType type,
-            @RequestParam(required = false) EntityType relatedEntityType
-    ) {
-        messageService.markAllMessagesAsRead(type, relatedEntityType);
-        return ApiResponse.success();
-    }
-
-    /**
-     * 删除通知
-     *
-     * @param messageId 消息ID
-     * @return 成功响应
-     */
-    @DeleteMapping("/notification/{messageId}")
-    public ApiResponse<Void> deleteMessage(
-            @PathVariable int messageId
-    ) {
-        messageService.deleteNotification(messageId);
         return ApiResponse.success();
     }
 }

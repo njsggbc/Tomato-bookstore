@@ -30,7 +30,7 @@ public class AdvertisementListener {
     public void handleAdvertisingEvent(AdvertisingEvent event) {
         List<User> administrators = userRepository.findAllByRole(Role.ADMIN);
         administrators.forEach(administrator -> {
-            messageService.sendMessage(
+            messageService.sendNotification(
                     MessageType.BUSINESS,
                     administrator,
                     "广告发布通知",
@@ -44,7 +44,7 @@ public class AdvertisementListener {
 
     @EventListener
     public void handleAdvertisingReviewEvent(AdvertisingReviewEvent event) {
-        messageService.sendMessage(
+        messageService.sendNotification(
                 MessageType.BUSINESS,
                 event.getAdvertisement().getStore().getManager(),
                 "广告投放审核结果",

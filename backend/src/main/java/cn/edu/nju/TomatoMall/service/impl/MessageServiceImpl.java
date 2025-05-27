@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -49,46 +50,22 @@ public class MessageServiceImpl implements MessageService {
         this.tomatoMallWebSocketHandler = tomatoMallWebSocketHandler;
     }
 
-
     @Override
     @Transactional
-    public void sendMessage(MessageType type, int recipientId, String title, String content, EntityType entityType, Integer entityId, MessagePriority priority) {
-        sendMessage(
-                type,
-                userRepository.findById(recipientId)
-                        .orElseThrow(TomatoMallException::userNotFound),
-                title,
-                content,
-                entityType,
-                entityId,
-                priority
-        );
-    }
+    public void sendNotification(MessageType type, User recipient, String title, String content, EntityType entityType, Integer entityId, MessagePriority priority) {
+        if (type == null || !MessageType.isNotification(type)) {
+            throw TomatoMallException.messageTypeNotSupported();
+        }
 
-    @Override
-    @Transactional
-    public void sendMessage(MessageType type, User recipient, String title, String content, EntityType entityType, Integer entityId, MessagePriority priority) {
         Message message = Message.builder()
                 .type(type)
+                .recipient(recipient)
                 .title(title)
                 .content(content)
                 .relatedEntityType(entityType)
                 .relatedEntityId(entityId)
                 .priority(priority)
                 .build();
-
-        switch(type) {
-            case CHAT:
-                message.setSender(securityUtil.getCurrentUser());
-            case SYSTEM:
-            case SHOPPING:
-            case BUSINESS:
-                message.setRecipient(recipient);
-            case BROADCAST:
-                break;
-            default:
-                throw TomatoMallException.messageTypeNotSupported();
-        }
 
         messageRepository.save(message);
 
@@ -100,12 +77,12 @@ public class MessageServiceImpl implements MessageService {
 
     @Override
     @Transactional
-    public void broadcastMessageToStore(MessageType type, Store store, String title, String content, EntityType entityType, Integer entityId, MessagePriority priority) {
+    public void broadcastNotificationToStore(MessageType type, Store store, String title, String content, EntityType entityType, Integer entityId, MessagePriority priority) {
         List<User> recipients = new ArrayList<>();
         recipients.add(store.getManager());
         recipients.addAll(employmentRepository.getEmployeeByStoreId(store.getId()));
 
-        recipients.forEach(recipient -> sendMessage(
+        recipients.forEach(recipient -> sendNotification(
                 type,
                 recipient,
                 title,
@@ -117,37 +94,22 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
-    public Page<MessageResponse> getUserMessages(int page, int size, MessageType type, MessageStatus status, EntityType relatedEntityType) {
+    public Page<MessageResponse> getNotifications(int page, int size, MessageType type, MessageStatus status, EntityType relatedEntityType) {
         Sort sort = Sort.by(Sort.Direction.DESC, "createTime");
         Pageable pageable = PageRequest.of(page, size, sort);
-        return messageRepository.findByRecipientIdWithFilters(securityUtil.getCurrentUser().getId(), type, status, relatedEntityType, pageable)
+
+        List<MessageType> types;
+        if (type == null) {
+            types = MessageType.getNotificationTypes();
+        } else {
+            if (!MessageType.isNotification(type)) {
+                throw TomatoMallException.messageTypeNotSupported();
+            }
+            types = Collections.singletonList(type);
+        }
+
+        return messageRepository.findByRecipientIdWithFilters(securityUtil.getCurrentUser().getId(), types, status, relatedEntityType, pageable)
                 .map(MessageResponse::new);
-    }
-
-    @Override
-    public void markMessageAsRead(int messageId) {
-        Message message = messageRepository.findByIdAndRecipientId(messageId, securityUtil.getCurrentUser().getId())
-                .orElseThrow(TomatoMallException::messageNotFound);
-        message.setStatus(MessageStatus.READ);
-        messageRepository.save(message);
-    }
-
-    @Override
-    public void markAllMessagesAsRead(MessageType type, EntityType relatedEntityType) {
-        messageRepository.updateStatusByRecipientIdWithFilters(
-                securityUtil.getCurrentUser().getId(),
-                type,
-                relatedEntityType,
-                MessageStatus.UNREAD,
-                MessageStatus.READ
-        );
-
-
-    }
-
-    @Override
-    public int getUnreadMessageCount(MessageType type, EntityType relatedEntityType) {
-        return messageRepository.countByRecipientIdWithFilters(securityUtil.getCurrentUser().getId(), type, MessageStatus.UNREAD, relatedEntityType);
     }
 
     @Override
@@ -158,5 +120,56 @@ public class MessageServiceImpl implements MessageService {
             throw TomatoMallException.messageTypeNotSupported();
         }
         messageRepository.delete(message);
+    }
+
+    @Override
+    public void markAllNotificationsAsRead(MessageType type, EntityType relatedEntityType) {
+        List<MessageType> types;
+        if (type == null) {
+            types = MessageType.getNotificationTypes();
+        } else {
+            if (!MessageType.isNotification(type)) {
+                throw TomatoMallException.messageTypeNotSupported();
+            }
+            types = Collections.singletonList(type);
+        }
+
+        messageRepository.updateStatusByRecipientIdWithFilters(
+                securityUtil.getCurrentUser().getId(),
+                types,
+                relatedEntityType,
+                MessageStatus.UNREAD,
+                MessageStatus.READ
+        );
+    }
+
+    @Override
+    public int getUnreadNotificationCount(MessageType type, EntityType relatedEntityType) {
+        List<MessageType> types;
+        if (type == null) {
+            types = MessageType.getNotificationTypes();
+        } else {
+            if (!MessageType.isNotification(type)) {
+                throw TomatoMallException.messageTypeNotSupported();
+            }
+            types = Collections.singletonList(type);
+        }
+
+        return messageRepository.countByRecipientIdWithFilters(securityUtil.getCurrentUser().getId(), types, MessageStatus.UNREAD, relatedEntityType);
+    }
+
+    @Override
+    public void markMessageAsRead(int messageId) {
+        Message message = messageRepository.findByIdAndRecipientId(messageId, securityUtil.getCurrentUser().getId())
+                .orElseThrow(TomatoMallException::messageNotFound);
+
+        if (message.getType() == MessageType.BROADCAST) {
+            throw TomatoMallException.messageTypeNotSupported();
+        }
+
+        if (message.getStatus() == MessageStatus.UNREAD) {
+            message.setStatus(MessageStatus.READ);
+            messageRepository.save(message);
+        }
     }
 }
