@@ -45,5 +45,5 @@ public class ProductSnapshot {
 
     @Column(nullable = false, updatable = false)
     @Builder.Default
-    private LocalDateTime created = LocalDateTime.now();
+    private LocalDateTime createTime = LocalDateTime.now();
 }

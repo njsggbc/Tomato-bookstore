@@ -13,6 +13,7 @@ import cn.edu.nju.TomatoMall.service.OrderService;
 import cn.edu.nju.TomatoMall.service.PaymentService;
 import cn.edu.nju.TomatoMall.util.SecurityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -27,7 +28,6 @@ import java.util.stream.Collectors;
 public class ShoppingController {
     private final OrderService orderService;
     private final PaymentService paymentService;
-    private final PaymentRepository paymentRepository;
     private final SecurityUtil securityUtil;
 
     /**
@@ -35,14 +35,12 @@ public class ShoppingController {
      *
      * @param orderService 订单操作服务
      * @param paymentService 支付服务
-     * @param paymentRepository 支付数据操作存储库
      * @param securityUtil 安全操作工具
      */
     @Autowired
-    public ShoppingController(OrderService orderService, PaymentService paymentService, PaymentRepository paymentRepository, SecurityUtil securityUtil) {
+    public ShoppingController(OrderService orderService, PaymentService paymentService, SecurityUtil securityUtil) {
         this.orderService = orderService;
         this.paymentService = paymentService;
-        this.paymentRepository = paymentRepository;
         this.securityUtil = securityUtil;
     }
 
@@ -55,8 +53,13 @@ public class ShoppingController {
      * @return 购物车中的商品项列表
      */
     @GetMapping("/carts")
-    public ApiResponse<List<CartItemInfoResponse>> getCartItems() {
-        return ApiResponse.success(orderService.getCartItemList());
+    public ApiResponse<Page<CartItemInfoResponse>> getCartItems(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createTime") String field,
+            @RequestParam(defaultValue = "false") boolean order
+    ) {
+        return ApiResponse.success(orderService.getCartItemList(page, size, field, order));
     }
 
     /**
@@ -136,9 +139,13 @@ public class ShoppingController {
      * @return 订单简要信息列表
      */
     @GetMapping("/orders")
-    public ApiResponse<List<OrderBriefResponse>> getOrderList(
+    public ApiResponse<Page<OrderBriefResponse>> getOrderList(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createTime") String field,
+            @RequestParam(defaultValue = "false") boolean order,
             @RequestParam(required = false) CustomerRequestOrderStatus status) {
-        return ApiResponse.success(orderService.getOrderList(status));
+        return ApiResponse.success(orderService.getOrderList(page, size, field, order, status));
     }
 
     /**
@@ -192,10 +199,14 @@ public class ShoppingController {
      * @return 店铺订单简要信息列表
      */
     @GetMapping("/store/{storeId}/orders")
-    public ApiResponse<List<OrderBriefResponse>> getStoreOrders(
+    public ApiResponse<Page<OrderBriefResponse>> getStoreOrders(
             @PathVariable int storeId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createTime") String field,
+            @RequestParam(defaultValue = "false") boolean order,
             @RequestParam(required = false) StoreRequestOrderStatus status) {
-        return ApiResponse.success(orderService.getStoreOrderList(storeId, status));
+        return ApiResponse.success(orderService.getStoreOrderList(storeId, page, size, field, order, status));
     }
 
     /**
@@ -271,11 +282,13 @@ public class ShoppingController {
      * @return 未支付的支付信息列表
      */
     @GetMapping("/payments/pending")
-    public List<PaymentInfoResponse> getPendingPayments() {
-        return paymentRepository.findByUserIdAndStatus(securityUtil.getCurrentUser().getId(), PaymentStatus.PENDING)
-                .stream()
-                .map(PaymentInfoResponse::new)
-                .collect(Collectors.toList());
+    public ApiResponse<Page<PaymentInfoResponse>> getPendingPayments(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createTime") String field,
+            @RequestParam(defaultValue = "false") boolean order
+    ) {
+        return ApiResponse.success(paymentService.getPaymentList(page, size, field, order, PaymentStatus.PENDING));
     }
 
     /**

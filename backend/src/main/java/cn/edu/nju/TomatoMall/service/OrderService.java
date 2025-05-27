@@ -9,6 +9,7 @@ import cn.edu.nju.TomatoMall.models.dto.order.*;
 import cn.edu.nju.TomatoMall.models.dto.shipment.*;
 import cn.edu.nju.TomatoMall.models.po.Order;
 import cn.edu.nju.TomatoMall.models.po.User;
+import org.springframework.data.domain.Page;
 
 import java.util.List;
 import java.util.Map;
@@ -17,11 +18,16 @@ import java.util.Map;
  * 订单管理服务接口
  */
 public interface OrderService {
+
     /**
-     * 获取当前用户的购物车商品列表
-     * @return 购物车项信息列表
+     * 获取购物车项列表
+     * @param page 页码
+     * @param size 每页大小
+     * @param field 排序字段
+     * @param order 排序方式
+     * @return 购物车项信息分页
      */
-    List<CartItemInfoResponse> getCartItemList();
+    Page<CartItemInfoResponse> getCartItemList(int page, int size, String field, boolean order);
 
     /**
      * 向购物车添加商品
@@ -81,7 +87,7 @@ public interface OrderService {
      * @param status 订单状态
      * @return 订单简要信息列表
      */
-    List<OrderBriefResponse> getOrderList(CustomerRequestOrderStatus status);
+    Page<OrderBriefResponse> getOrderList(int page, int size, String field, boolean order, CustomerRequestOrderStatus status);
 
     /**
      * 取消订单
@@ -99,12 +105,21 @@ public interface OrderService {
     /*---------------- 商家服务 ----------------*/
 
     /**
-     * 获取店铺的订单列表
+     * 获取商店的订单列表
      * @param storeId 商店ID
+     * @param page 页码
+     * @param size 每页大小
+     * @param field 排序字段
+     * @param order 排序方式
      * @param status 订单状态
-     * @return 订单简要信息列表
+     * @return 商家视角订单简要信息分页
      */
-    List<OrderBriefResponse> getStoreOrderList(int storeId, StoreRequestOrderStatus status);
+    Page<OrderBriefResponse> getStoreOrderList(int storeId,
+                                               int page,
+                                               int size,
+                                               String field,
+                                               boolean order,
+                                               StoreRequestOrderStatus status);
 
     /**
      * 获取店铺订单详细信息

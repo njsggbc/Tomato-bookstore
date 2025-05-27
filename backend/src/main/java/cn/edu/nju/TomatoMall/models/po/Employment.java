@@ -29,5 +29,5 @@ public class Employment {
 
     @Column(nullable = false, updatable = false)
     @Builder.Default
-    private LocalDateTime startTime = LocalDateTime.now();
+    private LocalDateTime createTime = LocalDateTime.now();
 }

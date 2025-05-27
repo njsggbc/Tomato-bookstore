@@ -27,6 +27,6 @@ public class ProductSnapshotResponse {
         this.images = productSnapshot.getImages();
         this.price = productSnapshot.getPrice();
         this.specifications = productSnapshot.getSpecifications();
-        this.createTime = productSnapshot.getCreated();
+        this.createTime = productSnapshot.getCreateTime();
     }
 }

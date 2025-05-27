@@ -5,6 +5,7 @@ import cn.edu.nju.TomatoMall.enums.PaymentStatus;
 import cn.edu.nju.TomatoMall.events.order.OrderCancelEvent;
 import cn.edu.nju.TomatoMall.events.payment.PaymentCancelEvent;
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
+import cn.edu.nju.TomatoMall.models.dto.payment.PaymentInfoResponse;
 import cn.edu.nju.TomatoMall.models.po.Order;
 import cn.edu.nju.TomatoMall.models.po.Payment;
 import cn.edu.nju.TomatoMall.repository.OrderRepository;
@@ -14,6 +15,10 @@ import cn.edu.nju.TomatoMall.util.SecurityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -157,6 +162,14 @@ public abstract class PaymentServiceImpl implements PaymentService {
         } catch (Exception e) {
             throw TomatoMallException.paymentFail(e.getMessage());
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PaymentInfoResponse> getPaymentList(int page, int size, String field, boolean order, PaymentStatus status) {
+        int userId = securityUtil.getCurrentUser().getId();
+        Pageable pageable = PageRequest.of(page, size, Sort.by(order ? Sort.Direction.ASC : Sort.Direction.DESC, field));
+        return paymentRepository.findByUserIdAndStatus(userId, status, pageable).map(PaymentInfoResponse::new);
     }
 
     @Override

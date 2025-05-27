@@ -25,9 +25,9 @@ public class EmploymentToken {
 
     @Column(nullable = false, updatable = false)
     @Builder.Default
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createTime = LocalDateTime.now();
 
-    private LocalDateTime expiresAt;
+    private LocalDateTime expireTime;
 
     @Column(nullable = false)
     private boolean valid = true;

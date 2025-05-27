@@ -3,6 +3,8 @@ package cn.edu.nju.TomatoMall.repository;
 import cn.edu.nju.TomatoMall.enums.PaymentMethod;
 import cn.edu.nju.TomatoMall.enums.PaymentStatus;
 import cn.edu.nju.TomatoMall.models.po.Payment;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -27,7 +29,7 @@ public interface PaymentRepository extends JpaRepository<Payment, String> {
     Optional<Payment> findByPaymentNoAndUserId(String paymentNo, int userId);
 
     @Query("SELECT p FROM Payment p WHERE p.user.id = ?1 AND p.status = ?2")
-    List<Payment> findByUserIdAndStatus(int userId, PaymentStatus status);
+    Page<Payment> findByUserIdAndStatus(int userId, PaymentStatus status, Pageable pageable);
 
     List<Payment> findByStatus(PaymentStatus status);
 

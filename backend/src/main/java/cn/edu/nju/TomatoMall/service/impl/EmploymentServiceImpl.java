@@ -70,7 +70,7 @@ public class EmploymentServiceImpl implements EmploymentService {
                 .token(token)
                 .name(name)
                 .store(storeRef)
-                .expiresAt(expiration)
+                .expireTime(expiration)
                 .valid(true)
                 .build();
 
@@ -109,7 +109,7 @@ public class EmploymentServiceImpl implements EmploymentService {
                 .findValidByTokenAndStoreId(tokenValue, storeId)
                 .orElseThrow(TomatoMallException::tokenInvalid);
 
-        if (token.getExpiresAt() != null && token.getExpiresAt().isBefore(LocalDateTime.now())) {
+        if (token.getExpireTime() != null && token.getExpireTime().isBefore(LocalDateTime.now())) {
             throw TomatoMallException.tokenInvalid();
         }
 
@@ -122,7 +122,7 @@ public class EmploymentServiceImpl implements EmploymentService {
         // 标记 Token 为已使用
         token.setValid(false);
         token.setConsumer(user);
-        token.setExpiresAt(null);
+        token.setExpireTime(null);
 
         employmentRepository.save(employment);
         employmentTokenRepository.save(token);

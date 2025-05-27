@@ -2,6 +2,8 @@ package cn.edu.nju.TomatoMall.repository;
 
 import cn.edu.nju.TomatoMall.enums.OrderStatus;
 import cn.edu.nju.TomatoMall.models.po.Order;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -18,7 +20,7 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
     Optional<Order> findByOrderNoAndUserId(String orderNo, int userId);
     Optional<Order> findByIdAndStoreId(int orderId, int storeId);
     Optional<Order> findByOrderNoAndStoreId(String orderNo, int storeId);
-    List<Order> findByUserIdAndStatusIn(int userId, List<OrderStatus> status);
-    List<Order> findByStoreIdAndStatusIn(int storeId, List<OrderStatus> status);
+    Page<Order> findAllByUserIdAndStatusIn(int userId, List<OrderStatus> status, Pageable pageable);
+    Page<Order> findAllByStoreIdAndStatusIn(int storeId, List<OrderStatus> status, Pageable pageable);
     Optional<Order> findByOrderNo(String orderNo);
 }

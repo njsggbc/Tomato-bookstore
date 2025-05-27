@@ -14,6 +14,10 @@ import cn.edu.nju.TomatoMall.service.OrderService;
 import cn.edu.nju.TomatoMall.util.SecurityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -149,11 +153,11 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     @Transactional(readOnly = true)
-    public List<CartItemInfoResponse> getCartItemList() {
+    public Page<CartItemInfoResponse> getCartItemList(int page, int size, String field, boolean order) {
         User user = securityUtil.getCurrentUser();
-        return cartItemRepository.findByUserId(user.getId()).stream()
-                .map(CartItemInfoResponse::new)
-                .collect(Collectors.toList());
+        Pageable pageable = PageRequest.of(page, size, Sort.by(order ? Sort.Direction.ASC : Sort.Direction.DESC, field));
+        return cartItemRepository.findAllByUserId(user.getId(), pageable)
+                .map(CartItemInfoResponse::new);
     }
 
     /**
@@ -248,7 +252,7 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     @Transactional(readOnly = true)
-    public List<OrderBriefResponse> getOrderList(CustomerRequestOrderStatus status) {
+    public Page<OrderBriefResponse> getOrderList(int page, int size, String field, boolean order, CustomerRequestOrderStatus status) {
         List<OrderStatus> statusList;
         switch (status) {
             case ALL:
@@ -273,9 +277,10 @@ public class OrderServiceImpl implements OrderService {
                 throw TomatoMallException.invalidOperation();
         }
 
-        return orderRepository.findByUserIdAndStatusIn(securityUtil.getCurrentUser().getId(), statusList).stream()
-                .map(OrderBriefResponse::new)
-                .collect(Collectors.toList());
+        Pageable pageable = PageRequest.of(page, size, Sort.by(order ? Sort.Direction.ASC : Sort.Direction.DESC, field));
+
+        return orderRepository.findAllByUserIdAndStatusIn(securityUtil.getCurrentUser().getId(), statusList, pageable)
+                .map(OrderBriefResponse::new);
     }
 
     /**
@@ -365,7 +370,7 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     @Transactional(readOnly = true)
-    public List<OrderBriefResponse> getStoreOrderList(int storeId, StoreRequestOrderStatus status) {
+    public Page<OrderBriefResponse> getStoreOrderList(int storeId, int page, int size, String field, boolean order, StoreRequestOrderStatus status) {
         validateStorePermission(storeId);
 
         List<OrderStatus> statusList;
@@ -392,9 +397,10 @@ public class OrderServiceImpl implements OrderService {
                 throw TomatoMallException.invalidOperation();
         }
 
-        return orderRepository.findByStoreIdAndStatusIn(storeId, statusList).stream()
-                .map(OrderBriefResponse::new)
-                .collect(Collectors.toList());
+        Pageable pageable = PageRequest.of(page, size, Sort.by(order ? Sort.Direction.ASC : Sort.Direction.DESC, field));
+
+        return orderRepository.findAllByStoreIdAndStatusIn(storeId, statusList, pageable)
+                .map(OrderBriefResponse::new);
     }
 
     /**
