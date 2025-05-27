@@ -17,7 +17,6 @@ public class TomatoMallWebSocketConfigurer implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(messageWebSocketHandler, "/ws/messages")
-                .setAllowedOrigins("*")  // 生产环境需要配置具体域名
-                .withSockJS();  // 支持SockJS降级
+                .setAllowedOrigins("*");  // 生产环境需要配置具体域名
     }
 }
