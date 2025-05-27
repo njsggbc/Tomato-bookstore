@@ -70,8 +70,9 @@ public interface StoreService {
      * 审核商店（管理员权限）
      * @param storeId 商店ID
      * @param pass 是否通过
+     * @param comment 审核意见
      */
-    void review(int storeId, boolean pass);
+    void review(int storeId, boolean pass, String comment);
 
     /**
      * 获取待审核的店铺列表（管理员权限）

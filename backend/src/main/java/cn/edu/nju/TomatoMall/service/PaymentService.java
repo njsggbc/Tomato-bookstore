@@ -24,6 +24,13 @@ public interface PaymentService {
     void cancel(int paymentId);
 
     /**
+     * 退款处理
+     * @param orderNo 订单编号
+     * @param reason 退款原因
+     */
+    void refund(String orderNo, String reason);
+
+    /**
      * 处理支付通知回调
      * @param request HTTP请求
      * @param paymentMethod 支付方式

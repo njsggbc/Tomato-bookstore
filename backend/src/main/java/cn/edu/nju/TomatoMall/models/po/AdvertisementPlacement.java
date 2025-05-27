@@ -29,6 +29,8 @@ public class AdvertisementPlacement {
     @Builder.Default
     private AdPlacementStatus status = AdPlacementStatus.PENDING;
 
+    private String comment; // 备注信息
+
     @ElementCollection
     private List<LocalDateTime> displayTimeList; // 展示时间列表
 

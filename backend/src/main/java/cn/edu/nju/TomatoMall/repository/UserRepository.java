@@ -1,9 +1,11 @@
 package cn.edu.nju.TomatoMall.repository;
 
+import cn.edu.nju.TomatoMall.enums.Role;
 import cn.edu.nju.TomatoMall.models.po.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -14,4 +16,5 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     boolean existsByPhone(String phone);
     Optional<User> findByEmail(String email);
     boolean existsByEmail(String email);
+    List<User> findAllByRole(Role role);
 }

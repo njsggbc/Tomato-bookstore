@@ -22,6 +22,7 @@ import java.util.List;
 @RequestMapping("/api/stores")
 public class StoreController {
 
+
     @Autowired
     private StoreService storeService;
 
@@ -146,8 +147,9 @@ public class StoreController {
      */
     @DeleteMapping("/{storeId}/staff/{userId}")
     public ApiResponse<Void> dismissEmployee(@PathVariable int storeId,
-                                             @PathVariable int userId) {
-        employmentService.dismiss(storeId, userId);
+                                             @PathVariable int userId,
+                                             @RequestBody String reason) {
+        employmentService.dismiss(storeId, userId, reason);
         return ApiResponse.success();
     }
 
@@ -164,15 +166,18 @@ public class StoreController {
      * 审核店铺（管理员权限）
      *
      * @param storeId 店铺ID
-     * @param pass    是否审核通过
+     * @param pass   是否通过审核
+     * @param comment 审核意见
      * @return 操作成功与否
      */
     @PostMapping("/review")
     public ApiResponse<Void> reviewStore(
             @RequestParam int storeId,
-            @RequestParam boolean pass
+            @RequestParam boolean pass,
+            @RequestBody String comment
+
     ) {
-        storeService.review(storeId, pass);
+        storeService.review(storeId, pass, comment);
         return ApiResponse.success();
     }
 

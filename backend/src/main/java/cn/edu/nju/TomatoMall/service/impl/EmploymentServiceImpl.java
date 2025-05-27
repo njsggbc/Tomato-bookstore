@@ -1,5 +1,6 @@
 package cn.edu.nju.TomatoMall.service.impl;
 
+import cn.edu.nju.TomatoMall.events.employment.*;
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
 import cn.edu.nju.TomatoMall.models.dto.employment.*;
 import cn.edu.nju.TomatoMall.models.dto.user.UserBriefResponse;
@@ -13,6 +14,7 @@ import cn.edu.nju.TomatoMall.repository.StoreRepository;
 import cn.edu.nju.TomatoMall.service.EmploymentService;
 import cn.edu.nju.TomatoMall.util.SecurityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,18 +29,21 @@ public class EmploymentServiceImpl implements EmploymentService {
     private final EmploymentTokenRepository employmentTokenRepository;
     private final EmploymentRepository employmentRepository;
     private final SecurityUtil securityUtil;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Autowired
     public EmploymentServiceImpl(
             StoreRepository storeRepository,
             EmploymentTokenRepository employmentTokenRepository,
             EmploymentRepository employmentRepository,
-            SecurityUtil securityUtil
+            SecurityUtil securityUtil,
+            ApplicationEventPublisher eventPublisher
     ) {
         this.storeRepository = storeRepository;
         this.employmentTokenRepository = employmentTokenRepository;
         this.employmentRepository = employmentRepository;
         this.securityUtil = securityUtil;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -121,16 +126,24 @@ public class EmploymentServiceImpl implements EmploymentService {
 
         employmentRepository.save(employment);
         employmentTokenRepository.save(token);
+
+        // 发布雇佣事件
+        eventPublisher.publishEvent(new EmployeeHiredEvent(employment, token));
     }
 
     @Override
     @Transactional
-    public void dismiss(int storeId, int userId) {
+    public void dismiss(int storeId, int userId, String reason) {
         validatePermission(storeId);
 
         Employment employment = employmentRepository.findByStoreIdAndEmployeeId(storeId, userId)
                 .orElseThrow(TomatoMallException::invalidOperation);
+        Store store = employment.getStore();
+        User user = employment.getEmployee();
         employmentRepository.delete(employment);
+
+        // 发布解雇事件
+        eventPublisher.publishEvent(new EmployeeDismissedEvent(store, user, reason));
     }
 
     @Override

@@ -1,12 +1,14 @@
 package cn.edu.nju.TomatoMall.service.impl;
 
 import cn.edu.nju.TomatoMall.enums.InventoryStatus;
+import cn.edu.nju.TomatoMall.events.product.*;
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
 import cn.edu.nju.TomatoMall.models.po.Inventory;
 import cn.edu.nju.TomatoMall.repository.InventoryRepository;
 import cn.edu.nju.TomatoMall.repository.ProductRepository;
 import cn.edu.nju.TomatoMall.service.InventoryService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
@@ -18,11 +20,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class InventoryServiceImpl implements InventoryService {
     private final InventoryRepository inventoryRepository;
     private final ProductRepository productRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Autowired
-    public InventoryServiceImpl(InventoryRepository inventoryRepository, ProductRepository productRepository) {
+    public InventoryServiceImpl(InventoryRepository inventoryRepository,
+                                ProductRepository productRepository,
+                                ApplicationEventPublisher eventPublisher) {
         this.inventoryRepository = inventoryRepository;
         this.productRepository = productRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -126,6 +132,11 @@ public class InventoryServiceImpl implements InventoryService {
         int updated = inventoryRepository.decreaseStock(productId, quantity, inventory.getVersion());
         if (updated == 0) {
             throw new OptimisticLockingFailureException("并发更新库存失败，请重试");
+        }
+
+        // 发布库存预警事件
+        if (inventory.getQuantity() <= inventory.getThresholdQuantity()) {
+            eventPublisher.publishEvent(new ProductLowStockEvent(productRepository.getReferenceById(productId), inventory.getQuantity()));
         }
     }
 

@@ -1,6 +1,5 @@
 package cn.edu.nju.TomatoMall.events.payment;
 
-import cn.edu.nju.TomatoMall.models.po.Order;
 import cn.edu.nju.TomatoMall.models.po.Payment;
 import lombok.Getter;
 

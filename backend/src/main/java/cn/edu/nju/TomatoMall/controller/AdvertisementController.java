@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 广告管理相关接口
+ * advertisement
  */
 @RestController
 @RequestMapping("/api/advertisements")
@@ -166,8 +166,10 @@ public class AdvertisementController {
     @PatchMapping("/placements/{placementId}/review")
     public ApiResponse<Void> reviewAdvertisementPlacement(
             @PathVariable("placementId") int placementId,
-            @RequestParam("pass") boolean isPass) {
-        advertisementService.reviewAdvertisementPlacement(placementId, isPass);
+            @RequestParam("pass") boolean pass,
+            @RequestBody String comment
+           ) {
+        advertisementService.reviewAdvertisementPlacement(placementId, pass, comment);
         return ApiResponse.success();
     }
 

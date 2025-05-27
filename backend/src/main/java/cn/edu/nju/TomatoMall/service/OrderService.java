@@ -1,10 +1,14 @@
 package cn.edu.nju.TomatoMall.service;
 
 import cn.edu.nju.TomatoMall.enums.CustomerRequestOrderStatus;
+import cn.edu.nju.TomatoMall.enums.OrderEvent;
+import cn.edu.nju.TomatoMall.enums.OrderStatus;
 import cn.edu.nju.TomatoMall.enums.StoreRequestOrderStatus;
 import cn.edu.nju.TomatoMall.models.dto.payment.PaymentInfoResponse;
 import cn.edu.nju.TomatoMall.models.dto.order.*;
 import cn.edu.nju.TomatoMall.models.dto.shipment.*;
+import cn.edu.nju.TomatoMall.models.po.Order;
+import cn.edu.nju.TomatoMall.models.po.User;
 
 import java.util.List;
 import java.util.Map;
@@ -157,4 +161,16 @@ public interface OrderService {
      * @param params 确认送达请求参数
      */
     void confirmDelivery(String trackingNo, DeliveryConfirmRequest params);
+
+    /* ---------------- 辅助方法 ----------------*/
+
+    /**
+     * 更新订单状态
+     * @param order 订单对象
+     * @param operator 操作人员
+     * @param event 订单事件
+     * @param status 新的订单状态
+     * @param message 附加消息
+     */
+    void updateStatus(Order order, User operator, OrderEvent event, OrderStatus status, String message);
 }

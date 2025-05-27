@@ -89,7 +89,7 @@ public interface AdvertisementService {
      * @param isPass 是否通过
      */
     @Transactional
-    void reviewAdvertisementPlacement(int placementId, boolean isPass);
+    void reviewAdvertisementPlacement(int placementId, boolean isPass, String comment);
 
     /**
      * 获取广告位列表
