@@ -3,6 +3,7 @@ package cn.edu.nju.TomatoMall.models.po;
 import lombok.*;
 
 import javax.persistence.*;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "cart_items")
@@ -27,4 +28,7 @@ public class CartItem {
     @Column(nullable = false)
     private int quantity;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private LocalDateTime timestamp = LocalDateTime.now();
 }

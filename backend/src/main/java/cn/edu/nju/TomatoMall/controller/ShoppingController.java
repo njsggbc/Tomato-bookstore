@@ -8,7 +8,6 @@ import cn.edu.nju.TomatoMall.models.dto.shipment.DeliveryConfirmRequest;
 import cn.edu.nju.TomatoMall.models.dto.shipment.ShipRequest;
 import cn.edu.nju.TomatoMall.models.dto.shipment.ShippingUpdateRequest;
 import cn.edu.nju.TomatoMall.models.vo.ApiResponse;
-import cn.edu.nju.TomatoMall.repository.PaymentRepository;
 import cn.edu.nju.TomatoMall.service.OrderService;
 import cn.edu.nju.TomatoMall.service.PaymentService;
 import cn.edu.nju.TomatoMall.util.SecurityUtil;
@@ -18,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * shopping
@@ -56,7 +54,7 @@ public class ShoppingController {
     public ApiResponse<Page<CartItemInfoResponse>> getCartItems(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "createTime") String field,
+            @RequestParam(defaultValue = "timestamp") String field,
             @RequestParam(defaultValue = "false") boolean order
     ) {
         return ApiResponse.success(orderService.getCartItemList(page, size, field, order));

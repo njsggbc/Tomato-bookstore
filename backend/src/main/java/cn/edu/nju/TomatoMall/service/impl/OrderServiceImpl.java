@@ -171,17 +171,25 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public int addToCart(int productId, int quantity) {
-        try {
-            return cartItemRepository.save(
-                    CartItem.builder()
-                            .user(securityUtil.getCurrentUser())
-                            .product(productRepository.getReferenceById(productId))
-                            .quantity(quantity)
-                            .build()
-            ).getId();
-        } catch (Exception e) {
-            throw TomatoMallException.invalidOperation();
+        CartItem item = cartItemRepository.findByUserIdAndProductId(securityUtil.getCurrentUser().getId(), productId)
+                .orElse(null);
+        if (item != null) {
+            // 如果购物车中已存在该商品，则更新数量和时间戳
+            item.setQuantity(item.getQuantity() + quantity);
+            item.setTimestamp(LocalDateTime.now());
+            cartItemRepository.save(item);
+            return item.getId();
         }
+
+        // 如果购物车中不存在该商品，则创建新的购物车项
+        return cartItemRepository.save(
+                CartItem.builder()
+                        .product(productRepository.findById(productId)
+                                .orElseThrow(TomatoMallException::productNotFound))
+                        .user(securityUtil.getCurrentUser())
+                        .quantity(quantity)
+                        .build()
+        ).getId();
     }
 
     /**

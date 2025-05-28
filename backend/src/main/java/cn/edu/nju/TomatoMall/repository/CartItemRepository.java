@@ -12,11 +12,14 @@ import javax.persistence.criteria.CriteriaBuilder;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CartItemRepository extends JpaRepository<CartItem, Integer> {
     @Query("SELECT c FROM CartItem c WHERE c.id IN ?1 AND c.user.id = ?2")
     List<CartItem> findByIdsAndUserId(List<Integer> cartItemIds, int userId);
+
+    Optional<CartItem> findByUserIdAndProductId(int userId, int productId);
 
     Page<CartItem> findAllByUserId(int id, Pageable pageable);
 
