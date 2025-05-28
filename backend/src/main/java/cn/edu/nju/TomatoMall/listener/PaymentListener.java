@@ -75,7 +75,8 @@ public class PaymentListener {
                 MessageType.SHOPPING,
                 event.getPayment().getUser(),
                 "支付失败",
-                "您的支付交易失败，请检查支付信息或联系客服。",
+                "您的支付交易失败，请检查支付信息或联系客服，" +
+                        "交易号：" + event.getPayment().getTradeNo(),
                 EntityType.PAYMENT,
                 event.getPayment().getId(),
                 MessagePriority.HIGH
@@ -133,7 +134,10 @@ public class PaymentListener {
                 MessageType.SHOPPING,
                 event.getPayment().getUser(),
                 "退款失败",
-                "您的退款请求失败，请联系客服处理。",
+                "您的退款请求失败，请联系客服处理，" +
+                        "订单号：" + event.getOrder().getOrderNo() + "\n" +
+                        "退款金额：" + event.getRefundAmount() + "\n" +
+                        "交易号：" + event.getTradeNo(),
                 EntityType.PAYMENT,
                 event.getPayment().getId(),
                 MessagePriority.HIGH

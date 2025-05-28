@@ -2,9 +2,11 @@ package cn.edu.nju.TomatoMall.events.payment;
 
 import cn.edu.nju.TomatoMall.models.po.Order;
 import cn.edu.nju.TomatoMall.models.po.Payment;
+import lombok.Getter;
 
 import java.math.BigDecimal;
 
+@Getter
 public class RefundFailEvent extends PaymentEvent {
     private final Order order;
     private final BigDecimal refundAmount;

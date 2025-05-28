@@ -72,7 +72,9 @@ public class OrderListener {
                 MessageType.SHOPPING,
                 event.getOrder().getUser(),
                 "订单已发货",
-                "订单: " + event.getOrder().getOrderNo() + " 已发货",
+                "订单: " + event.getOrder().getOrderNo() + " 已发货\n" +
+                        "物流公司: " + event.getCarrier() + "\n" +
+                        "运单号: " + event.getTrackingNumber(),
                 EntityType.ORDER,
                 event.getOrder().getId(),
                 MessagePriority.MEDIUM
@@ -86,7 +88,7 @@ public class OrderListener {
                 MessageType.SHOPPING,
                 event.getOrder().getUser(),
                 "订单已送达",
-                "订单: " + event.getOrder().getOrderNo() + " 已送达",
+                "订单: " + event.getOrder().getOrderNo() + " 的商品已送达至 " + event.getDeliveryAddress() + "，请及时查收",
                 EntityType.ORDER,
                 event.getOrder().getId(),
                 MessagePriority.MEDIUM

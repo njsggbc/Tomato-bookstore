@@ -626,7 +626,7 @@ public class OrderServiceImpl implements OrderService {
                         .event(OrderEvent.DELIVER)
                         .afterEventStatus(OrderStatus.AWAITING_RECEIPT)
                         .message("已送达: " + params.getDeliveryLocation() + "\n" +
-                                "签收人: " + params.getSignedBy() + "\n" +
+                                "负责人: " + params.getSignedBy() + "\n" +
                                 "联系电话: " + params.getPhone() + "\n" +
                                 "备注: " + params.getRemark())
                         .timestamp(params.getDeliveryTime())

@@ -1,7 +1,9 @@
 package cn.edu.nju.TomatoMall.events.order;
 
 import cn.edu.nju.TomatoMall.models.po.Order;
+import lombok.Getter;
 
+@Getter
 public class OrderShipEvent extends OrderEvent {
     private final String trackingNumber;
     private final String carrier;

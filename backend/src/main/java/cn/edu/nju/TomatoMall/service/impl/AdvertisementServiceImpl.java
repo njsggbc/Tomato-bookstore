@@ -370,6 +370,7 @@ public class AdvertisementServiceImpl implements AdvertisementService {
                 .getSlots()
                 .stream()
                 .map(AdSlotInfoResponse::new)
+                .sorted(Comparator.comparing(AdSlotInfoResponse::getStartTime))
                 .collect(Collectors.toList());
     }
 

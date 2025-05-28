@@ -149,7 +149,7 @@ public class ShoppingController {
     /**
      * 获取订单详细信息
      *
-     * @param orderId 订单ID
+     * @param orderId 订单ID，可设置为0表示使用订单编号获取
      * @param orderNo 可选的订单编号
      * @return 客户订单详细信息
      */
@@ -157,6 +157,12 @@ public class ShoppingController {
     public ApiResponse<CustomerOrderInfoResponse> getOrderDetail(
             @PathVariable Integer orderId,
             @RequestParam(required = false) String orderNo) {
+        if (orderId == 0) {
+            orderId = null;
+        }
+        if (orderId == null && orderNo == null) {
+            throw TomatoMallException.invalidParameter();
+        }
         return ApiResponse.success(orderService.getOrderInfo(orderId, orderNo));
     }
 
