@@ -1,9 +1,17 @@
 package cn.edu.nju.TomatoMall.service;
 
+import cn.edu.nju.TomatoMall.models.dto.product.ProductInventoryResponse;
+
 /**
  * 库存管理服务接口
  */
 public interface InventoryService {
+    /**
+     * 获取商品库存信息
+     * @param productId 商品ID
+     * @return 商品库存信息
+     */
+    ProductInventoryResponse getProductInventoryInfo(int productId);
 
     /**
      * 设置库存 - 用于初始化或重置库存

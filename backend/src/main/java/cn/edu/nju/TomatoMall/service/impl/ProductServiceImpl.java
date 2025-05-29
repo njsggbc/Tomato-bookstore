@@ -183,8 +183,10 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
-    public int getStockpile(int productId) {
-        return inventoryService.getAvailableStock(productId);
+    public ProductInventoryResponse getStockpile(int productId) {
+        validatePermission(productRepository.findStoreIdById(productId)
+                .orElseThrow(TomatoMallException::productNotFound));
+        return inventoryService.getProductInventoryInfo(productId);
     }
 
     private List<String> uploadImages(List<MultipartFile> images) {

@@ -125,7 +125,7 @@ public class ProductController {
      * 获取商品库存信息
      */
     @GetMapping("/stockpile/{productId}")
-    public ApiResponse<Integer> getStockpile(@PathVariable int productId) {
+    public ApiResponse<ProductInventoryResponse> getStockpile(@PathVariable int productId) {
         return ApiResponse.success(productService.getStockpile(productId));
     }
 

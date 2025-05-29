@@ -94,9 +94,9 @@ public interface ProductService {
     /**
      * 获取商品库存信息
      * @param productId 商品ID
-     * @return 库存数量
+     * @return 库存信息
      */
-    int getStockpile(int productId);
+    ProductInventoryResponse getStockpile(int productId);
 
     /*---------- HACK: 以下为兼容测试用接口 ----------*/
 

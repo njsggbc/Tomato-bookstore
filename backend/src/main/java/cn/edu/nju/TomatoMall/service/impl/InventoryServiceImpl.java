@@ -3,6 +3,7 @@ package cn.edu.nju.TomatoMall.service.impl;
 import cn.edu.nju.TomatoMall.enums.InventoryStatus;
 import cn.edu.nju.TomatoMall.events.product.*;
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
+import cn.edu.nju.TomatoMall.models.dto.product.ProductInventoryResponse;
 import cn.edu.nju.TomatoMall.models.po.Inventory;
 import cn.edu.nju.TomatoMall.repository.InventoryRepository;
 import cn.edu.nju.TomatoMall.repository.ProductRepository;
@@ -29,6 +30,15 @@ public class InventoryServiceImpl implements InventoryService {
         this.inventoryRepository = inventoryRepository;
         this.productRepository = productRepository;
         this.eventPublisher = eventPublisher;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProductInventoryResponse getProductInventoryInfo(int productId) {
+        return new ProductInventoryResponse(
+                inventoryRepository.findByProductId(productId)
+                        .orElseThrow(TomatoMallException::productNotFound)
+        );
     }
 
     @Override

@@ -39,4 +39,6 @@ public interface InventoryRepository extends JpaRepository<Inventory, Integer> {
     @Modifying
     @Query("UPDATE Inventory i SET i.thresholdQuantity = :thresholdQuantity WHERE i.product.id = :productId")
     void updateThresholdQuantityByProductId(int productId, int thresholdQuantity);
+
+    Optional<Inventory> findByProductId(int productId);
 }
