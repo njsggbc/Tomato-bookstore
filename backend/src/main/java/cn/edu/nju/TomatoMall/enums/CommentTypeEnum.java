@@ -10,7 +10,6 @@ public enum CommentTypeEnum {
     private final String code;
     private final String description;
 
-
     CommentTypeEnum(String code, String description) {
         this.code = code;
         this.description = description;

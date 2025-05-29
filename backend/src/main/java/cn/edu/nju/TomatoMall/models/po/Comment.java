@@ -30,7 +30,6 @@ public class Comment {
 
     @Column(name = "shop_id")
     private int shopId;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "comment_type", nullable = false)
     private CommentTypeEnum commentType;

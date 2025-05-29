@@ -28,7 +28,6 @@ public class CommentController {
         return ResponseEntity.ok(commentService.createComment(commentDTO));
     }
 
-
     /**
      * 更新评论
      * @param commentId 评论ID
