@@ -21,7 +21,6 @@ public class CommentDTO {
 
     private int itemId;
 
-
     private int shopId;
 
     @NotNull(message = "评论类型不能为空")

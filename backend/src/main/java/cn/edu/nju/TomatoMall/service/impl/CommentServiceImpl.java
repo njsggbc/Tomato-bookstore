@@ -30,7 +30,6 @@ public class CommentServiceImpl implements CommentService {
         return convertToDTO(comment);
     }
 
-
     @Override
     @Transactional
     public CommentDTO updateComment(int commentId, CommentDTO commentDTO) {
