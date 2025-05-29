@@ -36,7 +36,6 @@ public class Comment {
     private CommentTypeEnum commentType;
 
 
-
     @Column(name = "parent_id")
     private Integer parentId;  // 父评论ID，用于回复功能
 
