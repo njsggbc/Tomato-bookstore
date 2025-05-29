@@ -14,6 +14,7 @@ public class CommentDTO {
     @Size(min = 1, max = 1000, message = "评论内容长度必须在1-1000字符之间")
     private String content;
 
+
     private Integer likesCount;
 
     @NotNull(message = "用户ID不能为空")
