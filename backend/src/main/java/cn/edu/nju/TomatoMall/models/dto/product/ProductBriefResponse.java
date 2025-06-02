@@ -13,7 +13,6 @@ import java.math.BigDecimal;
 public class ProductBriefResponse {
     int id;
     String title;
-    String description;
     String cover;
     BigDecimal price;
     Double rate;
@@ -23,7 +22,6 @@ public class ProductBriefResponse {
     public ProductBriefResponse(Product product) {
         this.id = product.getId();
         this.title = product.getName();
-        this.description = product.getDescription();
         this.cover = product.getImages().get(0);
         this.price = product.getPrice();
         this.rate = product.getRate();

@@ -29,7 +29,7 @@ public class ProductSnapshot {
     @Column(nullable = false, updatable = false)
     private String name;
 
-    @Column(nullable = false, updatable = false)
+    @Column(columnDefinition = "LONGTEXT", nullable = false, updatable = false)
     private String description;
 
     @ElementCollection
