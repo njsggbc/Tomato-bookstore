@@ -7,5 +7,5 @@ import lombok.Data;
 @AllArgsConstructor
 public class CheckoutResponse {
     int cartItemId;
-    int availableQuantity;
+    boolean isAvailable;
 }

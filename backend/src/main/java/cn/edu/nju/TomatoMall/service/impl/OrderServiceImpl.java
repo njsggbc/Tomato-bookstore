@@ -75,7 +75,7 @@ public class OrderServiceImpl implements OrderService {
      * 按店铺分组商品并检查每个商品的库存状态
      *
      * @param cartItemIds 购物车项ID列表
-     * @return 结算响应列表，包含每个商品的可用库存信息
+     * @return 结算响应列表，包含每个购物车项的ID和是否有足够库存的状态
      * @throws TomatoMallException 当购物车项无效时抛出异常
      */
     @Override
@@ -88,7 +88,7 @@ public class OrderServiceImpl implements OrderService {
         return cartItems.stream()
                 .map(item -> {
                     int availableStock = inventoryService.getAvailableStock(item.getProduct().getId());
-                    return new CheckoutResponse(item.getId(), availableStock);
+                    return new CheckoutResponse(item.getId(), availableStock >= item.getQuantity());
                 })
                 .collect(Collectors.toList());
     }
