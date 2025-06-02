@@ -44,4 +44,47 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
 
     @Query("SELECT p.store.id FROM Product p WHERE p.id = :id")
     Optional<Integer> findStoreIdById(int id);
+
+    @Query("SELECT DISTINCT p FROM Product p " +
+            "LEFT JOIN p.specifications spec " +
+            "WHERE p.onSale = true AND " +
+            "(:keyword IS NULL OR :keyword = '' OR " +
+            "LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(spec) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
+            "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
+            "(:maxPrice IS NULL OR p.price <= :maxPrice) " +
+            "ORDER BY " +
+            "CASE " +
+            // 商品名称完全匹配 - 最高优先级
+            "WHEN LOWER(p.name) = LOWER(:keyword) THEN 1 " +
+            // 商品名称开头匹配
+            "WHEN LOWER(p.name) LIKE LOWER(CONCAT(:keyword, '%')) THEN 2 " +
+            // 商品名称包含关键词
+            "WHEN LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) THEN 3 " +
+            // 描述开头匹配 - 中等优先级
+            "WHEN LOWER(p.description) LIKE LOWER(CONCAT(:keyword, '%')) THEN 4 " +
+            // 描述包含关键词 - 中等优先级
+            "WHEN LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')) THEN 5 " +
+            // 规格信息匹配
+            "ELSE 6 " +
+            "END ASC, p.sales DESC, p.rate DESC, p.createTime DESC")
+    Page<Product> searchProductsByRelevance(@Param("keyword") String keyword,
+                                 @Param("minPrice") BigDecimal minPrice,
+                                 @Param("maxPrice") BigDecimal maxPrice,
+                                 Pageable pageable);
+
+    @Query("SELECT DISTINCT p FROM Product p " +
+            "LEFT JOIN p.specifications spec " +
+            "WHERE p.onSale = true AND " +
+            "(:keyword IS NULL OR :keyword = '' OR " +
+            "LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(spec) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
+            "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
+            "(:maxPrice IS NULL OR p.price <= :maxPrice)")
+    Page<Product> searchProductsWithCustomSort(@Param("keyword") String keyword,
+                                               @Param("minPrice") BigDecimal minPrice,
+                                               @Param("maxPrice") BigDecimal maxPrice,
+                                               Pageable pageable);
 }

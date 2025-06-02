@@ -24,7 +24,7 @@ public class Store {
     @Column(nullable = false, unique = true)
     private String name;
 
-    @Column(nullable = false)
+    @Column(columnDefinition = "TEXT", nullable = false)
     private String description;
 
     @Column(nullable = false)
