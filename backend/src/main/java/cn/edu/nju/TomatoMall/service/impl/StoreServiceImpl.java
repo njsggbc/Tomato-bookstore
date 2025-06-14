@@ -2,8 +2,8 @@ package cn.edu.nju.TomatoMall.service.impl;
 
 import cn.edu.nju.TomatoMall.enums.Role;
 import cn.edu.nju.TomatoMall.enums.StoreStatus;
-import cn.edu.nju.TomatoMall.events.store.StoreStatusChangeEvent;
-import cn.edu.nju.TomatoMall.events.store.StoreReviewEvent;
+import cn.edu.nju.TomatoMall.service.impl.events.store.StoreStatusChangeEvent;
+import cn.edu.nju.TomatoMall.service.impl.events.store.StoreReviewEvent;
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
 import cn.edu.nju.TomatoMall.models.dto.store.StoreInfoResponse;
 import cn.edu.nju.TomatoMall.models.po.Store;

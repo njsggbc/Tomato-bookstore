@@ -50,7 +50,7 @@ public interface PaymentService {
      * @param paymentMethod 支付方式
      * @return 处理结果
      */
-    String handlePaymentNotify(HttpServletRequest request, PaymentMethod paymentMethod);
+    Object handlePaymentNotify(HttpServletRequest request, PaymentMethod paymentMethod);
 
     /**
      * 查询交易状态

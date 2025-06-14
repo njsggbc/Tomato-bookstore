@@ -1,13 +1,13 @@
 package cn.edu.nju.TomatoMall.service.impl;
 
 import cn.edu.nju.TomatoMall.enums.InventoryStatus;
-import cn.edu.nju.TomatoMall.events.product.*;
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
 import cn.edu.nju.TomatoMall.models.dto.product.ProductInventoryResponse;
 import cn.edu.nju.TomatoMall.models.po.Inventory;
 import cn.edu.nju.TomatoMall.repository.InventoryRepository;
 import cn.edu.nju.TomatoMall.repository.ProductRepository;
 import cn.edu.nju.TomatoMall.service.InventoryService;
+import cn.edu.nju.TomatoMall.service.impl.events.product.ProductLowStockEvent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.OptimisticLockingFailureException;

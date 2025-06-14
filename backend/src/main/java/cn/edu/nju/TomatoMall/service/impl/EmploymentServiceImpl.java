@@ -1,6 +1,5 @@
 package cn.edu.nju.TomatoMall.service.impl;
 
-import cn.edu.nju.TomatoMall.events.employment.*;
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
 import cn.edu.nju.TomatoMall.models.dto.employment.*;
 import cn.edu.nju.TomatoMall.models.dto.user.UserBriefResponse;
@@ -12,6 +11,9 @@ import cn.edu.nju.TomatoMall.repository.EmploymentRepository;
 import cn.edu.nju.TomatoMall.repository.EmploymentTokenRepository;
 import cn.edu.nju.TomatoMall.repository.StoreRepository;
 import cn.edu.nju.TomatoMall.service.EmploymentService;
+import cn.edu.nju.TomatoMall.service.impl.events.employment.EmployeeDismissedEvent;
+import cn.edu.nju.TomatoMall.service.impl.events.employment.EmployeeHiredEvent;
+import cn.edu.nju.TomatoMall.service.impl.events.employment.EmployeeResignedEvent;
 import cn.edu.nju.TomatoMall.util.SecurityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;

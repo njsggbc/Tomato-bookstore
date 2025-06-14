@@ -2,8 +2,7 @@ package cn.edu.nju.TomatoMall.service.impl;
 
 import cn.edu.nju.TomatoMall.enums.PaymentMethod;
 import cn.edu.nju.TomatoMall.enums.PaymentStatus;
-import cn.edu.nju.TomatoMall.events.order.OrderCancelEvent;
-import cn.edu.nju.TomatoMall.events.payment.PaymentCancelEvent;
+import cn.edu.nju.TomatoMall.service.impl.events.payment.PaymentCancelEvent;
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
 import cn.edu.nju.TomatoMall.models.dto.payment.PaymentInfoResponse;
 import cn.edu.nju.TomatoMall.models.po.Order;
@@ -11,10 +10,10 @@ import cn.edu.nju.TomatoMall.models.po.Payment;
 import cn.edu.nju.TomatoMall.repository.OrderRepository;
 import cn.edu.nju.TomatoMall.repository.PaymentRepository;
 import cn.edu.nju.TomatoMall.service.PaymentService;
+import cn.edu.nju.TomatoMall.service.impl.strategy.PaymentStrategy;
 import cn.edu.nju.TomatoMall.util.SecurityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -27,8 +26,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.servlet.http.HttpServletRequest;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -40,24 +37,29 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 @Service
-public abstract class PaymentServiceImpl implements PaymentService {
+public class PaymentServiceImpl implements PaymentService {
     // 支付超时时间，单位分钟
-    protected static final int PAYMENT_TIMEOUT = 5;
+    public static final int PAYMENT_TIMEOUT = 5;
 
-    protected final PaymentRepository paymentRepository;
-    protected final OrderRepository orderRepository;
-    protected final ApplicationEventPublisher eventPublisher;
-    protected final SecurityUtil securityUtil;
+    private final PaymentRepository paymentRepository;
+    private final OrderRepository orderRepository;
+    private final ApplicationEventPublisher eventPublisher;
+    private final SecurityUtil securityUtil;
+    private final Map<PaymentMethod, PaymentStrategy> PAYMENT_STRATEGY = new HashMap<>();
 
     @Autowired
     public PaymentServiceImpl(PaymentRepository paymentRepository,
                               OrderRepository orderRepository,
                               ApplicationEventPublisher eventPublisher,
-                              SecurityUtil securityUtil) {
+                              SecurityUtil securityUtil,
+                              List<PaymentStrategy> paymentStrategies) {
         this.paymentRepository = paymentRepository;
         this.orderRepository = orderRepository;
         this.eventPublisher = eventPublisher;
         this.securityUtil = securityUtil;
+        for (PaymentStrategy strategy : paymentStrategies) {
+            PAYMENT_STRATEGY.put(strategy.getPaymentMethod(), strategy);
+        }
     }
 
     // 使用单线程的定时执行器服务
@@ -97,15 +99,6 @@ public abstract class PaymentServiceImpl implements PaymentService {
         }
     }
 
-    private final Map<PaymentMethod, PaymentServiceImpl> PAYMENT_STRATEGY = new HashMap<>();
-
-    @Autowired
-    public void setPaymentStrategy(
-            AlipayServiceImpl alipayServiceImpl
-    ) {
-        PAYMENT_STRATEGY.put(PaymentMethod.ALIPAY, alipayServiceImpl);
-    }
-
     // ====================================================================================
     // 接口方法实现
     // ====================================================================================
@@ -113,7 +106,7 @@ public abstract class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public String pay(int paymentId, PaymentMethod paymentMethod) {
-        PaymentServiceImpl paymentStrategy = PAYMENT_STRATEGY.get(paymentMethod);
+        PaymentStrategy paymentStrategy = PAYMENT_STRATEGY.get(paymentMethod);
         if (paymentStrategy == null) {
             throw TomatoMallException.paymentFail("不支持的支付方式");
         }
@@ -128,7 +121,13 @@ public abstract class PaymentServiceImpl implements PaymentService {
         payment.setPaymentMethod(paymentMethod);
         payment.setPaymentRequestTime(LocalDateTime.now());
 
-        return paymentStrategy.createTrade(payment);
+        String res = paymentStrategy.createTrade(payment);
+        if (res == null || res.isEmpty()) {
+            throw TomatoMallException.paymentFail("支付请求失败，请稍后重试");
+        }
+        schedulePaymentTimeout(payment);
+
+        return res; // 返回支付请求结果，通常是支付链接或二维码
     }
 
     /**
@@ -190,8 +189,8 @@ public abstract class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional
-    public String handlePaymentNotify(HttpServletRequest request, PaymentMethod paymentMethod) {
-        return PAYMENT_STRATEGY.get(paymentMethod).processNotify(request);
+    public Object handlePaymentNotify(HttpServletRequest request, PaymentMethod paymentMethod) {
+        return PAYMENT_STRATEGY.get(paymentMethod).processPaymentNotify(request);
     }
 
     @Override
@@ -199,7 +198,7 @@ public abstract class PaymentServiceImpl implements PaymentService {
     public Object queryTradeStatus(String paymentNo) {
         Payment payment = paymentRepository.findByPaymentNoAndUserId(paymentNo, securityUtil.getCurrentUser().getId())
                 .orElseThrow(TomatoMallException::paymentNotFound);
-        return PAYMENT_STRATEGY.get(payment.getPaymentMethod()).processQueryTrade(paymentNo);
+        return PAYMENT_STRATEGY.get(payment.getPaymentMethod()).queryTradeStatus(paymentNo);
     }
 
     @Override
@@ -208,7 +207,7 @@ public abstract class PaymentServiceImpl implements PaymentService {
         Payment payment = paymentRepository.findByPaymentNoAndUserId(paymentNo, securityUtil.getCurrentUser().getId())
                 .orElseThrow(TomatoMallException::paymentNotFound);
 
-        return PAYMENT_STRATEGY.get(payment.getPaymentMethod()).processQueryRefund(paymentNo, orderNo);
+        return PAYMENT_STRATEGY.get(payment.getPaymentMethod()).queryRefundStatus(paymentNo, orderNo);
     }
 
     // ====================================================================================
@@ -263,7 +262,7 @@ public abstract class PaymentServiceImpl implements PaymentService {
      * 安排支付超时处理
      * @param payment 支付对象
      */
-    public void schedulePaymentTimeout(Payment payment) {
+    private void schedulePaymentTimeout(Payment payment) {
         if (payment == null || scheduler.isShutdown()) {
             return;
         }
@@ -302,7 +301,7 @@ public abstract class PaymentServiceImpl implements PaymentService {
      * 移除支付超时处理任务
      * @param payment 支付对象
      */
-    public void removeSchedulePaymentTimeout(Payment payment) {
+    private void removeSchedulePaymentTimeout(Payment payment) {
         if (payment == null) {
             return;
         }
@@ -318,8 +317,7 @@ public abstract class PaymentServiceImpl implements PaymentService {
     /**
      * 处理超时支付状态
      */
-    @Transactional
-    public void handleTimeout(Payment payment) {
+    private void handleTimeout(Payment payment) {
         if (payment != null && payment.getStatus() == PaymentStatus.PENDING) {
             if (payment.getPaymentMethod() != null) {
                 PAYMENT_STRATEGY.get(payment.getPaymentMethod()).processTimeout(payment);
@@ -332,24 +330,4 @@ public abstract class PaymentServiceImpl implements PaymentService {
             }
         }
     }
-
-    // ====================================================================================
-    // 策略方法
-    // ====================================================================================
-
-    public abstract PaymentMethod getPaymentMethod();
-
-    public abstract String createTrade(Payment payment);
-
-    public abstract void closeTrade(Payment payment);
-
-    public abstract String processNotify(HttpServletRequest request);
-
-    public abstract void processRefund(Order order, BigDecimal amount, String reason);
-
-    public abstract void processTimeout(Payment payment);
-
-    public abstract Object processQueryTrade(String paymentNo);
-
-    public abstract Object processQueryRefund(String paymentNo, String orderNo);
 }
