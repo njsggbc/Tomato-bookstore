@@ -91,6 +91,7 @@ public class SystemDataInitializer implements CommandLineRunner {
                     .createTime(LocalDateTime.now())
                     .status(StoreStatus.NORMAL)
                     .manager(admin)
+                    .isSystemStore(true)
                     .build();
 
             storeRepository.save(systemStore);

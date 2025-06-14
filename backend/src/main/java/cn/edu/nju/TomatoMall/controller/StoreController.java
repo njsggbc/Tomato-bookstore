@@ -1,5 +1,6 @@
 package cn.edu.nju.TomatoMall.controller;
 
+import cn.edu.nju.TomatoMall.enums.PaymentMethod;
 import cn.edu.nju.TomatoMall.models.dto.employment.TokenGenerateRequest;
 import cn.edu.nju.TomatoMall.models.dto.employment.TokenInfoResponse;
 import cn.edu.nju.TomatoMall.models.dto.store.StoreCreateRequest;
@@ -14,6 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * store
@@ -70,7 +72,8 @@ public class StoreController {
                 params.getDescription(),
                 params.getLogo(),
                 params.getAddress(),
-                params.getQualification());
+                params.getQualification(),
+                params.getMerchantAccounts());
         return ApiResponse.success();
     }
 
@@ -87,7 +90,14 @@ public class StoreController {
      */
     @PatchMapping(path = "/{storeId}", consumes = "multipart/form-data")
     public ApiResponse<Void> updateStore(@PathVariable int storeId, @ModelAttribute StoreUpdateRequest params) {
-        storeService.updateStore(storeId, params.getName(), params.getDescription(), params.getLogo(), params.getAddress(), params.getQualification());
+        storeService.updateStore(
+                storeId,
+                params.getName(),
+                params.getDescription(),
+                params.getLogo(),
+                params.getAddress(),
+                params.getQualification(),
+                params.getMerchantAccounts());
         return ApiResponse.success();
     }
 
@@ -238,5 +248,17 @@ public class StoreController {
     @GetMapping("/{storeId}/qualifications")
     public ApiResponse<List<String>> getStoreQualifications(@PathVariable int storeId) {
         return ApiResponse.success(storeService.getStoreQualification(storeId));
+    }
+
+    /**
+     * 获取店铺的收款账户信息
+     *
+     * @param storeId 店铺ID
+     * @return 商户收款账户信息
+     */
+    @GetMapping("/{storeId}/merchant-accounts")
+    public ApiResponse<Map<PaymentMethod, String>> getStoreMerchantAccounts(@PathVariable int storeId) {
+        Map<PaymentMethod, String> accounts = storeService.getMerchantAccounts(storeId);
+        return ApiResponse.success(accounts);
     }
 }

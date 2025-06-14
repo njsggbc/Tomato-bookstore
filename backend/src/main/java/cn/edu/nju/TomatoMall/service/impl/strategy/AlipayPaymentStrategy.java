@@ -1,88 +1,76 @@
-package cn.edu.nju.TomatoMall.service.impl;
+package cn.edu.nju.TomatoMall.service.impl.strategy;
 
 import cn.edu.nju.TomatoMall.configure.AlipayConfig;
 import cn.edu.nju.TomatoMall.enums.PaymentMethod;
 import cn.edu.nju.TomatoMall.enums.PaymentStatus;
-import cn.edu.nju.TomatoMall.events.payment.RefundSuccessEvent;
-import cn.edu.nju.TomatoMall.events.payment.*;
-import cn.edu.nju.TomatoMall.events.payment.PaymentSuccessEvent;
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
 import cn.edu.nju.TomatoMall.models.po.Order;
 import cn.edu.nju.TomatoMall.models.po.Payment;
-import cn.edu.nju.TomatoMall.repository.OrderRepository;
 import cn.edu.nju.TomatoMall.repository.PaymentRepository;
-import cn.edu.nju.TomatoMall.util.SecurityUtil;
+import cn.edu.nju.TomatoMall.service.impl.events.payment.*;
 import com.alibaba.fastjson.JSONObject;
 import com.alipay.api.AlipayApiException;
 import com.alipay.api.AlipayClient;
 import com.alipay.api.request.*;
-import com.alipay.api.response.*;
+import com.alipay.api.response.AlipayTradeFastpayRefundQueryResponse;
+import com.alipay.api.response.AlipayTradePagePayResponse;
+import com.alipay.api.response.AlipayTradeQueryResponse;
+import com.alipay.api.response.AlipayTradeRefundResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-/**
- * 支付宝支付服务实现类
- * 实现PaymentService接口，处理支付宝支付相关业务逻辑
- */
+import static cn.edu.nju.TomatoMall.service.impl.PaymentServiceImpl.PAYMENT_TIMEOUT;
+
 @Slf4j
-@Service
-public class AlipayServiceImpl extends PaymentServiceImpl {
-
-    // ====================================================================================
-    // 常量
-    // ====================================================================================
-
+@Component
+public class AlipayPaymentStrategy implements PaymentStrategy {
     // 最大重试次数
     private static final int MAX_RETRY_COUNT = 3;
     // 重试延迟时间(毫秒)
     private static final long RETRY_DELAY_MS = 2000;
-
-    // ====================================================================================
-    // 依赖
-    // ====================================================================================
-
+    // 支付宝配置
     private final AlipayConfig config;
+    // 支付宝服务
     private final AlipayClient alipayClient;
 
+    private final PaymentRepository paymentRepository;
+    private final ApplicationEventPublisher eventPublisher;
+
     @Autowired
-    public AlipayServiceImpl(AlipayConfig config,
-                             AlipayClient alipayClient,
-                             PaymentRepository paymentRepository,
-                             OrderRepository orderRepository,
-                             ApplicationEventPublisher eventPublisher,
-                             SecurityUtil securityUtil
-    ) {
-        super(paymentRepository, orderRepository, eventPublisher, securityUtil);
+    public AlipayPaymentStrategy(AlipayConfig config,
+                                 AlipayClient alipayClient,
+                                 PaymentRepository paymentRepository,
+                                 ApplicationEventPublisher eventPublisher) {
         this.config = config;
         this.alipayClient = alipayClient;
+        this.paymentRepository = paymentRepository;
+        this.eventPublisher = eventPublisher;
     }
 
-    // ====================================================================================
-    // 方法实现
-    // ====================================================================================
-
-    /**
-     * 获取支付方式
-     * @return 返回支付宝支付方式枚举
-     */
     @Override
     public PaymentMethod getPaymentMethod() {
         return PaymentMethod.ALIPAY;
     }
 
+    /**
+     * 创建支付宝支付交易
+     * @param payment 支付对象
+     * @return 支付跳转链接
+     */
     @Override
     @Transactional
     public String createTrade(Payment payment) {
@@ -112,14 +100,19 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
                 payment.setPaymentMethod(PaymentMethod.ALIPAY);
                 payment.setPaymentRequestTime(LocalDateTime.now());
                 paymentRepository.save(payment);
-                // 安排支付超时处理
-                schedulePaymentTimeout(payment);
                 log.debug("支付请求成功，返回URL: {}", response.getBody());
                 return response.getBody();
             }
             // 支付请求失败
-            log.error("支付请求失败: {}", response.getSubMsg());
-            throw TomatoMallException.paymentFail(response.getSubMsg());
+            else {
+                log.error("支付请求失败: subCode={}, subMsg={}", response.getSubCode(), response.getSubMsg());
+                // 区分分账相关错误
+                if (isSplitAccountError(response.getSubCode())) {
+                    throw TomatoMallException.paymentFail("商户收款账户异常，请稍后重试或联系店铺客服");
+                } else {
+                    throw TomatoMallException.paymentFail(response.getSubMsg());
+                }
+            }
         } catch (AlipayApiException e) {
             log.error("支付宝API调用错误", e);
             throw TomatoMallException.paymentFail(e.getMessage());
@@ -127,7 +120,8 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
     }
 
     /**
-     * @param payment
+     * 关闭交易
+     * @param payment 支付对象
      */
     @Override
     @Transactional
@@ -155,7 +149,7 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
      */
     @Override
     @Transactional
-    public String processNotify(HttpServletRequest request) {
+    public String processPaymentNotify(HttpServletRequest request) {
         // 转换请求参数为Map
         Map<String, String> params = convertParams(request);
         try {
@@ -266,7 +260,7 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
     @Transactional
     public void processTimeout(Payment payment) {
         // 查询交易状态
-        AlipayTradeQueryResponse response = processQueryTrade(payment.getPaymentNo());
+        AlipayTradeQueryResponse response = queryTradeStatus(payment.getPaymentNo());
         if (!isTradeSuccess(response)) {
             // 交易未成功，关闭交易
             closeTrade(payment);
@@ -285,7 +279,7 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
      */
     @Override
     @Transactional(readOnly = true)
-    public AlipayTradeQueryResponse processQueryTrade(String paymentNo) {
+    public AlipayTradeQueryResponse queryTradeStatus(String paymentNo) {
         try {
             AlipayTradeQueryRequest request = new AlipayTradeQueryRequest();
             request.setBizContent(new JSONObject().fluentPut("out_trade_no", paymentNo).toString());
@@ -310,7 +304,7 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
      */
     @Override
     @Transactional(readOnly = true)
-    public AlipayTradeFastpayRefundQueryResponse processQueryRefund(String paymentNo, String orderNo) {
+    public AlipayTradeFastpayRefundQueryResponse queryRefundStatus(String paymentNo, String orderNo) {
         try {
             AlipayTradeFastpayRefundQueryRequest request = new AlipayTradeFastpayRefundQueryRequest();
             JSONObject content = new JSONObject()
@@ -331,7 +325,7 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
     }
 
     // ====================================================================================
-    // 创建交易辅助方法
+    // 私有辅助方法
     // ====================================================================================
 
     /**
@@ -345,9 +339,6 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
         // 获取支付信息
         Payment payment = paymentRepository.findByPaymentNo(outTradeNo)
                 .orElseThrow(TomatoMallException::paymentNotFound);
-
-        // 移除支付超时处理任务
-        removeSchedulePaymentTimeout(payment);
 
         // 如果支付已经成功，避免重复处理
         if (payment.getStatus() == PaymentStatus.SUCCESS) {
@@ -389,8 +380,6 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
     @Transactional
     public String handleClosedPayment(String outTradeNo) {
         paymentRepository.findByPaymentNo(outTradeNo).ifPresent(payment -> {
-            // 移除支付超时处理任务
-            removeSchedulePaymentTimeout(payment);
             // 更新支付状态为失败
             payment.setStatus(PaymentStatus.FAILED);
             paymentRepository.save(payment);
@@ -418,12 +407,31 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
         content.put("product_code", "FAST_INSTANT_TRADE_PAY");
         // 支付超时时间（分钟）
         content.put("timeout_express", PAYMENT_TIMEOUT + "m");
+        // 分账信息
+        List<JSONObject> royaltyDetailInfos = new ArrayList<>();
+        int serialNo = 1;
+        for (Order order : payment.getOrders()) {
+            if (!order.getStore().isSystemStore()) {
+                String merchantAccount = order.getStore().getMerchantAccounts().get(PaymentMethod.ALIPAY);
 
-        // 记录关键参数用于调试
-        log.debug("支付请求业务参数: out_trade_no={}, total_amount={}, subject={}",
-                payment.getPaymentNo(),
-                payment.getAmount().setScale(2, RoundingMode.HALF_UP).toString(),
-                truncateSubject(payment.getOrders()));
+                if (merchantAccount != null && !merchantAccount.trim().isEmpty()) {
+                    JSONObject detail = new JSONObject();
+                    detail.put("serial_no", String.valueOf(serialNo++));
+                    detail.put("trans_in_type", "loginName");
+                    detail.put("trans_in", merchantAccount);
+                    detail.put("amount", order.getTotalAmount().setScale(2, RoundingMode.HALF_UP));
+                    detail.put("desc", "订单[" + order.getOrderNo() + "]商户分账");
+
+                    royaltyDetailInfos.add(detail);
+                }
+            }
+        }
+        if (!royaltyDetailInfos.isEmpty()) {
+            JSONObject royaltyInfo = new JSONObject();
+            royaltyInfo.put("royalty_type", "ROYALTY");
+            royaltyInfo.put("royalty_detail_infos", royaltyDetailInfos);
+            content.put("royalty_info", royaltyInfo);
+        }
 
         return content;
     }
@@ -440,10 +448,6 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
         // 支付宝限制主题长度为128个字符，超出则截断
         return subject.length() > 128 ? subject.substring(0, 125) + "..." : subject;
     }
-
-    // ====================================================================================
-    // 回调处理辅助方法
-    // ====================================================================================
 
     /**
      * 转换HTTP请求参数为Map
@@ -473,9 +477,18 @@ public class AlipayServiceImpl extends PaymentServiceImpl {
                         "TRADE_FINISHED".equals(response.getTradeStatus()));
     }
 
-    // ====================================================================================
-    // 退款处理辅助方法
-    // ====================================================================================
+    /**
+     * 判断是否为分账相关错误
+     */
+    private boolean isSplitAccountError(String subCode) {
+        return subCode != null && (
+                subCode.contains("ROYALTY") ||
+                        subCode.contains("PAYEE_NOT_EXIST") ||
+                        subCode.contains("PAYEE_USER_INFO_ERROR") ||
+                        subCode.contains("SPLIT_BILL_FAIL") ||
+                        subCode.equals("INVALID_PARAMETER.TRANS_IN")
+        );
+    }
 
     /**
      * 构建退款业务参数

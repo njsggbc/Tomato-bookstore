@@ -1,13 +1,13 @@
 package cn.edu.nju.TomatoMall.models.po;
 
+import cn.edu.nju.TomatoMall.enums.PaymentMethod;
 import cn.edu.nju.TomatoMall.enums.StoreStatus;
 import lombok.*;
-import org.springframework.boot.autoconfigure.session.StoreType;
-import org.springframework.web.multipart.MultipartFile;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Entity
 @Table(name = "stores")
@@ -47,6 +47,13 @@ public class Store {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "manager_id", nullable = false)
     private User manager;
+
+    @ElementCollection
+    private Map<PaymentMethod, String> merchantAccounts;
+
+    @Column(nullable = false, updatable = false)
+    @Builder.Default
+    private boolean isSystemStore = false;
 
     @ElementCollection
     private List<String> qualifications;

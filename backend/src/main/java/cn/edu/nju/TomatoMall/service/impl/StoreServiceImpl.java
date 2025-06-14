@@ -1,5 +1,6 @@
 package cn.edu.nju.TomatoMall.service.impl;
 
+import cn.edu.nju.TomatoMall.enums.PaymentMethod;
 import cn.edu.nju.TomatoMall.enums.Role;
 import cn.edu.nju.TomatoMall.enums.StoreStatus;
 import cn.edu.nju.TomatoMall.service.impl.events.store.StoreStatusChangeEvent;
@@ -25,6 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -93,12 +95,18 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     @Transactional
-    public void createStore(String name,  String description, MultipartFile logo, String address,List<MultipartFile> qualifications) {
+    public void createStore(String name,
+                            String description,
+                            MultipartFile logo,
+                            String address,
+                            List<MultipartFile> qualifications,
+                            Map<PaymentMethod, String> merchantAccounts) {
         validateName(name);
         validateLogo(logo);
         validateAddress(address);
         validateDescription(description);
         validateQualifications(qualifications);
+        validateMerchantAccounts(merchantAccounts);
 
         if (storeRepository.existsByName(name)) {
             throw TomatoMallException.storeNameAlreadyExists();
@@ -115,6 +123,7 @@ public class StoreServiceImpl implements StoreService {
                 .qualifications(qualifications.stream()
                         .map(qualification -> fileUtil.upload(user.getId(), qualification))
                         .collect(Collectors.toList()))
+                .merchantAccounts(merchantAccounts)
                 .build();
 
         storeRepository.save(store);
@@ -125,13 +134,22 @@ public class StoreServiceImpl implements StoreService {
 
     @Transactional
     @Override
-    public void updateStore(int storeId, String name, String description, MultipartFile logo, String address, List<MultipartFile> qualifications) {
+    public void updateStore(int storeId,
+                            String name,
+                            String description,
+                            MultipartFile logo,
+                            String address,
+                            List<MultipartFile> qualifications,
+                            Map<PaymentMethod, String> merchantAccounts) {
         Store store = storeRepository.findById(storeId).orElseThrow(TomatoMallException::storeNotFound);
         validatePermission(store);
+
+        boolean needReview = false;
 
         if (name != null) {
             validateName(name);
             store.setName(name);
+            needReview = true;
         }
         if (logo != null) {
             validateLogo(logo);
@@ -139,10 +157,12 @@ public class StoreServiceImpl implements StoreService {
                 fileUtil.delete(store.getLogoUrl());
             }
             store.setLogoUrl(fileUtil.upload(store.getManager().getId(), logo));
+            needReview = true;
         }
         if (address != null) {
             validateAddress(address);
             store.setAddress(address);
+            needReview = true;
         }
         if (description != null) {
             validateDescription(description);
@@ -155,14 +175,20 @@ public class StoreServiceImpl implements StoreService {
                     .map(qualification -> fileUtil.upload(store.getManager().getId(), qualification))
                     .collect(Collectors.toList())
             );
+            needReview = true;
+        }
+        if (merchantAccounts != null) {
+            validateMerchantAccounts(merchantAccounts);
+            store.setMerchantAccounts(merchantAccounts);
         }
 
-        store.setStatus(StoreStatus.UPDATING);
+        if (needReview) {
+            store.setStatus(StoreStatus.UPDATING);
+            // 发布店铺更新事件
+            eventPublisher.publishEvent(new StoreStatusChangeEvent(store));
+        }
 
         storeRepository.save(store);
-
-        // 发布店铺更新事件
-        eventPublisher.publishEvent(new StoreStatusChangeEvent(store));
     }
 
     @Override
@@ -260,6 +286,13 @@ public class StoreServiceImpl implements StoreService {
         return storeRepository.findById(storeId).orElseThrow(TomatoMallException::unexpectedError).getQualifications();
     }
 
+    @Override
+    public Map<PaymentMethod, String> getMerchantAccounts(int storeId) {
+        Store store = storeRepository.findById(storeId).orElseThrow(TomatoMallException::storeNotFound);
+        validatePermission(store);
+        return store.getMerchantAccounts();
+    }
+
     private void validatePermission(Store store) {
         if (!store.getManager().equals(securityUtil.getCurrentUser())) {
             throw TomatoMallException.permissionDenied();
@@ -293,6 +326,21 @@ public class StoreServiceImpl implements StoreService {
     private void validateQualifications(List<MultipartFile> qualifications) {
         if (qualifications == null || qualifications.isEmpty()) {
             throw TomatoMallException.invalidParameter("店铺资质不能为空");
+        }
+    }
+
+    private void validateMerchantAccounts(Map<PaymentMethod, String> merchantAccounts) {
+        if (merchantAccounts == null || merchantAccounts.isEmpty()) {
+            throw TomatoMallException.invalidParameter("商户账号信息不能为空");
+        }
+        for (PaymentMethod paymentMethod : PaymentMethod.values()) {
+            String account = merchantAccounts.get(paymentMethod);
+            if (account == null || account.isEmpty()) {
+                throw TomatoMallException.invalidParameter("商户账号信息不完整: " + paymentMethod);
+            }
+            if (!paymentMethod.isValidAccount(account.trim())) {
+                throw TomatoMallException.invalidParameter("商户账号信息不合法: " + paymentMethod + " - " + account);
+            }
         }
     }
 

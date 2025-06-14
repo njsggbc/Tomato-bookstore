@@ -365,7 +365,7 @@ public class ShoppingController {
      */
     @PostMapping("/alipay/notify")
     public String handlePaymentNotify(HttpServletRequest request) {
-        return paymentService.handlePaymentNotify(request, PaymentMethod.ALIPAY);
+        return paymentService.handlePaymentNotify(request, PaymentMethod.ALIPAY).toString();
     }
 
     /*------------------- 物流服务 ----------------*/

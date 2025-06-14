@@ -19,9 +19,9 @@ app:
       password: 123456 
     system-store: #自定义默认系统商店信息
       id: 1
-      name: 系统店铺
-      description: 特殊用途店铺
-      address: 默认地址
+      name: TomatoMall
+      description: 番茄商城
+      address: "番茄市番茄区番茄街道番茄路1号"
       logo-url: ""
 
 server:

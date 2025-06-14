@@ -1,17 +1,27 @@
 package cn.edu.nju.TomatoMall.enums;
 
 public enum PaymentMethod {
-    ALIPAY("支付宝"),
-    WECHAT_PAY("微信支付"),
-    UNION_PAY("银联支付");
+    ALIPAY("支付宝");
 
-    private final String method;
+    private final String displayName;
 
-    PaymentMethod(String method) {
-        this.method = method;
+    PaymentMethod(String displayName) {
+        this.displayName = displayName;
     }
 
-    public String getMethod() {
-        return method;
+    @Override
+    public String toString() {
+        return displayName;
+    }
+
+    public boolean isValidAccount(String account) {
+        switch (this) {
+            case ALIPAY:
+                return account != null
+                        && (account.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\\\.[A-Za-z]{2,}$") ||
+                            account.matches("^1[3-9]\\d{9}$"));
+            default:
+                return false;
+        }
     }
 }
