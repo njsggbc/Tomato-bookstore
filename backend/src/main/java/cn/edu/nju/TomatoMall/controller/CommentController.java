@@ -1,5 +1,6 @@
 package cn.edu.nju.TomatoMall.controller;
 
+import cn.edu.nju.TomatoMall.enums.EntityType;
 import cn.edu.nju.TomatoMall.models.dto.comment.*;
 import cn.edu.nju.TomatoMall.models.vo.ApiResponse;
 import cn.edu.nju.TomatoMall.service.CommentService;
@@ -18,122 +19,143 @@ public class CommentController {
     private CommentService commentService;
 
     /**
-     * 创建新评论
+     * 创建新商店评论
      * @param commentCreateRequest 评论信息
      * @return 空
      */
-    @PostMapping
-    public ApiResponse<Void> createComment(@Valid @RequestBody CommentCreateRequest commentCreateRequest) {
-        commentService.createComment(commentCreateRequest);
+    @PostMapping("/store/{storeId}")
+    public ApiResponse<Void> createStoreComment(
+            @PathVariable int storeId,
+            @RequestBody CommentCreateRequest commentCreateRequest) {
+        commentService.comment(
+                EntityType.STORE, storeId, commentCreateRequest.getContent(), commentCreateRequest.getRating()
+        );
         return ApiResponse.success();
     }
 
-
-
     /**
-     * 获取商品评论（分页）
-     * @param itemId 商品ID
-     * @param page 页码（从0开始）
-     * @param size 每页显示数量
-     * @param field 排序字段
-     * @param order 排序方向（true为升序，false为降序）
-     * @return 评论列表
+     * 创建新商品评论
+     * @param productId 商品ID
+     * @param commentCreateRequest 评论信息
+     * @return 空
      */
-    @GetMapping("/item/{itemId}")
-    public ApiResponse<Page<ItemCommentResponse>> getItemComments(
-            @PathVariable int itemId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "createdAt") String field,
-            @RequestParam(defaultValue = "false") boolean order) {
-        return ApiResponse.success(commentService.getItemCommentsPaged(itemId, page, size, field, order));
-    }
-
-    /**
-     * 获取商店评论（分页）
-     * @param shopId 商店ID
-     * @param page 页码（从0开始）
-     * @param size 每页显示数量
-     * @param field 排序字段
-     * @param order 排序方向（true为升序，false为降序）
-     * @return 评论列表
-     */
-    @GetMapping("/shop/{shopId}")
-    public ApiResponse<Page<StoreCommentResponse>> getShopComments(
-            @PathVariable int shopId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "createdAt") String field,
-            @RequestParam(defaultValue = "false") boolean order) {
-        return ApiResponse.success(commentService.getShopCommentsPaged(shopId, page, size, field, order));
-    }
-
-    /**
-     * 点赞评论
-     * @param commentId 评论ID
-     * @return 更新后的评论
-     */
-    @PostMapping("/{commentId}/like")
-    public ApiResponse<Void> likeComment(@PathVariable int commentId) {
-        commentService.likeComment(commentId);
+    @PostMapping("/product/{productId}")
+    public ApiResponse<Void> createProductComment(
+            @PathVariable int productId,
+            @RequestBody CommentCreateRequest commentCreateRequest) {
+        commentService.comment(
+                EntityType.PRODUCT, productId, commentCreateRequest.getContent(), commentCreateRequest.getRating()
+        );
         return ApiResponse.success();
     }
 
     /**
      * 回复评论
      * @param parentId 父评论ID
-     * @param replyRequest 回复内容
+     * @param commentCreateRequest 回复信息
      * @return 空
      */
     @PostMapping("/{parentId}/reply")
-    public ApiResponse<Void> replyToComment(
-            @PathVariable int parentId,
-            @Valid @RequestBody CommentReplyRequest replyRequest) {
-        commentService.replyToComment(parentId, replyRequest);
+    public ApiResponse<Void> replyToComment(@PathVariable int parentId,
+                                            @RequestBody CommentCreateRequest commentCreateRequest) {
+        commentService.reply(parentId, commentCreateRequest.getContent());
+        return ApiResponse.success();
+    }
+
+    /**
+     * 更新评论
+     * @param commentId 评论ID
+     * @param commentUpdateRequest 更新信息
+     * @return 空
+     */
+    @PutMapping("/{commentId}")
+    public ApiResponse<Void> updateComment(@PathVariable int commentId,
+                                           @RequestBody CommentUpdateRequest commentUpdateRequest) {
+        commentService.update(commentId, commentUpdateRequest.getContent(), commentUpdateRequest.getRating());
         return ApiResponse.success();
     }
 
     /**
      * 删除评论
      * @param commentId 评论ID
-     * @param userId 用户ID
-     * @return 无内容
+     * @return 空
      */
     @DeleteMapping("/{commentId}")
-    public ApiResponse<Void> deleteComment(
-            @PathVariable int commentId,
-            @RequestParam int userId) {
-        commentService.deleteComment(commentId, userId);
+    public ApiResponse<Void> deleteComment(@PathVariable int commentId) {
+        commentService.delete(commentId);
         return ApiResponse.success();
     }
 
     /**
+     * 获取商店评论列表
+     * @param page 页码
+     * @param size 每页大小
+     * @param field 排序字段
+     * @param order 是否升序
+     * @return 评论列表
+     */
+    @GetMapping("/store/{storeId}")
+    public ApiResponse<Page<CommentResponse>> getStoreComments(
+            @PathVariable int storeId,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size,
+            @RequestParam(value = "field", defaultValue = "createTime") String field,
+            @RequestParam(value = "order", defaultValue = "false") boolean order) {
+        return ApiResponse.success(
+                commentService.getComments(EntityType.STORE, storeId, page, size, field, order)
+        );
+    }
+
+    /**
+     * 获取商品评论列表
+     * @param productId 商品ID
+     * @param page 页码
+     * @param size 每页大小
+     * @param field 排序字段
+     * @param order 是否升序
+     * @return 评论列表
+     */
+    @GetMapping("/product/{productId}")
+    public ApiResponse<Page<CommentResponse>> getProductComments(
+            @PathVariable int productId,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size,
+            @RequestParam(value = "field", defaultValue = "createTime") String field,
+            @RequestParam(value = "order", defaultValue = "false") boolean order) {
+        return ApiResponse.success(
+                commentService.getComments(EntityType.PRODUCT, productId, page, size, field, order)
+        );
+    }
+
+    /**
      * 获取评论的回复列表
-     * @param commentId 父评论ID
+     * @param parentId 父评论ID
+     * @param page 页码
+     * @param size 每页大小
+     * @param field 排序字段
+     * @param order 是否升序
      * @return 回复列表
      */
-    @GetMapping("/{commentId}/replies")
-    public ApiResponse<List<CommentReplyResponse>> getReplies(@PathVariable int commentId) {
-        return ApiResponse.success(commentService.getReplies(commentId));
+    @GetMapping("/{parentId}/reply")
+    public ApiResponse<Page<CommentResponse>> getReplies(
+            @PathVariable int parentId,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size,
+            @RequestParam(value = "field", defaultValue = "createTime") String field,
+            @RequestParam(value = "order", defaultValue = "false") boolean order) {
+        return ApiResponse.success(
+                commentService.getReplies(parentId, page, size, field, order)
+        );
     }
 
     /**
-     * 获取商品的平均评分
-     * @param itemId 商品ID
-     * @return 平均评分
+     * 点赞/取消点赞评论
+     * @param commentId 评论ID
+     * @return 空
      */
-    @GetMapping("/item/{itemId}/rating")
-    public ApiResponse<Double> getItemAverageRating(@PathVariable int itemId) {
-        return ApiResponse.success(commentService.getItemAverageRating(itemId));
-    }
-
-    /**
-     * 获取商店的平均评分
-     * @param shopId 商店ID
-     * @return 平均评分
-     */
-    @GetMapping("/shop/{shopId}/rating")
-    public ApiResponse<Double> getShopAverageRating(@PathVariable int shopId) {
-        return ApiResponse.success(commentService.getShopAverageRating(shopId));
+    @PostMapping("/{commentId}/like")
+    public ApiResponse<Void> toggleLike(@PathVariable int commentId) {
+        commentService.toggleLike(commentId);
+        return ApiResponse.success();
     }
 } 

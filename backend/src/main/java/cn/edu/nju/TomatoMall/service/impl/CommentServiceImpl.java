@@ -1,204 +1,259 @@
 package cn.edu.nju.TomatoMall.service.impl;
 
-import cn.edu.nju.TomatoMall.models.dto.comment.*;
+import cn.edu.nju.TomatoMall.enums.EntityType;
+import cn.edu.nju.TomatoMall.enums.Role;
+import cn.edu.nju.TomatoMall.enums.StoreRole;
+import cn.edu.nju.TomatoMall.exception.TomatoMallException;
+import cn.edu.nju.TomatoMall.models.dto.comment.CommentResponse;
 import cn.edu.nju.TomatoMall.models.po.Comment;
-import cn.edu.nju.TomatoMall.models.po.Product;
-import cn.edu.nju.TomatoMall.models.po.Store;
-import cn.edu.nju.TomatoMall.repository.CommentRepository;
-import cn.edu.nju.TomatoMall.repository.ProductRepository;
-import cn.edu.nju.TomatoMall.repository.StoreRepository;
+import cn.edu.nju.TomatoMall.models.po.User;
+import cn.edu.nju.TomatoMall.repository.*;
 import cn.edu.nju.TomatoMall.service.CommentService;
-import cn.edu.nju.TomatoMall.enums.CommentTypeEnum;
+import cn.edu.nju.TomatoMall.service.PermissionService;
 import cn.edu.nju.TomatoMall.util.SecurityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.persistence.EntityNotFoundException;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDateTime;
 
 @Service
+@Transactional
 public class CommentServiceImpl implements CommentService {
 
     @Autowired
     private CommentRepository commentRepository;
 
     @Autowired
+    private StoreRepository storeRepository;
+
+    @Autowired
     private ProductRepository productRepository;
 
     @Autowired
-    private StoreRepository storeRepository;
-    @Autowired
     private SecurityUtil securityUtil;
 
+    @Autowired
+    private PermissionService permissionService;
+
     @Override
-    @Transactional
-    public void createComment(CommentCreateRequest commentCreateRequest) {
-        Comment comment = new Comment();
-        comment.setContent(commentCreateRequest.getContent());
-        comment.setCommentType(commentCreateRequest.getCommentType());
-        comment.setRating(commentCreateRequest.getRating());
-        comment.setUser(securityUtil.getCurrentUser());
-        comment.setCommentType(commentCreateRequest.getCommentType());
-        // 根据评论类型设置商品或商店
-        if (commentCreateRequest.getCommentType() == CommentTypeEnum.ITEM) {
-            Product product = productRepository.findById(commentCreateRequest.getProductId())
-                    .orElseThrow(() -> new EntityNotFoundException("商品不存在"));
-            comment.setProduct(product);
-        } else if (commentCreateRequest.getCommentType() == CommentTypeEnum.SHOP) {
-            Store store = storeRepository.findById(commentCreateRequest.getStoreId())
-                    .orElseThrow(() -> new EntityNotFoundException("商店不存在"));
-            comment.setStore(store);
+    public void comment(EntityType entityType, Integer entityId, String content, Integer rating) {
+        User currentUser = securityUtil.getCurrentUser();
+
+        // 验证评分
+        if (rating != null && (rating < 1 || rating > 10)) {
+            throw TomatoMallException.invalidParameter("评分必须在1-10之间");
         }
-        
-        comment = commentRepository.save(comment);
-        
-        // 更新评分
-        if (comment.getCommentType() == CommentTypeEnum.ITEM) {
-            updateItemRating(comment.getProduct().getId());
-        } else if (comment.getCommentType() == CommentTypeEnum.SHOP) {
-            updateShopRating(comment.getStore().getId());
+
+        // 验证评论权限
+        validatePermission(entityType, entityId, currentUser);
+
+        // 创建评论
+        Comment comment = Comment.builder()
+                .user(currentUser)
+                .entityType(entityType)
+                .entityId(entityId)
+                .content(content)
+                .rating(rating)
+                .build();
+
+        commentRepository.save(comment);
+
+        // 更新实体评分
+        if (rating != null) {
+            updateEntityRating(entityType, entityId);
         }
     }
 
-
-
-
-
     @Override
-    public Page<ItemCommentResponse> getItemCommentsPaged(int itemId, int page, int size, String field, boolean order) {
-        Sort sort = Sort.by(order ? Sort.Direction.ASC : Sort.Direction.DESC, field);
-        Pageable pageable = PageRequest.of(page, size, sort);
-        return commentRepository.findByProductIdOrderByLikesCountDesc(itemId, pageable)
-                .map(this::convertToItemResponse);
-    }
+    public void reply(int parentId, String content) {
+        User currentUser = securityUtil.getCurrentUser();
 
-    @Override
-    public Page<StoreCommentResponse> getShopCommentsPaged(int shopId, int page, int size, String field, boolean order) {
-        Sort sort = Sort.by(order ? Sort.Direction.ASC : Sort.Direction.DESC, field);
-        Pageable pageable = PageRequest.of(page, size, sort);
-        return commentRepository.findByStoreIdOrderByLikesCountDesc(shopId, pageable)
-                .map(this::convertToStoreResponse);
-    }
-
-    @Override
-    @Transactional
-    public void likeComment(int commentId) {
-        Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new EntityNotFoundException("评论不存在"));
-        comment.setLikesCount(comment.getLikesCount() + 1);
-        comment = commentRepository.save(comment);
-        
-    }
-
-    @Override
-    @Transactional
-    public void replyToComment(int parentId, CommentReplyRequest replyRequest) {
+        // 查找评论
         Comment parentComment = commentRepository.findById(parentId)
-                .orElseThrow(() -> new EntityNotFoundException("父评论不存在"));
-        
-        Comment reply = new Comment();
-        reply.setContent(replyRequest.getContent());
-        reply.setParentCommentId(parentId);
-        reply.setCommentType(parentComment.getCommentType());
-        reply.setUser(securityUtil.getCurrentUser());
-        if (parentComment.getCommentType() == CommentTypeEnum.ITEM) {
-            Product product = productRepository.findById(parentComment.getProduct().getId())
-                    .orElseThrow(() -> new EntityNotFoundException("商品不存在"));
-            reply.setProduct(product);
-        } else if (parentComment.getCommentType() == CommentTypeEnum.SHOP) {
-            Store store = storeRepository.findById(parentComment.getStore().getId())
-                    .orElseThrow(() -> new EntityNotFoundException("商店不存在"));
-            reply.setStore(store);
-        }
-        reply = commentRepository.save(reply);
+                .orElseThrow(TomatoMallException::commentNotFound);
+
+        // 创建回复（回复不能有评分）
+        Comment reply = Comment.builder()
+                .user(currentUser)
+                .entityType(parentComment.getEntityType())
+                .entityId(parentComment.getEntityId())
+                .content(content)
+                .parent(parentComment)
+                .build();
+
+        commentRepository.save(reply);
     }
 
     @Override
-    @Transactional
-    public void deleteComment(int commentId, int userId) {
+    public void update(int commentId, String content, Integer rating) {
+        User currentUser = securityUtil.getCurrentUser();
+
         Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new EntityNotFoundException("评论不存在"));
-        if (comment.getUser().getId() != userId) {
-            throw new RuntimeException("无权删除该评论");
+                .orElseThrow(TomatoMallException::commentNotFound);
+
+        // 只有评论作者可以修改
+        if (!comment.getUser().equals(currentUser)) {
+            throw TomatoMallException.permissionDenied();
         }
-        commentRepository.softDelete(commentId);
-        
+
+        // 回复不能有评分
+        if (comment.getParent() != null && rating != null) {
+            throw TomatoMallException.invalidParameter("回复不能有评分");
+        }
+
+        // 验证评分
+        if (rating != null && (rating < 1 || rating > 10)) {
+            throw TomatoMallException.invalidParameter("评分必须在1-10之间");
+        }
+
+        boolean ratingChanged = false;
+        // 更新内容
+        if (content != null) {
+            comment.setContent(content);
+        }
         // 更新评分
-        if (comment.getCommentType() == CommentTypeEnum.ITEM) {
-            updateItemRating(comment.getProduct().getId());
-        } else if (comment.getCommentType() == CommentTypeEnum.SHOP) {
-            updateShopRating(comment.getStore().getId());
+        if (rating != null && !rating.equals(comment.getRating())) {
+            comment.setRating(rating);
+            ratingChanged = true;
+        }
+
+        comment.setUpdateTime(LocalDateTime.now());
+        commentRepository.save(comment);
+
+        // 如果评分发生变化，更新实体评分
+        if (ratingChanged && comment.getParent() == null) {
+            updateEntityRating(comment.getEntityType(), comment.getEntityId());
         }
     }
 
     @Override
-    public List<CommentReplyResponse> getReplies(int commentId) {
-        return commentRepository.findByCommentIdOrderByLikesCountDesc(commentId)
-                .stream()
-                .map(this::convertToReplyResponse)
-                .collect(Collectors.toList());
+    public void delete(int commentId) {
+        User currentUser = securityUtil.getCurrentUser();
+
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(TomatoMallException::commentNotFound);
+
+        // 检查权限：评论作者或管理员可以删除
+        if (!comment.getUser().equals(currentUser)
+                && !currentUser.getRole().equals(Role.ADMIN)) {
+            throw TomatoMallException.permissionDenied();
+        }
+
+        // 记录是否需要更新评分
+        boolean shouldUpdateRating = comment.getRating() != null && comment.getParent() == null;
+        EntityType entityType = comment.getEntityType();
+        int entityId = comment.getEntityId();
+
+        // 删除所有回复
+        commentRepository.deleteAllByParentId(commentId);
+        // 删除评论
+        commentRepository.delete(comment);
+
+        // 删除后更新评分
+        if (shouldUpdateRating) {
+            updateEntityRating(entityType, entityId);
+        }
     }
 
     @Override
-    public Double getItemAverageRating(int itemId) {
-        return commentRepository.getAverageRatingForItem(itemId);
+    @Transactional(readOnly = true)
+    public Page<CommentResponse> getComments(EntityType entityType, int entityId,
+                                             int page, int size, String field, boolean order) {
+        Sort sort = order ? Sort.by(field).ascending() : Sort.by(field).descending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<Comment> comments = commentRepository.findByEntityTypeAndEntityIdAndParentIsNull(
+                entityType, entityId, pageable);
+
+        return comments.map(comment -> {
+            User currentUser = securityUtil.getCurrentUser();
+            boolean liked = comment.isLikedBy(currentUser.getId());
+            return new CommentResponse(comment, liked);
+        });
     }
 
     @Override
-    public Double getShopAverageRating(int shopId) {
-        return commentRepository.getAverageRatingForShop(shopId);
+    @Transactional(readOnly = true)
+    public Page<CommentResponse> getReplies(int parentId, int page, int size, String field, boolean order) {
+        if (!commentRepository.existsById(parentId)) {
+            throw TomatoMallException.commentNotFound();
+        }
+
+        Sort sort = order ? Sort.by(field).ascending() : Sort.by(field).descending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<Comment> replies = commentRepository.findByParentId(parentId, pageable);
+
+        return replies.map(comment -> {
+            User currentUser = securityUtil.getCurrentUser();
+            boolean liked = comment.isLikedBy(currentUser.getId());
+            return new CommentResponse(comment, liked);
+        });
     }
 
     @Override
-    public long getItemCommentCount(int itemId) {
-        return commentRepository.countByProductIdAndIsDeletedFalse(itemId);
+    public void toggleLike(int commentId) {
+        User currentUser = securityUtil.getCurrentUser();
+
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(TomatoMallException::commentNotFound);
+
+        comment.toggleLike(currentUser.getId());
+        commentRepository.save(comment);
     }
 
-    @Override
-    public long getShopCommentCount(int shopId) {
-        return commentRepository.countByStoreIdAndIsDeletedFalse(shopId);
+    private void validatePermission(EntityType entityType, int entityId, User currentUser) {
+        switch (entityType) {
+            case STORE:
+                if (!permissionService.getStoreRole(entityId).equals(StoreRole.CUSTOMER)) {
+                    throw TomatoMallException.permissionDenied();
+                }
+                break;
+            case PRODUCT:
+                if (!permissionService.getStoreRole(
+                        productRepository.findStoreIdById(entityId).orElseThrow(TomatoMallException::productNotFound)
+                ).equals(StoreRole.CUSTOMER)) {
+                    throw TomatoMallException.permissionDenied();
+                }
+                break;
+            default:
+                throw TomatoMallException.invalidParameter();
+        }
+
+        if (commentRepository.findUserCommentOnEntity(currentUser.getId(), entityType, entityId).isPresent()) {
+            throw TomatoMallException.permissionDenied("不能重复评论");
+        }
     }
 
-    @Override
-    @Transactional
-    public void updateItemRating(int itemId) {
-        Double avgRating = commentRepository.getAverageRatingForItem(itemId);
+    private void updateEntityRating(EntityType entityType, int entityId) {
+        Double avgRating = commentRepository.calculateAverageRating(entityType, entityId);
+
         if (avgRating != null) {
-            Product product = productRepository.findById(itemId)
-                    .orElseThrow(() -> new EntityNotFoundException("商品不存在"));
-            product.setRate(avgRating);
-            productRepository.save(product);
+            // 保留一位小数，向上取整
+            BigDecimal rating = BigDecimal.valueOf(avgRating)
+                    .setScale(1, RoundingMode.CEILING);
+
+            switch (entityType) {
+                case STORE:
+                    storeRepository.findById(entityId).ifPresent(store -> {
+                        store.setRating(rating);
+                        storeRepository.save(store);
+                    });
+                    break;
+                case PRODUCT:
+                    productRepository.findById(entityId).ifPresent(product -> {
+                        product.setRating(rating);
+                        productRepository.save(product);
+                    });
+                    break;
+            }
         }
     }
-
-    @Override
-    @Transactional
-    public void updateShopRating(int shopId) {
-        Double avgRating = commentRepository.getAverageRatingForShop(shopId);
-        if (avgRating != null) {
-            Store store = storeRepository.findById(shopId)
-                    .orElseThrow(() -> new EntityNotFoundException("商店不存在"));
-            store.setScore(avgRating.intValue());
-            store.setScoreCount((int)commentRepository.countByStoreIdAndIsDeletedFalse(shopId));
-            storeRepository.save(store);
-        }
-    }
-
-    private ItemCommentResponse convertToItemResponse(Comment comment) {
-        return new ItemCommentResponse(comment);
-    }
-
-    private StoreCommentResponse convertToStoreResponse(Comment comment) {
-        return new StoreCommentResponse(comment);
-    }
-
-    private CommentReplyResponse convertToReplyResponse(Comment comment) {
-        return new CommentReplyResponse(comment);
-    }
-} 
+}

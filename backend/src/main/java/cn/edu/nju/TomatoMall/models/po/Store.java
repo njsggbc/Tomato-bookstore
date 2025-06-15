@@ -6,6 +6,7 @@ import org.springframework.boot.autoconfigure.session.StoreType;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.persistence.*;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -41,8 +42,7 @@ public class Store {
     @Column(nullable = false)
     private StoreStatus status;
 
-    private Integer score;
-    private Integer scoreCount;
+    private BigDecimal rating;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "manager_id", nullable = false)

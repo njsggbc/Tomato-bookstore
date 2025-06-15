@@ -1,55 +1,71 @@
 package cn.edu.nju.TomatoMall.models.po;
 
-import cn.edu.nju.TomatoMall.enums.CommentTypeEnum;
-import lombok.Data;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+import cn.edu.nju.TomatoMall.enums.EntityType;
+import lombok.*;
+import org.hibernate.annotations.Check;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
-@Data
 @Entity
 @Table(name = "comments")
+@Getter
+@Setter
+@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public class Comment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
-    @Column(nullable = false, length = 1000)
-    private String content;
-
-    @Column(name = "likes_count", nullable = false)
-    private Integer likesCount = 0;
-
     @ManyToOne
-    @JoinColumn(name = "user", nullable = false)
+    @JoinColumn(nullable = false)
     private User user;
 
-    @ManyToOne
-    @JoinColumn(name = "product")
-    private Product product;
+    @Column(nullable = false)
+    private EntityType entityType; // 评论的实体类型，如商品、商店
+
+    @Column(nullable = false)
+    private int entityId;  // 评论的实体ID
+
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String content;
 
     @ManyToOne
-    @JoinColumn(name = "store")
-    private Store store;
-    @Enumerated(EnumType.STRING)
-    @Column(name = "comment_type", nullable = false)
-    private CommentTypeEnum commentType;
+    private Comment parent;  // 父评论，用于回复功能
 
+    @Check(constraints = "rating IS NULL OR rating between 1 and 10")
+    private Integer rating; // 评分1-10
 
-    @Column(name="parent_comment")
-    private int parentCommentId=0;  // 父评论ID，用于回复功能
+    @ElementCollection
+    @CollectionTable(name = "comment_likes", joinColumns = @JoinColumn(name = "comment_id"))
+    @Builder.Default
+    private Set<Integer> likedUserIds = new HashSet<>(); // 点赞用户ID集合
 
-    @Column(name = "is_deleted", nullable = false)
-    private boolean isDeleted = false;  // 软删除标记
+    @Column(nullable = false, updatable = false)
+    @Builder.Default
+    private LocalDateTime createTime = LocalDateTime.now();
 
-    @Column(name = "rating", nullable = false)
-    private int rating = 5;  // 评分 1-5
+    @Column(nullable = false)
+    @Builder.Default
+    private LocalDateTime updateTime = createTime;
 
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt=LocalDateTime.now();
+    public int getLikes() {
+        return likedUserIds.size();
+    }
 
+    public boolean isLikedBy(int userId) {
+        return likedUserIds.contains(userId);
+    }
 
-} 
+    public void toggleLike(int userId) {
+        if (likedUserIds.contains(userId)) {
+            likedUserIds.remove(userId);
+        } else {
+            likedUserIds.add(userId);
+        }
+    }
+}

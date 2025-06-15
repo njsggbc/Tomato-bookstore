@@ -37,7 +37,7 @@ public class Product {
     @Builder.Default
     private Map<String, String> specifications  = new HashMap<>();
 
-    private Double rate;
+    private BigDecimal rating;
 
     @Column(nullable = false)
     private int sales = 0;
