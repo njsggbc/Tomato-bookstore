@@ -8,6 +8,7 @@ import javax.persistence.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -31,7 +32,8 @@ public class Payment {
 
     @OneToMany(mappedBy = "payment", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @Column(nullable = false)
-    List<Order> orders;
+    @Builder.Default
+    List<Order> orders = new ArrayList<>();
 
     @Column(nullable = false)
     private BigDecimal amount;

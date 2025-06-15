@@ -42,19 +42,16 @@ public class PaymentServiceImpl implements PaymentService {
     public static final int PAYMENT_TIMEOUT = 5;
 
     private final PaymentRepository paymentRepository;
-    private final OrderRepository orderRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final SecurityUtil securityUtil;
     private final Map<PaymentMethod, PaymentStrategy> PAYMENT_STRATEGY = new HashMap<>();
 
     @Autowired
     public PaymentServiceImpl(PaymentRepository paymentRepository,
-                              OrderRepository orderRepository,
                               ApplicationEventPublisher eventPublisher,
                               SecurityUtil securityUtil,
                               List<PaymentStrategy> paymentStrategies) {
         this.paymentRepository = paymentRepository;
-        this.orderRepository = orderRepository;
         this.eventPublisher = eventPublisher;
         this.securityUtil = securityUtil;
         for (PaymentStrategy strategy : paymentStrategies) {
@@ -188,18 +185,26 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional
-    public void refund(String orderNo, String reason) {
+    public void refund(String paymentNo, String orderNo, String reason) {
         // 获取支付信息
-        Order order = orderRepository.findByOrderNo(orderNo)
-                .orElseThrow(TomatoMallException::orderNotFound);
+        Payment payment = paymentRepository.findByPaymentNo(paymentNo)
+                .orElseThrow(TomatoMallException::paymentNotFound);
 
         // 验证支付状态
-        if (order.getPayment().getStatus() != PaymentStatus.SUCCESS) {
+        if (payment.getStatus() != PaymentStatus.SUCCESS) {
             throw TomatoMallException.paymentFail("仅成功支付的订单可以退款");
         }
 
+        Order order = null;
+        if (orderNo != null) {
+            order = payment.getOrders().stream()
+                    .filter(o -> o.getOrderNo().equals(orderNo))
+                    .findFirst()
+                    .orElseThrow(() -> TomatoMallException.orderNotFound(orderNo));
+        }
+
         // 执行退款逻辑
-        PAYMENT_STRATEGY.get(order.getPayment().getPaymentMethod()).processRefund(order, order.getTotalAmount(), reason);
+        PAYMENT_STRATEGY.get(payment.getPaymentMethod()).processRefund(payment, order, reason);
     }
 
     @Override

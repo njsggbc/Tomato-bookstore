@@ -45,7 +45,7 @@ public class OrderListener {
 
         // 处理退款
         if (order.getStatus() == OrderStatus.REFUND_PROCESSING) {
-            paymentService.refund(order.getOrderNo(), event.getReason());
+            paymentService.refund(order.getPayment().getPaymentNo(), order.getOrderNo(), event.getReason());
             // 通知商户订单取消
             messageService.broadcastNotificationToStore(
                     MessageType.BUSINESS,

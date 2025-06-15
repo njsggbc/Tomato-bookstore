@@ -3,6 +3,7 @@ package cn.edu.nju.TomatoMall.service.impl.strategy;
 import cn.edu.nju.TomatoMall.enums.PaymentMethod;
 import cn.edu.nju.TomatoMall.models.po.Order;
 import cn.edu.nju.TomatoMall.models.po.Payment;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
@@ -37,11 +38,11 @@ public interface PaymentStrategy {
 
     /**
      * 处理退款
-     * @param order 订单信息
-     * @param amount 退款金额
-     * @param reason 退款原因
+     * @param payment
+     * @param order
+     * @param reason
      */
-    void processRefund(Order order, BigDecimal amount, String reason);
+    void processRefund(Payment payment, Order order, String reason);
 
     /**
      * 处理支付超时

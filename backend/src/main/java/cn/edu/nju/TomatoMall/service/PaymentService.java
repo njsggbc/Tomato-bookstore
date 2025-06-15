@@ -45,10 +45,11 @@ public interface PaymentService {
 
     /**
      * 退款处理
+     * @param paymentNo 支付单号
      * @param orderNo 订单编号
      * @param reason 退款原因
      */
-    void refund(String orderNo, String reason);
+    void refund(String paymentNo, String orderNo, String reason);
 
     /**
      * 处理支付通知回调
