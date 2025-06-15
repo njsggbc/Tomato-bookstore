@@ -18,7 +18,7 @@ public enum PaymentMethod {
         switch (this) {
             case ALIPAY:
                 return account != null
-                        && (account.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\\\.[A-Za-z]{2,}$") ||
+                        && (account.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$") ||
                             account.matches("^1[3-9]\\d{9}$"));
             default:
                 return false;

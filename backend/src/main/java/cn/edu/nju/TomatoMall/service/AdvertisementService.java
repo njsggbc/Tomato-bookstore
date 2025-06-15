@@ -1,7 +1,9 @@
 package cn.edu.nju.TomatoMall.service;
 
 import cn.edu.nju.TomatoMall.enums.AdSpaceType;
+import cn.edu.nju.TomatoMall.enums.PaymentMethod;
 import cn.edu.nju.TomatoMall.models.dto.advertisement.*;
+import cn.edu.nju.TomatoMall.models.dto.payment.PaymentInfoResponse;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -72,9 +74,13 @@ public interface AdvertisementService {
      * @param adId 广告ID
      * @param adSpaceId 广告位ID
      * @param slotIds 槽位ID列表
+     * @return 支付信息响应
      */
     @Transactional
-    void deliverAdvertisement(int adId, int adSpaceId, List<Integer> slotIds);
+    PaymentInfoResponse deliverAdvertisement(int adId, int adSpaceId, List<Integer> slotIds);
+
+    @Transactional
+    void cancelDeliverAdvertisementInternal(int placementId);
 
     /**
      * 取消广告投放

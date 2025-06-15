@@ -142,13 +142,14 @@ public class AdvertisementController {
      * 投放广告
      */
     @PostMapping("/placements")
-    public ApiResponse<Void> deliverAdvertisement(
-            @RequestBody AdPlacementRequest params) {
-        advertisementService.deliverAdvertisement(
+    public ApiResponse<PaymentInfoResponse> deliverAdvertisement(
+            @Valid @RequestBody AdPlacementRequest params) {
+        return ApiResponse.success(
+                advertisementService.deliverAdvertisement(
                 params.getAdId(),
                 params.getAdSpaceId(),
-                params.getAdSlotIds());
-        return ApiResponse.success();
+                params.getAdSlotIds()
+        ));
     }
 
     /**

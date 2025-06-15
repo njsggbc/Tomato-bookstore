@@ -2,8 +2,10 @@ package cn.edu.nju.TomatoMall.service.impl.listener;
 
 import cn.edu.nju.TomatoMall.enums.*;
 import cn.edu.nju.TomatoMall.models.po.Payment;
+import cn.edu.nju.TomatoMall.service.AdvertisementService;
 import cn.edu.nju.TomatoMall.service.MessageService;
 import cn.edu.nju.TomatoMall.service.OrderService;
+import cn.edu.nju.TomatoMall.service.PaymentService;
 import cn.edu.nju.TomatoMall.service.impl.events.payment.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
@@ -15,12 +17,29 @@ public class PaymentListener {
 
     private final OrderService orderService;
     private final MessageService messageService;
+    private final PaymentService paymentService;
+    private final AdvertisementService advertisementService;
 
     @Autowired
     public PaymentListener(OrderService orderService,
-                           MessageService messageService) {
+                           MessageService messageService,
+                           PaymentService paymentService, AdvertisementService advertisementService) {
         this.orderService = orderService;
         this.messageService = messageService;
+        this.paymentService = paymentService;
+        this.advertisementService = advertisementService;
+    }
+
+    /**
+     * 处理支付创建事件
+     * 调用支付服务进行支付超时处理
+     *
+     * @param payment 支付信息
+     */
+    @EventListener
+    @Transactional
+    public void handlePaymentCreated(Payment payment) {
+        paymentService.schedulePaymentTimeout(payment);
     }
 
     /**
@@ -33,6 +52,8 @@ public class PaymentListener {
     @Transactional
     public void handlePaymentSuccessEvent(PaymentSuccessEvent event) {
         Payment payment = event.getPayment();
+        paymentService.removeSchedulePaymentTimeout(payment);
+
         payment.getOrders().forEach(order -> {
             orderService.updateStatus(
                     order,
@@ -93,9 +114,21 @@ public class PaymentListener {
     @Transactional
     public void handlePaymentCancelEvent(PaymentCancelEvent event) {
         Payment payment = event.getPayment();
+        paymentService.removeSchedulePaymentTimeout(payment);
+
+        // 处理订单
         payment.getOrders().forEach(order -> {
             orderService.cancelInternal(order.getId(), event.getReason());
         });
+
+        // 处理其他实体类型
+        switch (payment.getEntityType()) {
+            case ADVERTISEMENT_PLACEMENT:
+                advertisementService.cancelDeliverAdvertisementInternal(payment.getId());
+                break;
+            default:
+                break;
+        }
     }
 
     /**
@@ -107,22 +140,24 @@ public class PaymentListener {
     @EventListener
     @Transactional
     public void handleRefundSuccessEvent(RefundSuccessEvent event) {
-        orderService.updateStatus(
-                event.getOrder(),
-                null,
-                OrderEvent.REFUND,
-                OrderStatus.CANCELLED,
-                "已退款: " + event.getRefundAmount() + "\n交易号：" + event.getTradeNo()
-        );
+        if (event.getOrder() != null) {
+            orderService.updateStatus(
+                    event.getOrder(),
+                    null,
+                    OrderEvent.REFUND,
+                    OrderStatus.CANCELLED,
+                    "已退款: " + event.getRefundAmount() + "\n交易号：" + event.getTradeNo()
+            );
+        }
 
         // 通知用户退款成功
         messageService.sendNotification(
                 MessageType.SHOPPING,
-                event.getOrder().getUser(),
+                event.getPayment().getUser(),
                 "退款成功",
                 "您的订单已成功退款，金额：" + event.getRefundAmount() + "，交易号：" + event.getTradeNo(),
-                EntityType.ORDER,
-                event.getOrder().getId(),
+                event.getOrder() == null ? EntityType.PAYMENT : EntityType.ORDER,
+                event.getOrder() == null ? event.getPayment().getId() : event.getOrder().getId(),
                 MessagePriority.MEDIUM
         );
     }
@@ -135,7 +170,7 @@ public class PaymentListener {
                 event.getPayment().getUser(),
                 "退款失败",
                 "您的退款请求失败，请联系客服处理，" +
-                        "订单号：" + event.getOrder().getOrderNo() + "\n" +
+                        "支付单号：" + event.getPayment().getPaymentNo() + "\n" +
                         "退款金额：" + event.getRefundAmount() + "\n" +
                         "交易号：" + event.getTradeNo(),
                 EntityType.PAYMENT,

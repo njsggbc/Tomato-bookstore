@@ -7,7 +7,6 @@ import cn.edu.nju.TomatoMall.exception.TomatoMallException;
 import cn.edu.nju.TomatoMall.models.dto.payment.PaymentInfoResponse;
 import cn.edu.nju.TomatoMall.models.po.Order;
 import cn.edu.nju.TomatoMall.models.po.Payment;
-import cn.edu.nju.TomatoMall.repository.OrderRepository;
 import cn.edu.nju.TomatoMall.repository.PaymentRepository;
 import cn.edu.nju.TomatoMall.service.PaymentService;
 import cn.edu.nju.TomatoMall.service.impl.strategy.PaymentStrategy;
@@ -114,7 +113,7 @@ public class PaymentServiceImpl implements PaymentService {
         if (payment.getPaymentNo() != null) {
             paymentStrategy.closeTrade(payment);
         }
-        payment.setPaymentNo(String.valueOf(System.currentTimeMillis())); // 生成新的支付单号
+        payment.setPaymentNo(String.valueOf(System.currentTimeMillis())); // 生成支付单号
         payment.setPaymentMethod(paymentMethod);
         payment.setPaymentRequestTime(LocalDateTime.now());
 
@@ -160,15 +159,13 @@ public class PaymentServiceImpl implements PaymentService {
         try {
             // 移除支付超时处理任务
             removeSchedulePaymentTimeout(payment);
-            // 如果已经创建了支付宝交易，关闭交易
-            if (payment.getPaymentMethod() != null) {
+            // 如果已经创建了交易，关闭交易
+            if (payment.getPaymentNo() != null) {
                 PAYMENT_STRATEGY.get(payment.getPaymentMethod()).closeTrade(payment);
             }
             // 更新支付状态为已取消
             payment.setStatus(PaymentStatus.CANCELLED);
-            payment.setPaymentNo(null);
             paymentRepository.save(payment);
-            // 通知所有关联订单支付取消
             eventPublisher.publishEvent(new PaymentCancelEvent(payment, "支付取消"));
         } catch (Exception e) {
             throw TomatoMallException.paymentFail(e.getMessage());
@@ -282,7 +279,9 @@ public class PaymentServiceImpl implements PaymentService {
      * 安排支付超时处理
      * @param payment 支付对象
      */
-    private void schedulePaymentTimeout(Payment payment) {
+    @Transactional
+    @Override
+    public void schedulePaymentTimeout(Payment payment) {
         if (payment == null || scheduler.isShutdown()) {
             return;
         }
@@ -321,7 +320,9 @@ public class PaymentServiceImpl implements PaymentService {
      * 移除支付超时处理任务
      * @param payment 支付对象
      */
-    private void removeSchedulePaymentTimeout(Payment payment) {
+    @Transactional
+    @Override
+    public void removeSchedulePaymentTimeout(Payment payment) {
         if (payment == null) {
             return;
         }
@@ -339,13 +340,13 @@ public class PaymentServiceImpl implements PaymentService {
      */
     private void handleTimeout(Payment payment) {
         if (payment != null && payment.getStatus() == PaymentStatus.PENDING) {
-            if (payment.getPaymentMethod() != null) {
+            if (payment.getPaymentNo() != null) {
                 PAYMENT_STRATEGY.get(payment.getPaymentMethod()).processTimeout(payment);
             } else {
-                // 如果没有支付方式，直接更新支付状态为超时
+                // 如果没有尝试过发起支付，直接更新支付状态为超时
                 payment.setStatus(PaymentStatus.TIMEOUT);
                 paymentRepository.save(payment);
-                // 通知所有关联订单支付取消
+                // 通知所有关联支付取消
                 eventPublisher.publishEvent(new PaymentCancelEvent(payment, "支付超时"));
             }
         }

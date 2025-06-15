@@ -40,6 +40,9 @@ public class AdvertisementPlacement {
     @Column(nullable = false)
     private int displayDuration; // 每次展示时长，单位小时
 
+    @OneToOne
+    private Payment payment;
+
     @Column(nullable = false, updatable = false)
     @Builder.Default
     private LocalDateTime createTime = LocalDateTime.now(); // 创建时间

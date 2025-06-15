@@ -14,6 +14,7 @@ import cn.edu.nju.TomatoMall.service.impl.events.order.OrderCancelEvent;
 import cn.edu.nju.TomatoMall.service.impl.events.order.OrderConfirmEvent;
 import cn.edu.nju.TomatoMall.service.impl.events.order.OrderDeliverEvent;
 import cn.edu.nju.TomatoMall.service.impl.events.order.OrderShipEvent;
+import cn.edu.nju.TomatoMall.service.impl.events.payment.PaymentCreateEvent;
 import cn.edu.nju.TomatoMall.util.SecurityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
@@ -143,10 +144,12 @@ public class OrderServiceImpl implements OrderService {
                 .user(user)
                 .orders(orders)
                 .build();
+        payment = paymentRepository.save(payment);
 
-        paymentRepository.save(payment);
+        // 发布支付创建事件
+        eventPublisher.publishEvent(new PaymentCreateEvent(payment));
 
-        return new PaymentInfoResponse(paymentRepository.findById(payment.getId()).orElseThrow(TomatoMallException::unexpectedError));
+        return new PaymentInfoResponse(payment);
     }
 
     /**

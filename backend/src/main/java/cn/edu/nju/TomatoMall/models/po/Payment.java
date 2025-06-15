@@ -1,5 +1,6 @@
 package cn.edu.nju.TomatoMall.models.po;
 
+import cn.edu.nju.TomatoMall.enums.EntityType;
 import cn.edu.nju.TomatoMall.enums.PaymentMethod;
 import cn.edu.nju.TomatoMall.enums.PaymentStatus;
 import lombok.*;
@@ -34,6 +35,10 @@ public class Payment {
     @Column(nullable = false)
     @Builder.Default
     List<Order> orders = new ArrayList<>();
+
+    private EntityType entityType;
+
+    private Integer entityId;
 
     @Column(nullable = false)
     private BigDecimal amount;

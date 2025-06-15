@@ -3,12 +3,18 @@ package cn.edu.nju.TomatoMall.service.impl;
 import cn.edu.nju.TomatoMall.enums.*;
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
 import cn.edu.nju.TomatoMall.models.dto.advertisement.*;
+import cn.edu.nju.TomatoMall.models.dto.payment.PaymentInfoResponse;
 import cn.edu.nju.TomatoMall.models.po.*;
 import cn.edu.nju.TomatoMall.repository.*;
 import cn.edu.nju.TomatoMall.service.AdvertisementService;
 import cn.edu.nju.TomatoMall.service.PermissionService;
+import cn.edu.nju.TomatoMall.service.impl.events.advertisement.AdPlacementCancelEvent;
 import cn.edu.nju.TomatoMall.service.impl.events.advertisement.AdvertisingEvent;
 import cn.edu.nju.TomatoMall.service.impl.events.advertisement.AdvertisingReviewEvent;
+import cn.edu.nju.TomatoMall.service.impl.events.order.OrderCancelEvent;
+import cn.edu.nju.TomatoMall.service.impl.events.payment.PaymentCreateEvent;
+import cn.edu.nju.TomatoMall.service.impl.strategy.AdChargingStrategy;
+import cn.edu.nju.TomatoMall.service.impl.strategy.SimpleAdChargingStrategy;
 import cn.edu.nju.TomatoMall.util.FileUtil;
 import cn.edu.nju.TomatoMall.util.SecurityUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +44,8 @@ public class AdvertisementServiceImpl implements AdvertisementService {
     private final SecurityUtil securityUtil;
     private final ApplicationEventPublisher eventPublisher;
     private final AdvertisementSlotRepository advertisementSlotRepository;
+    private final AdChargingStrategy adChargingStrategy;
+    private final PaymentRepository paymentRepository;
 
     @Autowired
     public AdvertisementServiceImpl(
@@ -49,7 +57,9 @@ public class AdvertisementServiceImpl implements AdvertisementService {
             FileUtil fileUtil,
             SecurityUtil securityUtil,
             ApplicationEventPublisher eventPublisher,
-            AdvertisementSlotRepository advertisementSlotRepository) {
+            AdvertisementSlotRepository advertisementSlotRepository,
+            SimpleAdChargingStrategy adChargingStrategy,
+            PaymentRepository paymentRepository) {
         this.advertisementRepository = advertisementRepository;
         this.advertisementSpaceRepository = advertisementSpaceRepository;
         this.advertisementPlacementRepository = advertisementPlacementRepository;
@@ -59,6 +69,8 @@ public class AdvertisementServiceImpl implements AdvertisementService {
         this.securityUtil = securityUtil;
         this.eventPublisher = eventPublisher;
         this.advertisementSlotRepository = advertisementSlotRepository;
+        this.adChargingStrategy = adChargingStrategy;
+        this.paymentRepository = paymentRepository;
     }
 
     @PostConstruct
@@ -206,7 +218,7 @@ public class AdvertisementServiceImpl implements AdvertisementService {
 
     @Transactional
     @Override
-    public void deliverAdvertisement(int adId, int spaceId, List<Integer> adSlotIds) {
+    public PaymentInfoResponse deliverAdvertisement(int adId, int spaceId, List<Integer> adSlotIds) {
         Advertisement ad = advertisementRepository.findById(adId)
                 .orElseThrow(TomatoMallException::advertisementNotFound);
 
@@ -255,6 +267,24 @@ public class AdvertisementServiceImpl implements AdvertisementService {
 
         // 发布投放事件
         eventPublisher.publishEvent(new AdvertisingEvent(placement));
+
+        // 创建支付
+        Payment payment = adChargingStrategy.charge(placement);
+        payment = paymentRepository.save(payment);
+
+        // 发布支付创建事件
+        eventPublisher.publishEvent(new PaymentCreateEvent(payment));
+
+        return new PaymentInfoResponse(payment);
+    }
+
+    @Transactional
+    @Override
+    public void cancelDeliverAdvertisementInternal(int placementId) {
+        AdvertisementPlacement placement = advertisementPlacementRepository.findById(placementId)
+                .orElseThrow(TomatoMallException::adPlacementNotFound);
+
+        cancelDeliverAdvertisementInternal(placement);
     }
 
     @Transactional
@@ -271,6 +301,13 @@ public class AdvertisementServiceImpl implements AdvertisementService {
         if (role != StoreRole.MANAGER) {
             throw TomatoMallException.permissionDenied();
         }
+
+        cancelDeliverAdvertisementInternal(placement);
+    }
+
+    private void cancelDeliverAdvertisementInternal(AdvertisementPlacement placement) {
+        Advertisement ad = placement.getAdvertisement();
+        AdvertisementSpace space = placement.getSpace();
 
         // 只有待审核和启用状态的投放才能取消
         if (placement.getStatus() != AdPlacementStatus.PENDING &&
@@ -300,6 +337,9 @@ public class AdvertisementServiceImpl implements AdvertisementService {
 
         // 更新广告状态
         updateAdStatus(ad);
+
+        // 发布取消投放事件
+        eventPublisher.publishEvent(new AdPlacementCancelEvent(placement));
     }
 
     @Transactional

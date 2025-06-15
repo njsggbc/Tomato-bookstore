@@ -204,6 +204,8 @@ public class AlipayPaymentStrategy implements PaymentStrategy {
             AlipayTradeRefundResponse response = alipayClient.certificateExecute(request);
 
             if (response.isSuccess()) {
+                payment.setStatus(order == null ? PaymentStatus.PARTIALLY_REFUNDED : PaymentStatus.REFUNDED);
+                paymentRepository.save(payment);
                 eventPublisher.publishEvent(new RefundSuccessEvent(payment, order,
                         new BigDecimal(response.getRefundFee()), response.getTradeNo()));
             } else {
@@ -219,7 +221,13 @@ public class AlipayPaymentStrategy implements PaymentStrategy {
                             }
 
                             AlipayTradeRefundResponse retryResponse = alipayClient.certificateExecute(retryRequest);
-                            if (retryResponse.isSuccess()) return;
+                            if (retryResponse.isSuccess()) {
+                                payment.setStatus(order == null ? PaymentStatus.PARTIALLY_REFUNDED : PaymentStatus.REFUNDED);
+                                paymentRepository.save(payment);
+                                eventPublisher.publishEvent(new RefundSuccessEvent(payment, order,
+                                        new BigDecimal(retryResponse.getRefundFee()), retryResponse.getTradeNo()));
+                                return;
+                            }
                         } catch (Exception e) {
                             log.error("退款重试失败", e);
                         }

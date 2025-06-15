@@ -3,8 +3,10 @@ package cn.edu.nju.TomatoMall.service;
 import cn.edu.nju.TomatoMall.enums.PaymentMethod;
 import cn.edu.nju.TomatoMall.enums.PaymentStatus;
 import cn.edu.nju.TomatoMall.models.dto.payment.PaymentInfoResponse;
+import cn.edu.nju.TomatoMall.models.po.Payment;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -73,4 +75,10 @@ public interface PaymentService {
      * @return 退款状态信息
      */
     Object queryRefundStatus(String paymentNo, String orderNo);
+
+    @Transactional
+    void schedulePaymentTimeout(Payment payment);
+
+    @Transactional
+    void removeSchedulePaymentTimeout(Payment payment);
 }

@@ -9,4 +9,5 @@ public enum EntityType {
     PRODUCT, // 商品
     STORE, // 商店
     USER, // 用户
+    ADVERTISEMENT_PLACEMENT, // 广告投放
 }
