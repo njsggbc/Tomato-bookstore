@@ -61,7 +61,7 @@ public interface StoreRepository extends JpaRepository<Store, Integer> {
             "WHEN LOWER(s.description) LIKE LOWER(CONCAT('%', :keyword, '%')) THEN 4 " +
             // 地址匹配
             "ELSE 5 " +
-            "END ASC, s.score DESC, s.createTime DESC")
+            "END ASC, s.rating DESC, s.createTime DESC")
     Page<Store> searchStoresByRelevance(@Param("keyword") String keyword, Pageable pageable);
 
     // 自定义排序查询

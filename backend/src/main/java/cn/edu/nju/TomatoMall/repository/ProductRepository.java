@@ -68,7 +68,7 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
             "WHEN LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')) THEN 5 " +
             // 规格信息匹配
             "ELSE 6 " +
-            "END ASC, p.sales DESC, p.rate DESC, p.createTime DESC")
+            "END ASC, p.sales DESC, p.rating DESC, p.createTime DESC")
     Page<Product> searchProductsByRelevance(@Param("keyword") String keyword,
                                  @Param("minPrice") BigDecimal minPrice,
                                  @Param("maxPrice") BigDecimal maxPrice,
