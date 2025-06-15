@@ -5,15 +5,15 @@ import lombok.Data;
 
 @Data
 public class UserDetailResponse {
-    int id;
-    String username;
-    String telephone;
-    String role;
-    String regTime;
-    String name;
-    String location;
-    String avatar;
-    String email;
+    private int id;
+    private String username;
+    private String telephone;
+    private String role;
+    private String regTime;
+    private String name;
+    private String location;
+    private String avatar;
+    private String email;
 
     public UserDetailResponse(User user) {
         this.id = user.getId();

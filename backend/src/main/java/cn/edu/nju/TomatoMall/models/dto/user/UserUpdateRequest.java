@@ -5,10 +5,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Data
 public class UserUpdateRequest {
-    String username;
-    String name;
-    String phone;
-    String location;
-    MultipartFile avatar;
-    String email;
+    private String username;
+    private String name;
+    private String phone;
+    private String location;
+    private MultipartFile avatar;
+    private String email;
 }

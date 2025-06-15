@@ -5,14 +5,14 @@ import lombok.Data;
 
 @Data
 public class StoreInfoResponse {
-    int id;
-    String name;
-    String description;
-    String address;
-    String logoUrl;
-    String regTime;
-    String status;
-    Integer score;
+    private int id;
+    private String name;
+    private String description;
+    private String address;
+    private String logoUrl;
+    private String regTime;
+    private String status;
+    private Integer score;
 
     public StoreInfoResponse(Store store) {
         this.id = store.getId();

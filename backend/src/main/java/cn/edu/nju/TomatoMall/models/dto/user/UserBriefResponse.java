@@ -5,10 +5,10 @@ import lombok.Data;
 
 @Data
 public class UserBriefResponse {
-    int id;
-    String username;
-    String role;
-    String avatar;
+    private int id;
+    private String username;
+    private String role;
+    private String avatar;
 
     public UserBriefResponse(User user) {
         this.id = user.getId();

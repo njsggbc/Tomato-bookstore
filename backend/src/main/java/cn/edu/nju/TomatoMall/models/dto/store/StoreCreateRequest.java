@@ -9,20 +9,34 @@ import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Data
 public class StoreCreateRequest {
     @NotBlank
-    String name;
+    private String name;
+
     @NotBlank
-    String address;
+    private String address;
+
     @NotBlank
-    String description;
+    private String description;
+
     @NotNull
-    MultipartFile logo;
+    private MultipartFile logo;
+
     @NotNull
     @Size(min=1)
-    List<MultipartFile> qualification;
+    private List<MultipartFile> qualification;
+
     @NotNull
-    Map<PaymentMethod, String> merchantAccounts;
+    private Map<String, String> merchantAccounts;
+
+    public Map<PaymentMethod, String> getMerchantAccounts() {
+        return merchantAccounts.entrySet().stream()
+                .collect(Collectors.toMap(
+                        entry -> PaymentMethod.valueOf(entry.getKey()),
+                        Map.Entry::getValue
+                ));
+    }
 }

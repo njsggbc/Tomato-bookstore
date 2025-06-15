@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 @Data
 public class TokenGenerateRequest {
     @NotBlank
-    String name;
+    private String name;
 
-    LocalDateTime expireTime;
+    private LocalDateTime expireTime;
 }

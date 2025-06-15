@@ -8,14 +8,14 @@ import javax.validation.constraints.NotBlank;
 @Data
 public class UserRegisterRequest {
     @NotBlank
-    String username;
+    private String username;
     @NotBlank
-    String phone;
+    private String phone;
     @NotBlank
-    String password;
+    private String password;
 
-    String location;
-    String name;
-    String email;
-    MultipartFile avatar;
+    private String location;
+    private String name;
+    private String email;
+    private MultipartFile avatar;
 }

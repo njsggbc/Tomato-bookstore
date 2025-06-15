@@ -10,19 +10,18 @@ import java.util.Map;
 
 @Data
 public class ProductDetailResponse {
-
-    int id;
-    String title;
-    String description;
-    String cover;
-    List<String> images;
-    BigDecimal price;
-    Double rate;
-    Map<String, String> specifications;
-    int storeId;
-    String createTime;
-    Integer sales;
-    InventoryStatus inventoryStatus;
+    private int id;
+    private String title;
+    private String description;
+    private String cover;
+    private List<String> images;
+    private BigDecimal price;
+    private Double rate;
+    private Map<String, String> specifications;
+    private int storeId;
+    private String createTime;
+    private Integer sales;
+    private InventoryStatus inventoryStatus;
 
     public ProductDetailResponse(Product product) {
         this.id = product.getId();

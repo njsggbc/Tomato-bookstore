@@ -6,12 +6,12 @@ import lombok.Data;
 
 @Data
 public class TokenInfoResponse {
-    int id;
-    String name;
-    String createTime;
-    String expireTime;
-    boolean expired;
-    UserBriefResponse consumer;
+    private int id;
+    private String name;
+    private String createTime;
+    private String expireTime;
+    private boolean expired;
+    private UserBriefResponse consumer;
 
     public TokenInfoResponse(EmploymentToken employmentToken) {
         this.id = employmentToken.getId();

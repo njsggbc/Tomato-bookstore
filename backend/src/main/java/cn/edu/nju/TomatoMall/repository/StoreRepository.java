@@ -22,8 +22,10 @@ public interface StoreRepository extends JpaRepository<Store, Integer> {
 
     // Find stores by status
     Page<Store> findByStatus(StoreStatus status, Pageable pageable);
-    // HACK: 测试用
-    Page<Store> findByStatusAndIdNot(StoreStatus status, Pageable pageable, int storeId);
+
+    // Find stores with status normal and not system store
+    @Query("SELECT s FROM Store s WHERE s.status = 'NORMAL' AND s.isSystemStore = false")
+    Page<Store> findAllNormal(Pageable pageable);
 
     // Find stores with status in the provided list
     Page<Store> findByStatusIn(List<StoreStatus> statuses, Pageable pageable);

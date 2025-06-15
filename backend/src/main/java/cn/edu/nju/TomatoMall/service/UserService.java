@@ -61,34 +61,4 @@ public interface UserService {
      * @param newPassword 新密码
      */
     void updatePassword(String currentPassword, String newPassword);
-
-    /*---------- HACK: 以下为兼容测试用接口 ----------*/
-
-    /**
-     * 创建账户（兼容测试）
-     * @param params 参数映射
-     * @return 操作结果信息
-     */
-    String accountCreate(Map<String, String> params);
-
-    /**
-     * 获取账户信息（兼容测试）
-     * @param username 用户名
-     * @return 用户详细信息
-     */
-    UserDetailResponse accountGet(String username);
-
-    /**
-     * 更新账户信息（兼容测试）
-     * @param params 参数映射
-     */
-    void accountUpdate(Map<String, String> params);
-
-    /**
-     * 账户登录（兼容测试）
-     * @param username 用户名
-     * @param password 密码
-     * @return 登录令牌
-     */
-    String accountLogin(String username, String password);
 }

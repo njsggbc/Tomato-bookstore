@@ -6,13 +6,22 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Data
 public class StoreUpdateRequest {
-    String name;
-    String address;
-    String description;
-    MultipartFile logo;
-    List<MultipartFile> qualification;
-    Map<PaymentMethod, String> merchantAccounts;
+    private String name;
+    private String address;
+    private String description;
+    private MultipartFile logo;
+    private List<MultipartFile> qualification;
+    private Map<String, String> merchantAccounts;
+
+    public Map<PaymentMethod, String> getMerchantAccounts() {
+        return merchantAccounts.entrySet().stream()
+                .collect(Collectors.toMap(
+                        entry -> PaymentMethod.valueOf(entry.getKey()),
+                        Map.Entry::getValue
+                ));
+    }
 }

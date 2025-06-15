@@ -9,9 +9,9 @@ import java.util.Map;
 
 @Data
 public class ProductUpdateRequest {
-    String title;
-    String description;
-    List<MultipartFile> images;
-    BigDecimal price;
-    Map<String, String> specifications;
+    private String title;
+    private String description;
+    private List<MultipartFile> images;
+    private BigDecimal price;
+    private Map<String, String> specifications;
 }

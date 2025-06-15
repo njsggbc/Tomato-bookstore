@@ -6,6 +6,6 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class CheckoutResponse {
-    int cartItemId;
-    boolean isAvailable;
+    private int cartItemId;
+    private boolean isAvailable;
 }

@@ -161,68 +161,6 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
     }
 
-    /*----------- HACK: 以下为兼容测试用方法 -----------*/
-
-    @Override
-    @Transactional
-    public String accountCreate(Map<String, String> params) {
-        UserRegisterRequest registerRequest = new UserRegisterRequest();
-
-        register(
-                params.get("username"),
-                params.get("telephone"),
-                params.get("password"),
-                params.get("location"),
-                params.get("name"),
-                params.get("email"),
-                null
-        );
-
-        // 兼容测试，创建用户时可以设置角色
-        User user = userRepository.findByUsername(params.get("username")).get();
-        user.setRole(Role.valueOf(params.get("role").toUpperCase()));
-        userRepository.save(user);
-
-        return "注册成功";
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public UserDetailResponse accountGet(String username) {
-        return new UserDetailResponse(userRepository.findByUsername(username).orElseThrow(TomatoMallException::userNotFound));
-    }
-
-    @Override
-    @Transactional
-    public void accountUpdate(Map<String, String> params) {
-        User user = userRepository.findByUsername(params.get("username")).orElseThrow(TomatoMallException::userNotFound);
-
-        if (params.get("password") != null) {
-            user.setPassword(params.get("password"));
-            userRepository.save(user);
-        }
-
-        updateInformation(
-                params.get("username"),
-                params.get("name"),
-                params.get("telephone"),
-                params.get("email"),
-                params.get("location"),
-                null
-        );
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public String accountLogin(String username, String password) {
-        User user = userRepository.findByUsername(username).orElseThrow(TomatoMallException::userNotFound);
-        if (!user.getPassword().equals(password)) {
-            throw TomatoMallException.phoneOrPasswordError();
-        }
-
-        return securityUtil.getToken(user);
-    }
-
     private void validatePhone(String phone) {
         if (phone == null || phone.isEmpty() || !phone.matches("^[1][3-9][0-9]{9}$")) {
             throw TomatoMallException.invalidParameter("手机号不合法");

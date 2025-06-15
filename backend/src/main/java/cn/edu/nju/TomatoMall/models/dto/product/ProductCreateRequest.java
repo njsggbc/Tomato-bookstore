@@ -14,17 +14,17 @@ import java.util.Map;
 @Data
 public class ProductCreateRequest {
     @NotBlank
-    String title;
+    private String title;
     @NotBlank
-    String description;
+    private String description;
     @NotNull
     @Size(min = 1)
-    List<MultipartFile> images;
+    private List<MultipartFile> images;
     @NotNull
-    BigDecimal price;
+    private BigDecimal price;
     @NotNull
-    Integer storeId;
+    private Integer storeId;
     @NotNull
     @Size(min = 1)
-    Map<String, String> specifications;
+    private Map<String, String> specifications;
 }

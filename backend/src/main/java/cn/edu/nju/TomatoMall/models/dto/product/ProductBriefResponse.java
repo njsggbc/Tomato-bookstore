@@ -11,13 +11,13 @@ import java.math.BigDecimal;
 
 @Data
 public class ProductBriefResponse {
-    int id;
-    String title;
-    String cover;
-    BigDecimal price;
-    Double rate;
-    Integer sales;
-    InventoryStatus inventoryStatus;
+    private int id;
+    private String title;
+    private String cover;
+    private BigDecimal price;
+    private Double rate;
+    private Integer sales;
+    private InventoryStatus inventoryStatus;
 
     public ProductBriefResponse(Product product) {
         this.id = product.getId();

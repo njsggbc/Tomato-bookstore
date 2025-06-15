@@ -6,9 +6,9 @@ import javax.validation.constraints.NotBlank;
 
 @Data
 public class UserLoginRequest {
-    String username;
-    String phone;
-    String email;
+    private String username;
+    private String phone;
+    private String email;
     @NotBlank
-    String password;
+    private String password;
 }
