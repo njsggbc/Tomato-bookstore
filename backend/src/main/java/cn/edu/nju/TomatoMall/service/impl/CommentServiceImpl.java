@@ -1,13 +1,20 @@
 package cn.edu.nju.TomatoMall.service.impl;
 
-import cn.edu.nju.TomatoMall.models.dto.comment.CommentDTO;
+import cn.edu.nju.TomatoMall.models.dto.comment.*;
 import cn.edu.nju.TomatoMall.models.po.Comment;
+import cn.edu.nju.TomatoMall.models.po.Product;
+import cn.edu.nju.TomatoMall.models.po.Store;
 import cn.edu.nju.TomatoMall.repository.CommentRepository;
+import cn.edu.nju.TomatoMall.repository.ProductRepository;
+import cn.edu.nju.TomatoMall.repository.StoreRepository;
 import cn.edu.nju.TomatoMall.service.CommentService;
-import org.springframework.beans.BeanUtils;
+import cn.edu.nju.TomatoMall.enums.CommentTypeEnum;
+import cn.edu.nju.TomatoMall.util.SecurityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,101 +28,95 @@ public class CommentServiceImpl implements CommentService {
     @Autowired
     private CommentRepository commentRepository;
 
+    @Autowired
+    private ProductRepository productRepository;
+
+    @Autowired
+    private StoreRepository storeRepository;
+    @Autowired
+    private SecurityUtil securityUtil;
+
     @Override
     @Transactional
-    public CommentDTO createComment(CommentDTO commentDTO) {
+    public void createComment(CommentCreateRequest commentCreateRequest) {
         Comment comment = new Comment();
-        BeanUtils.copyProperties(commentDTO, comment);
-        comment = commentRepository.save(comment);
-        return convertToDTO(comment);
-    }
-
-
-    @Override
-    @Transactional
-    public CommentDTO updateComment(int commentId, CommentDTO commentDTO) {
-        Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new EntityNotFoundException("评论不存在"));
+        comment.setContent(commentCreateRequest.getContent());
+        comment.setCommentType(commentCreateRequest.getCommentType());
+        comment.setRating(commentCreateRequest.getRating());
+        comment.setUser(securityUtil.getCurrentUser());
+        comment.setCommentType(commentCreateRequest.getCommentType());
+        // 根据评论类型设置商品或商店
+        if (commentCreateRequest.getCommentType() == CommentTypeEnum.ITEM) {
+            Product product = productRepository.findById(commentCreateRequest.getProductId())
+                    .orElseThrow(() -> new EntityNotFoundException("商品不存在"));
+            comment.setProduct(product);
+        } else if (commentCreateRequest.getCommentType() == CommentTypeEnum.SHOP) {
+            Store store = storeRepository.findById(commentCreateRequest.getStoreId())
+                    .orElseThrow(() -> new EntityNotFoundException("商店不存在"));
+            comment.setStore(store);
+        }
         
-        // 只更新允许修改的字段
-        comment.setContent(commentDTO.getContent());
-        comment.setRating(commentDTO.getRating());
-        
         comment = commentRepository.save(comment);
-        return convertToDTO(comment);
+        
+        // 更新评分
+        if (comment.getCommentType() == CommentTypeEnum.ITEM) {
+            updateItemRating(comment.getProduct().getId());
+        } else if (comment.getCommentType() == CommentTypeEnum.SHOP) {
+            updateShopRating(comment.getStore().getId());
+        }
+    }
+
+
+
+
+
+    @Override
+    public Page<ItemCommentResponse> getItemCommentsPaged(int itemId, int page, int size, String field, boolean order) {
+        Sort sort = Sort.by(order ? Sort.Direction.ASC : Sort.Direction.DESC, field);
+        Pageable pageable = PageRequest.of(page, size, sort);
+        return commentRepository.findByProductIdOrderByLikesCountDesc(itemId, pageable)
+                .map(this::convertToItemResponse);
     }
 
     @Override
-    public CommentDTO getCommentById(int commentId) {
-        Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new EntityNotFoundException("评论不存在"));
-        return convertToDTO(comment);
-    }
-
-    @Override
-    public List<CommentDTO> getItemComments(int itemId) {
-        return commentRepository.findByItemIdOrderByLikesCountDesc(itemId)
-                .stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<CommentDTO> getShopComments(int shopId) {
-        return commentRepository.findByShopIdOrderByLikesCountDesc(shopId)
-                .stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<CommentDTO> getUserComments(int userId) {
-        return commentRepository.findByUserId(userId)
-                .stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public Page<CommentDTO> getItemCommentsPaged(int itemId, Pageable pageable) {
-        return commentRepository.findByItemIdAndIsDeletedFalseOrderByCreatedAtDesc(itemId, pageable)
-                .map(this::convertToDTO);
-    }
-
-    @Override
-    public Page<CommentDTO> getShopCommentsPaged(int shopId, Pageable pageable) {
-        return commentRepository.findByShopIdAndIsDeletedFalseOrderByCreatedAtDesc(shopId, pageable)
-                .map(this::convertToDTO);
-    }
-
-    @Override
-    public Page<CommentDTO> getUserCommentsPaged(int userId, Pageable pageable) {
-        return commentRepository.findByUserIdAndIsDeletedFalseOrderByCreatedAtDesc(userId, pageable)
-                .map(this::convertToDTO);
+    public Page<StoreCommentResponse> getShopCommentsPaged(int shopId, int page, int size, String field, boolean order) {
+        Sort sort = Sort.by(order ? Sort.Direction.ASC : Sort.Direction.DESC, field);
+        Pageable pageable = PageRequest.of(page, size, sort);
+        return commentRepository.findByStoreIdOrderByLikesCountDesc(shopId, pageable)
+                .map(this::convertToStoreResponse);
     }
 
     @Override
     @Transactional
-    public CommentDTO likeComment(int commentId) {
+    public void likeComment(int commentId) {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new EntityNotFoundException("评论不存在"));
         comment.setLikesCount(comment.getLikesCount() + 1);
         comment = commentRepository.save(comment);
-        return convertToDTO(comment);
+        
     }
 
     @Override
     @Transactional
-    public CommentDTO replyToComment(int parentId, CommentDTO replyDTO) {
-        // 验证父评论是否存在
+    public void replyToComment(int parentId, CommentReplyRequest replyRequest) {
         Comment parentComment = commentRepository.findById(parentId)
                 .orElseThrow(() -> new EntityNotFoundException("父评论不存在"));
         
         Comment reply = new Comment();
-        BeanUtils.copyProperties(replyDTO, reply);
-        reply.setParentId(parentId);
+        reply.setContent(replyRequest.getContent());
+        reply.setParentCommentId(parentId);
+        reply.setCommentType(parentComment.getCommentType());
+        reply.setUser(securityUtil.getCurrentUser());
+        if (parentComment.getCommentType() == CommentTypeEnum.ITEM) {
+            Product product = productRepository.findById(parentComment.getProduct().getId())
+                    .orElseThrow(() -> new EntityNotFoundException("商品不存在"));
+            reply.setProduct(product);
+        } else if (parentComment.getCommentType() == CommentTypeEnum.SHOP) {
+            Store store = storeRepository.findById(parentComment.getStore().getId())
+                    .orElseThrow(() -> new EntityNotFoundException("商店不存在"));
+            reply.setStore(store);
+        }
         reply = commentRepository.save(reply);
-        return convertToDTO(reply);
     }
 
     @Override
@@ -123,10 +124,25 @@ public class CommentServiceImpl implements CommentService {
     public void deleteComment(int commentId, int userId) {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new EntityNotFoundException("评论不存在"));
-        if (comment.getUserId() != userId) {
+        if (comment.getUser().getId() != userId) {
             throw new RuntimeException("无权删除该评论");
         }
         commentRepository.softDelete(commentId);
+        
+        // 更新评分
+        if (comment.getCommentType() == CommentTypeEnum.ITEM) {
+            updateItemRating(comment.getProduct().getId());
+        } else if (comment.getCommentType() == CommentTypeEnum.SHOP) {
+            updateShopRating(comment.getStore().getId());
+        }
+    }
+
+    @Override
+    public List<CommentReplyResponse> getReplies(int commentId) {
+        return commentRepository.findByCommentIdOrderByLikesCountDesc(commentId)
+                .stream()
+                .map(this::convertToReplyResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -141,30 +157,48 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public long getItemCommentCount(int itemId) {
-        return commentRepository.countByItemIdAndIsDeletedFalse(itemId);
+        return commentRepository.countByProductIdAndIsDeletedFalse(itemId);
     }
 
     @Override
     public long getShopCommentCount(int shopId) {
-        return commentRepository.countByShopIdAndIsDeletedFalse(shopId);
+        return commentRepository.countByStoreIdAndIsDeletedFalse(shopId);
     }
 
     @Override
-    public long getUserCommentCount(int userId) {
-        return commentRepository.countByUserIdAndIsDeletedFalse(userId);
+    @Transactional
+    public void updateItemRating(int itemId) {
+        Double avgRating = commentRepository.getAverageRatingForItem(itemId);
+        if (avgRating != null) {
+            Product product = productRepository.findById(itemId)
+                    .orElseThrow(() -> new EntityNotFoundException("商品不存在"));
+            product.setRate(avgRating);
+            productRepository.save(product);
+        }
     }
 
     @Override
-    public List<CommentDTO> getReplies(int commentId) {
-        return commentRepository.findByParentIdOrderByCreatedAtDesc(commentId)
-                .stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+    @Transactional
+    public void updateShopRating(int shopId) {
+        Double avgRating = commentRepository.getAverageRatingForShop(shopId);
+        if (avgRating != null) {
+            Store store = storeRepository.findById(shopId)
+                    .orElseThrow(() -> new EntityNotFoundException("商店不存在"));
+            store.setScore(avgRating.intValue());
+            store.setScoreCount((int)commentRepository.countByStoreIdAndIsDeletedFalse(shopId));
+            storeRepository.save(store);
+        }
     }
 
-    private CommentDTO convertToDTO(Comment comment) {
-        CommentDTO dto = new CommentDTO();
-        BeanUtils.copyProperties(comment, dto);
-        return dto;
+    private ItemCommentResponse convertToItemResponse(Comment comment) {
+        return new ItemCommentResponse(comment);
+    }
+
+    private StoreCommentResponse convertToStoreResponse(Comment comment) {
+        return new StoreCommentResponse(comment);
+    }
+
+    private CommentReplyResponse convertToReplyResponse(Comment comment) {
+        return new CommentReplyResponse(comment);
     }
 } 

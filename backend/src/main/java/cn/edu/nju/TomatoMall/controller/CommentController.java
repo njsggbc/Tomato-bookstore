@@ -1,11 +1,10 @@
 package cn.edu.nju.TomatoMall.controller;
 
-import cn.edu.nju.TomatoMall.models.dto.comment.CommentDTO;
+import cn.edu.nju.TomatoMall.models.dto.comment.*;
+import cn.edu.nju.TomatoMall.models.vo.ApiResponse;
 import cn.edu.nju.TomatoMall.service.CommentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -20,52 +19,53 @@ public class CommentController {
 
     /**
      * 创建新评论
-     * @param commentDTO 评论信息
-     * @return 创建的评论
+     * @param commentCreateRequest 评论信息
+     * @return 空
      */
     @PostMapping
-    public ResponseEntity<CommentDTO> createComment(@Valid @RequestBody CommentDTO commentDTO) {
-        return ResponseEntity.ok(commentService.createComment(commentDTO));
+    public ApiResponse<Void> createComment(@Valid @RequestBody CommentCreateRequest commentCreateRequest) {
+        commentService.createComment(commentCreateRequest);
+        return ApiResponse.success();
     }
 
 
-    /**
-     * 更新评论
-     * @param commentId 评论ID
-     * @param commentDTO 更新的评论信息
-     * @return 更新后的评论
-     */
-    @PutMapping("/{commentId}")
-    public ResponseEntity<CommentDTO> updateComment(
-            @PathVariable int commentId,
-            @Valid @RequestBody CommentDTO commentDTO) {
-        return ResponseEntity.ok(commentService.updateComment(commentId, commentDTO));
-    }
 
     /**
      * 获取商品评论（分页）
      * @param itemId 商品ID
-     * @param pageable 分页参数
+     * @param page 页码（从0开始）
+     * @param size 每页显示数量
+     * @param field 排序字段
+     * @param order 排序方向（true为升序，false为降序）
      * @return 评论列表
      */
     @GetMapping("/item/{itemId}")
-    public ResponseEntity<Page<CommentDTO>> getItemComments(
+    public ApiResponse<Page<ItemCommentResponse>> getItemComments(
             @PathVariable int itemId,
-            Pageable pageable) {
-        return ResponseEntity.ok(commentService.getItemCommentsPaged(itemId, pageable));
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String field,
+            @RequestParam(defaultValue = "false") boolean order) {
+        return ApiResponse.success(commentService.getItemCommentsPaged(itemId, page, size, field, order));
     }
 
     /**
      * 获取商店评论（分页）
      * @param shopId 商店ID
-     * @param pageable 分页参数
+     * @param page 页码（从0开始）
+     * @param size 每页显示数量
+     * @param field 排序字段
+     * @param order 排序方向（true为升序，false为降序）
      * @return 评论列表
      */
     @GetMapping("/shop/{shopId}")
-    public ResponseEntity<Page<CommentDTO>> getShopComments(
+    public ApiResponse<Page<StoreCommentResponse>> getShopComments(
             @PathVariable int shopId,
-            Pageable pageable) {
-        return ResponseEntity.ok(commentService.getShopCommentsPaged(shopId, pageable));
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String field,
+            @RequestParam(defaultValue = "false") boolean order) {
+        return ApiResponse.success(commentService.getShopCommentsPaged(shopId, page, size, field, order));
     }
 
     /**
@@ -74,21 +74,23 @@ public class CommentController {
      * @return 更新后的评论
      */
     @PostMapping("/{commentId}/like")
-    public ResponseEntity<CommentDTO> likeComment(@PathVariable int commentId) {
-        return ResponseEntity.ok(commentService.likeComment(commentId));
+    public ApiResponse<Void> likeComment(@PathVariable int commentId) {
+        commentService.likeComment(commentId);
+        return ApiResponse.success();
     }
 
     /**
      * 回复评论
      * @param parentId 父评论ID
-     * @param replyDTO 回复内容
-     * @return 创建的回复
+     * @param replyRequest 回复内容
+     * @return 空
      */
     @PostMapping("/{parentId}/reply")
-    public ResponseEntity<CommentDTO> replyToComment(
+    public ApiResponse<Void> replyToComment(
             @PathVariable int parentId,
-            @Valid @RequestBody CommentDTO replyDTO) {
-        return ResponseEntity.ok(commentService.replyToComment(parentId, replyDTO));
+            @Valid @RequestBody CommentReplyRequest replyRequest) {
+        commentService.replyToComment(parentId, replyRequest);
+        return ApiResponse.success();
     }
 
     /**
@@ -98,34 +100,21 @@ public class CommentController {
      * @return 无内容
      */
     @DeleteMapping("/{commentId}")
-    public ResponseEntity<Void> deleteComment(
+    public ApiResponse<Void> deleteComment(
             @PathVariable int commentId,
             @RequestParam int userId) {
         commentService.deleteComment(commentId, userId);
-        return ResponseEntity.ok().build();
-    }
-
-    /**
-     * 获取用户评论
-     * @param userId 用户ID
-     * @param pageable 分页参数
-     * @return 评论列表
-     */
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<Page<CommentDTO>> getUserComments(
-            @PathVariable int userId,
-            Pageable pageable) {
-        return ResponseEntity.ok(commentService.getUserCommentsPaged(userId, pageable));
+        return ApiResponse.success();
     }
 
     /**
      * 获取评论的回复列表
-     * @param commentId 评论ID
+     * @param commentId 父评论ID
      * @return 回复列表
      */
     @GetMapping("/{commentId}/replies")
-    public ResponseEntity<List<CommentDTO>> getReplies(@PathVariable int commentId) {
-        return ResponseEntity.ok(commentService.getReplies(commentId));
+    public ApiResponse<List<CommentReplyResponse>> getReplies(@PathVariable int commentId) {
+        return ApiResponse.success(commentService.getReplies(commentId));
     }
 
     /**
@@ -134,8 +123,8 @@ public class CommentController {
      * @return 平均评分
      */
     @GetMapping("/item/{itemId}/rating")
-    public ResponseEntity<Double> getItemAverageRating(@PathVariable int itemId) {
-        return ResponseEntity.ok(commentService.getItemAverageRating(itemId));
+    public ApiResponse<Double> getItemAverageRating(@PathVariable int itemId) {
+        return ApiResponse.success(commentService.getItemAverageRating(itemId));
     }
 
     /**
@@ -144,7 +133,7 @@ public class CommentController {
      * @return 平均评分
      */
     @GetMapping("/shop/{shopId}/rating")
-    public ResponseEntity<Double> getShopAverageRating(@PathVariable int shopId) {
-        return ResponseEntity.ok(commentService.getShopAverageRating(shopId));
+    public ApiResponse<Double> getShopAverageRating(@PathVariable int shopId) {
+        return ApiResponse.success(commentService.getShopAverageRating(shopId));
     }
 } 

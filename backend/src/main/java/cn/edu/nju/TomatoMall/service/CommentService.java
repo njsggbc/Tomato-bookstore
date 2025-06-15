@@ -1,29 +1,34 @@
 package cn.edu.nju.TomatoMall.service;
 
-import cn.edu.nju.TomatoMall.models.dto.comment.CommentDTO;
+import cn.edu.nju.TomatoMall.models.dto.comment.*;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
-
 public interface CommentService {
-    CommentDTO createComment(CommentDTO commentDTO);
-    CommentDTO updateComment(int commentId, CommentDTO commentDTO);
+    void createComment(CommentCreateRequest commentCreateRequest);
+
     void deleteComment(int commentId, int userId);
-    CommentDTO getCommentById(int commentId);
-    List<CommentDTO> getItemComments(int itemId);
-    List<CommentDTO> getShopComments(int shopId);
-    List<CommentDTO> getUserComments(int userId);
-    Page<CommentDTO> getItemCommentsPaged(int itemId, Pageable pageable);
-    Page<CommentDTO> getShopCommentsPaged(int shopId, Pageable pageable);
-    Page<CommentDTO> getUserCommentsPaged(int userId, Pageable pageable);
-    CommentDTO likeComment(int commentId);
-    CommentDTO replyToComment(int parentId, CommentDTO replyDTO);
+
+    Page<ItemCommentResponse> getItemCommentsPaged(int itemId, int page, int size, String field, boolean order);
+    Page<StoreCommentResponse> getShopCommentsPaged(int shopId, int page, int size, String field, boolean order);
+    void likeComment(int commentId);
+    void replyToComment(int parentId, CommentReplyRequest replyDTO);
     Double getItemAverageRating(int itemId);
     Double getShopAverageRating(int shopId);
     long getItemCommentCount(int itemId);
     long getShopCommentCount(int shopId);
-    long getUserCommentCount(int userId);
-    List<CommentDTO> getReplies(int commentId);
+    List<CommentReplyResponse> getReplies(int commentId);
+    
+    /**
+     * 更新商品评分
+     * @param itemId 商品ID
+     */
+    void updateItemRating(int itemId);
+
+    /**
+     * 更新商店评分
+     * @param shopId 商店ID
+     */
+    void updateShopRating(int shopId);
 } 

@@ -22,20 +22,24 @@ public class Comment {
     @Column(name = "likes_count", nullable = false)
     private Integer likesCount = 0;
 
-    @Column(name = "user_id", nullable = false)
-    private int userId;
+    @ManyToOne
+    @JoinColumn(name = "user", nullable = false)
+    private User user;
 
-    @Column(name = "item_id")
-    private int itemId;
+    @ManyToOne
+    @JoinColumn(name = "product")
+    private Product product;
 
-    @Column(name = "shop_id")
-    private int shopId;
+    @ManyToOne
+    @JoinColumn(name = "store")
+    private Store store;
     @Enumerated(EnumType.STRING)
     @Column(name = "comment_type", nullable = false)
     private CommentTypeEnum commentType;
 
-    @Column(name = "parent_id")
-    private Integer parentId;  // 父评论ID，用于回复功能
+
+    @Column(name="parent_comment")
+    private int parentCommentId=0;  // 父评论ID，用于回复功能
 
     @Column(name = "is_deleted", nullable = false)
     private boolean isDeleted = false;  // 软删除标记
@@ -45,9 +49,7 @@ public class Comment {
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private LocalDateTime createdAt=LocalDateTime.now();
 
-    @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+
 } 

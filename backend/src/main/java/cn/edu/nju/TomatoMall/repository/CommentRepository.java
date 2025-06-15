@@ -1,6 +1,5 @@
 package cn.edu.nju.TomatoMall.repository;
 
-import cn.edu.nju.TomatoMall.enums.CommentTypeEnum;
 import cn.edu.nju.TomatoMall.models.po.Comment;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -11,32 +10,35 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-
 @Repository
 public interface CommentRepository extends JpaRepository<Comment, Integer> {
-    List<Comment> findByItemIdOrderByLikesCountDesc(int itemId);
-    List<Comment> findByShopIdOrderByLikesCountDesc(int shopId);
-    List<Comment> findByUserId(int userId);
 
-    Page<Comment> findByItemIdAndIsDeletedFalseOrderByCreatedAtDesc(int itemId, Pageable pageable);
-    Page<Comment> findByShopIdAndIsDeletedFalseOrderByCreatedAtDesc(int shopId, Pageable pageable);
-    Page<Comment> findByUserIdAndIsDeletedFalseOrderByCreatedAtDesc(int userId, Pageable pageable);
+    @Query("SELECT c FROM Comment c WHERE c.product.id = ?1 AND c.isDeleted = false ORDER BY c.likesCount DESC")
+    Page<Comment> findByProductIdOrderByLikesCountDesc(int productId,Pageable pageable);
+    @Query("SELECT c FROM Comment c WHERE c.store.id = ?1 AND c.isDeleted = false ORDER BY c.likesCount DESC")
+    Page<Comment> findByStoreIdOrderByLikesCountDesc(int storeId,Pageable pageable);
+    
+    @Query("SELECT c FROM Comment c WHERE c.product.id = ?1 AND c.isDeleted = false ORDER BY c.createdAt DESC")
+    Page<Comment> findByProductIdAndIsDeletedFalseOrderByCreatedAtDesc(int productId, Pageable pageable);
+    
+    @Query("SELECT c FROM Comment c WHERE c.store.id = ?1 AND c.isDeleted = false ORDER BY c.createdAt DESC")
+    Page<Comment> findByStoreIdAndIsDeletedFalseOrderByCreatedAtDesc(int storeId, Pageable pageable);
 
-    @Query("SELECT AVG(c.rating) FROM Comment c WHERE c.itemId = ?1 AND c.isDeleted = false")
-    Double getAverageRatingForItem(int itemId);
+    @Query("SELECT AVG(c.rating) FROM Comment c WHERE c.product.id = ?1 AND c.isDeleted = false")
+    Double getAverageRatingForItem(int productId);
 
-    @Query("SELECT AVG(c.rating) FROM Comment c WHERE c.shopId = ?1 AND c.isDeleted = false")
-    Double getAverageRatingForShop(int shopId);
-
-    List<Comment> findByParentIdOrderByCreatedAtDesc(Integer parentId);
-
-    List<Comment> findByCommentTypeAndIsDeletedFalseOrderByLikesCountDesc(CommentTypeEnum commentType);
+    @Query("SELECT AVG(c.rating) FROM Comment c WHERE c.store.id = ?1 AND c.isDeleted = false")
+    Double getAverageRatingForShop(int storeId);
+    @Query("SELECT c FROM Comment c WHERE c.id = ?1  ORDER BY c.likesCount DESC")
+    List<Comment> findByCommentIdOrderByLikesCountDesc(Integer parentUserId);
 
     @Modifying
     @Query("UPDATE Comment c SET c.isDeleted = true WHERE c.id = ?1")
     void softDelete(int commentId);
 
-    long countByItemIdAndIsDeletedFalse(int itemId);
-    long countByShopIdAndIsDeletedFalse(int shopId);
-    long countByUserIdAndIsDeletedFalse(int userId);
+    @Query("SELECT COUNT(c) FROM Comment c WHERE c.product.id = ?1 AND c.isDeleted = false")
+    long countByProductIdAndIsDeletedFalse(int productId);
+
+    @Query("SELECT COUNT(c) FROM Comment c WHERE c.store.id = ?1 AND c.isDeleted = false")
+    long countByStoreIdAndIsDeletedFalse(int storeId);
 } 
