@@ -27,6 +27,12 @@ public interface PaymentService {
     void cancel(int paymentId);
 
     /**
+     * 内部取消支付方法，适用于事务处理
+     * @param paymentId 支付ID
+     */
+    void cancelInternal(int paymentId);
+
+    /**
      * 获取支付信息列表
      * @param page 页码
      * @param size 每页大小

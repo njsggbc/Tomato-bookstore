@@ -61,7 +61,7 @@ public class OrderListener {
                 return;
             }
             // 处理支付取消
-            paymentService.cancel(order.getPayment().getId());
+            paymentService.cancelInternal(order.getPayment().getId());
         }
     }
 

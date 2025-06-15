@@ -140,7 +140,22 @@ public class PaymentServiceImpl implements PaymentService {
         // 获取支付信息
         Payment payment = paymentRepository.findByIdAndUserId(paymentId, securityUtil.getCurrentUser().getId())
                 .orElseThrow(TomatoMallException::paymentNotFound);
+        cancel(payment);
+    }
 
+    /**
+     * 内部取消支付方法，适用于事务处理
+     * @param paymentId 支付ID
+     */
+    @Override
+    @Transactional
+    public void cancelInternal(int paymentId) {
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(TomatoMallException::paymentNotFound);
+        cancel(payment);
+    }
+
+    private void cancel(Payment payment) {
         if (payment.getStatus() != PaymentStatus.PENDING) {
             throw TomatoMallException.paymentFail("支付状态不允许操作");
         }

@@ -94,7 +94,7 @@ public class PaymentListener {
     public void handlePaymentCancelEvent(PaymentCancelEvent event) {
         Payment payment = event.getPayment();
         payment.getOrders().forEach(order -> {
-            orderService.cancel(order.getId(), event.getReason());
+            orderService.cancelInternal(order.getId(), event.getReason());
         });
     }
 

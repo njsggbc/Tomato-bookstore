@@ -295,7 +295,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
-     * 取消订单
+     * 取消订单（前端接口调用方法）
      * 释放库存并申请退款
      *
      * @param orderId 订单ID
@@ -307,7 +307,25 @@ public class OrderServiceImpl implements OrderService {
     public void cancel(int orderId, String reason) {
         Order order = orderRepository.findByIdAndUserId(orderId, securityUtil.getCurrentUser().getId())
                 .orElseThrow(TomatoMallException::orderNotFound);
+        cancel(order, reason);
+    }
 
+    /**
+     * 内部取消订单方法
+     * 仅供其他服务调用
+     *
+     * @param orderId 订单ID
+     * @param reason 取消原因
+     */
+    @Override
+    @Transactional
+    public void cancelInternal(int orderId, String reason) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(TomatoMallException::orderNotFound);
+        cancel(order, reason);
+    }
+
+    private void cancel(Order order, String reason) {
         switch (order.getStatus()) {
             case CANCELLED:
                 return;

@@ -10,6 +10,7 @@ import cn.edu.nju.TomatoMall.models.dto.shipment.*;
 import cn.edu.nju.TomatoMall.models.po.Order;
 import cn.edu.nju.TomatoMall.models.po.User;
 import org.springframework.data.domain.Page;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -95,6 +96,13 @@ public interface OrderService {
      * @param message 取消原因
      */
     void cancel(int orderId, String message);
+
+    /**
+     * 内部取消订单方法，用于内部逻辑处理
+     * @param orderId 订单ID
+     * @param reason 取消原因
+     */
+    void cancelInternal(int orderId, String reason);
 
     /**
      * 确认收货
