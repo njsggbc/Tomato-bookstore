@@ -97,20 +97,4 @@ public interface ProductService {
      * @return 库存数量
      */
     int getStockpile(int productId);
-
-    /*---------- HACK: 以下为兼容测试用接口 ----------*/
-
-    /**
-     * 创建商品（兼容测试）
-     * @param params 参数映射
-     * @return 商品简要信息
-     */
-    ProductBriefResponse createProduct(Map<String, Object> params);
-
-    /**
-     * 更新商品（兼容测试）
-     * @param params 参数映射
-     * @return 操作结果信息
-     */
-    String updateProduct(Map<String, Object> params);
 }

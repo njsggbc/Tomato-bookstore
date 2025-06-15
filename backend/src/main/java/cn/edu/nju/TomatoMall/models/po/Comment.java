@@ -51,7 +51,7 @@ public class Comment {
 
     @Column(nullable = false)
     @Builder.Default
-    private LocalDateTime updateTime = createTime;
+    private LocalDateTime updateTime = LocalDateTime.now();
 
     public int getLikes() {
         return likedUserIds.size();

@@ -16,7 +16,7 @@ public class ProductBriefResponse {
     String description;
     String cover;
     BigDecimal price;
-    Double rate;
+    BigDecimal rate;
     Integer sales;
     InventoryStatus inventoryStatus;
 
@@ -26,7 +26,7 @@ public class ProductBriefResponse {
         this.description = product.getDescription();
         this.cover = product.getImages().get(0);
         this.price = product.getPrice();
-        this.rate = product.getRate();
+        this.rate = product.getRating();
         this.sales = product.getSales();
         this.inventoryStatus = product.getInventoryStatus();
     }

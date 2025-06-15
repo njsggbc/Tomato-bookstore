@@ -40,6 +40,7 @@ public class Product {
     private BigDecimal rating;
 
     @Column(nullable = false)
+    @Builder.Default
     private int sales = 0;
 
     @Column(nullable = false, updatable = false)

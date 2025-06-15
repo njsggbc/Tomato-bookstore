@@ -142,7 +142,7 @@ public class ProductServiceImpl implements ProductService {
         product.setOnSale(false);
         product.setDescription(null);
         product.setSpecifications(null);
-        product.setRate(null);
+        product.setRating(null);
         product.setInventory(null);
 
         productRepository.save(product);
@@ -217,58 +217,6 @@ public class ProductServiceImpl implements ProductService {
             throw TomatoMallException.permissionDenied();
         }
 
-    }
-
-    /*------------- HACK: 以下为兼容测试用方法 -------------*/
-
-    @Override
-    @Transactional
-    public ProductBriefResponse createProduct(Map<String, Object> params) {
-        if (!securityUtil.getCurrentUser().getRole().equals(Role.ADMIN)) {
-            throw TomatoMallException.permissionDenied();
-        }
-
-        Product product = Product.builder()
-                .name(params.get("title").toString())
-                .price(new BigDecimal(params.get("price").toString()))
-                .rate(Double.parseDouble(params.get("rate").toString()))
-                .description(params.get("description").toString())
-                .images(Collections.singletonList(params.get("cover").toString()))
-                .store(storeRepository.findById(1).orElseThrow(TomatoMallException::unexpectedError))
-                .build();
-
-        productRepository.save(product);
-
-        return new ProductBriefResponse(product);
-    }
-
-    @Override
-    @Transactional
-    public String updateProduct(Map<String, Object> params) {
-        if (!securityUtil.getCurrentUser().getRole().equals(Role.ADMIN)) {
-            throw TomatoMallException.permissionDenied();
-        }
-
-        Product product = productRepository.findById(Integer.parseInt(params.get("id").toString())).orElseThrow(TomatoMallException::productNotFound);
-        product.setName(params.get("title").toString());
-        product.setPrice(new BigDecimal(params.get("price").toString()));
-        product.setRate(Double.parseDouble(params.get("rate").toString()));
-
-        if (params.get("description") != null) {
-            product.setDescription(params.get("description").toString());
-        }
-
-        if (params.get("cover") != null) {
-            List<String> images = new ArrayList<>();
-            images.add(params.get("cover").toString());
-            product.setImages(images);
-        }
-
-        // HACK: 不兼容部分： detail, specifications
-
-        productRepository.save(product);
-
-        return "更新成功";
     }
 
     private void validateName(String name) {

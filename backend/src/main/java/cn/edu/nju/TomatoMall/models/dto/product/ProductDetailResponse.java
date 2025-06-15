@@ -17,7 +17,7 @@ public class ProductDetailResponse {
     String cover;
     List<String> images;
     BigDecimal price;
-    Double rate;
+    BigDecimal rate;
     Map<String, String> specifications;
     int storeId;
     String createTime;
@@ -31,7 +31,7 @@ public class ProductDetailResponse {
         this.images = product.getImages();
         this.cover = images.get(0);
         this.price = product.getPrice();
-        this.rate = product.getRate();
+        this.rate = product.getRating();
         this.specifications = product.getSpecifications();
         this.storeId = product.getStore().getId();
         this.sales = product.getSales();
