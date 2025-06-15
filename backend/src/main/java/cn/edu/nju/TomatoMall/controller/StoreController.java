@@ -1,11 +1,10 @@
 package cn.edu.nju.TomatoMall.controller;
 
 import cn.edu.nju.TomatoMall.enums.PaymentMethod;
+import cn.edu.nju.TomatoMall.exception.TomatoMallException;
 import cn.edu.nju.TomatoMall.models.dto.employment.TokenGenerateRequest;
 import cn.edu.nju.TomatoMall.models.dto.employment.TokenInfoResponse;
-import cn.edu.nju.TomatoMall.models.dto.store.StoreCreateRequest;
 import cn.edu.nju.TomatoMall.models.dto.store.StoreInfoResponse;
-import cn.edu.nju.TomatoMall.models.dto.store.StoreUpdateRequest;
 import cn.edu.nju.TomatoMall.models.dto.user.UserBriefResponse;
 import cn.edu.nju.TomatoMall.service.EmploymentService;
 import cn.edu.nju.TomatoMall.service.StoreService;
@@ -13,9 +12,13 @@ import cn.edu.nju.TomatoMall.models.vo.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import javax.validation.Valid;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * store
@@ -66,14 +69,31 @@ public class StoreController {
      * 创建新商店
      */
     @PostMapping(consumes = "multipart/form-data")
-    public ApiResponse<Void> createStore(@ModelAttribute StoreCreateRequest params) {
-        storeService.createStore(
-                params.getName(),
-                params.getDescription(),
-                params.getLogo(),
-                params.getAddress(),
-                params.getQualification(),
-                params.getMerchantAccounts());
+    public ApiResponse<Void> createStore(
+            @RequestParam String name,
+            @RequestParam String address,
+            @RequestParam String description,
+            @RequestParam MultipartFile logo,
+            @RequestParam List<MultipartFile> qualification,
+            @RequestParam Map<String, String> allParams) {
+
+        System.out.println("=== 所有参数 ===");
+        allParams.forEach((key, value) -> {
+            System.out.println(key + " = " + value);
+        });
+
+        // 手动过滤和转换merchantAccounts
+        Map<PaymentMethod, String> merchantAccounts = allParams.entrySet().stream()
+                .filter(entry -> entry.getKey().startsWith("merchantAccounts."))
+                .collect(Collectors.toMap(
+                        entry -> {
+                            String methodStr = entry.getKey().substring("merchantAccounts.".length());
+                            return PaymentMethod.valueOf(methodStr);
+                        },
+                        Map.Entry::getValue
+                ));
+
+        storeService.createStore(name, description, logo, address, qualification, merchantAccounts);
         return ApiResponse.success();
     }
 
@@ -89,18 +109,49 @@ public class StoreController {
      * 更新商店信息
      */
     @PatchMapping(path = "/{storeId}", consumes = "multipart/form-data")
-    public ApiResponse<Void> updateStore(@PathVariable int storeId, @ModelAttribute StoreUpdateRequest params) {
-        storeService.updateStore(
-                storeId,
-                params.getName(),
-                params.getDescription(),
-                params.getLogo(),
-                params.getAddress(),
-                params.getQualification(),
-                params.getMerchantAccounts());
+    public ApiResponse<Void> updateStore(
+            @PathVariable int storeId,
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String address,
+            @RequestParam(required = false) String description,
+            @RequestParam(required = false) MultipartFile logo,
+            @RequestParam(required = false) List<MultipartFile> qualification,
+            @RequestParam Map<String, String> allParams) {
+
+        // 手动过滤和转换merchantAccounts（可能为空）
+        Map<PaymentMethod, String> merchantAccounts = null;
+
+        Map<String, String> merchantAccountsStr = allParams.entrySet().stream()
+                .filter(entry -> entry.getKey().startsWith("merchantAccounts."))
+                .collect(Collectors.toMap(
+                        entry -> entry.getKey().substring("merchantAccounts.".length()),
+                        Map.Entry::getValue
+                ));
+
+        if (!merchantAccountsStr.isEmpty()) {
+            merchantAccounts = new HashMap<>();
+            for (Map.Entry<String, String> entry : merchantAccountsStr.entrySet()) {
+                try {
+                    PaymentMethod method = PaymentMethod.valueOf(entry.getKey());
+                    merchantAccounts.put(method, entry.getValue());
+                } catch (IllegalArgumentException e) {
+                    throw TomatoMallException.invalidParameter("无效的支付方式: " + entry.getKey());
+                }
+            }
+        }
+
+        System.out.println("=== 更新商店调试信息 ===");
+        System.out.println("storeId: " + storeId);
+        System.out.println("name: " + name);
+        System.out.println("address: " + address);
+        System.out.println("description: " + description);
+        System.out.println("logo: " + (logo != null ? logo.getOriginalFilename() : "null"));
+        System.out.println("qualification: " + (qualification != null ? qualification.size() : "null"));
+        System.out.println("merchantAccounts: " + merchantAccounts);
+
+        storeService.updateStore(storeId, name, description, logo, address, qualification, merchantAccounts);
         return ApiResponse.success();
     }
-
     /**
      * 删除商店
      */
@@ -124,7 +175,7 @@ public class StoreController {
      */
     @PostMapping("/{storeId}/tokens")
     public ApiResponse<String> generateToken(@PathVariable int storeId,
-                                             @RequestBody TokenGenerateRequest params) {
+                                             @Valid @RequestBody TokenGenerateRequest params) {
         String token = employmentService.generateToken(
                 storeId,
                 params.getName(),

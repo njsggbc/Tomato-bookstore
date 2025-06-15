@@ -16,6 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.validation.Valid;
 import java.util.List;
 
 /**
@@ -107,7 +108,7 @@ public class ShoppingController {
      * @return 包含支付信息的响应
      */
     @PostMapping("/carts/checkout")
-    public ApiResponse<List<CheckoutResponse>> checkout(@RequestBody List<Integer> cartItemIds) {
+    public ApiResponse<List<CheckoutResponse>> checkout(@Valid @RequestBody List<Integer> cartItemIds) {
         return ApiResponse.success(orderService.checkout(cartItemIds));
     }
 
@@ -118,7 +119,7 @@ public class ShoppingController {
      * @return 支付信息响应
      */
     @PostMapping("/orders")
-    public ApiResponse<PaymentInfoResponse> submit(@RequestBody SubmitRequest params) {
+    public ApiResponse<PaymentInfoResponse> submit(@Valid @RequestBody SubmitRequest params) {
         return ApiResponse.success(
                 orderService.submit(
                         params.getCartItemIds(),
@@ -273,7 +274,7 @@ public class ShoppingController {
     public ApiResponse<Void> shipOrder(
             @PathVariable int storeId,
             @PathVariable int orderId,
-            @RequestBody ShipRequest params) {
+            @Valid @RequestBody ShipRequest params) {
         orderService.ship(storeId, orderId, params);
         return ApiResponse.success();
     }
@@ -380,7 +381,7 @@ public class ShoppingController {
     @PostMapping("/shipping/{trackingNo}/update")
     public ApiResponse<Void> updateShippingInfo(
             @PathVariable String trackingNo,
-            @RequestBody ShippingUpdateRequest params
+            @Valid @RequestBody ShippingUpdateRequest params
     ) {
         orderService.updateShippingInfo(trackingNo, params);
         return ApiResponse.success();
@@ -396,7 +397,7 @@ public class ShoppingController {
     @PostMapping("/shipping/{trackingNo}/confirm-delivery")
     public ApiResponse<Void> confirmDelivery(
             @PathVariable String trackingNo,
-            @RequestBody DeliveryConfirmRequest params
+            @Valid @RequestBody DeliveryConfirmRequest params
     ) {
         orderService.confirmDelivery(trackingNo, params);
         return ApiResponse.success();

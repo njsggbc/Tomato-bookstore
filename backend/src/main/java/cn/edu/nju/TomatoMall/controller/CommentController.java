@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
+
 @RestController
 @RequestMapping("/api/comments")
 public class CommentController {
@@ -23,7 +25,7 @@ public class CommentController {
     @PostMapping("/store/{storeId}")
     public ApiResponse<Void> createStoreComment(
             @PathVariable int storeId,
-            @RequestBody CommentCreateRequest commentCreateRequest) {
+            @Valid @RequestBody CommentCreateRequest commentCreateRequest) {
         commentService.comment(
                 EntityType.STORE, storeId, commentCreateRequest.getContent(), commentCreateRequest.getRating()
         );
@@ -39,7 +41,7 @@ public class CommentController {
     @PostMapping("/product/{productId}")
     public ApiResponse<Void> createProductComment(
             @PathVariable int productId,
-            @RequestBody CommentCreateRequest commentCreateRequest) {
+            @Valid @RequestBody CommentCreateRequest commentCreateRequest) {
         commentService.comment(
                 EntityType.PRODUCT, productId, commentCreateRequest.getContent(), commentCreateRequest.getRating()
         );
@@ -54,7 +56,7 @@ public class CommentController {
      */
     @PostMapping("/{parentId}/reply")
     public ApiResponse<Void> replyToComment(@PathVariable int parentId,
-                                            @RequestBody CommentCreateRequest commentCreateRequest) {
+                                           @Valid @RequestBody CommentCreateRequest commentCreateRequest) {
         commentService.reply(parentId, commentCreateRequest.getContent());
         return ApiResponse.success();
     }
@@ -67,7 +69,7 @@ public class CommentController {
      */
     @PutMapping("/{commentId}")
     public ApiResponse<Void> updateComment(@PathVariable int commentId,
-                                           @RequestBody CommentUpdateRequest commentUpdateRequest) {
+                                           @Valid @RequestBody CommentUpdateRequest commentUpdateRequest) {
         commentService.update(commentId, commentUpdateRequest.getContent(), commentUpdateRequest.getRating());
         return ApiResponse.success();
     }

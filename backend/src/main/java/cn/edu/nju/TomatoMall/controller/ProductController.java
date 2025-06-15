@@ -7,8 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Map;
+import javax.validation.Valid;
 
 /**
  * product
@@ -53,7 +52,7 @@ public class ProductController {
      * 创建新商品
      */
     @PostMapping(consumes = "multipart/form-data")
-    public ApiResponse<Void> createProduct(@ModelAttribute ProductCreateRequest params) {
+    public ApiResponse<Void> createProduct(@Valid @ModelAttribute ProductCreateRequest params) {
         productService.createProduct(
                 params.getStoreId(),
                 params.getTitle(),
@@ -76,7 +75,7 @@ public class ProductController {
      * 更新商品信息
      */
     @PatchMapping(path = "/{productId}", consumes = "multipart/form-data")
-    public ApiResponse<Void> updateProduct(@PathVariable int productId, @ModelAttribute ProductUpdateRequest params) {
+    public ApiResponse<Void> updateProduct(@PathVariable int productId, @Valid @ModelAttribute ProductUpdateRequest params) {
         productService.updateProduct(
                 productId,
                 params.getTitle(),
@@ -108,8 +107,8 @@ public class ProductController {
      * 调整商品库存
      */
     @PatchMapping("/stockpile/{productId}")
-    public ApiResponse<String> updateStockpile(@PathVariable int productId, @RequestBody Map<String, Integer> params) {
-        return ApiResponse.success(productService.updateStockpile(productId, params.get("amount")));
+    public ApiResponse<String> updateStockpile(@PathVariable int productId, @RequestParam int stockpile) {
+        return ApiResponse.success(productService.updateStockpile(productId, stockpile));
     }
 
     /**
@@ -128,30 +127,4 @@ public class ProductController {
     public ApiResponse<ProductInventoryResponse> getStockpile(@PathVariable int productId) {
         return ApiResponse.success(productService.getStockpile(productId));
     }
-
-    /*------ HACK: 以下为兼容测试用接口 ------*/
-
-//    /**
-//     * 兼容测试用：更新商品信息
-//     */
-//    @PutMapping
-//    public ApiResponse<String> updateProduct(@RequestBody Map<String, Object> params) {
-//        return ApiResponse.success(productService.updateProduct(params));
-//    }
-
-//    /**
-//     * 兼容测试用：创建商品
-//     */
-//    @PostMapping
-//    public ApiResponse<ProductBriefResponse> createProduct(@RequestBody Map<String, Object> params) {
-//        return ApiResponse.success(productService.createProduct(params));
-//    }
-
-//    /**
-//     * 兼容测试用：获取商品列表
-//     */
-//    @GetMapping
-//    public ApiResponse<List<ProductBriefResponse>> getProductList() {
-//        return ApiResponse.success(productService.getProductList(0, 0, "id", true).getContent());
-//    }
 }

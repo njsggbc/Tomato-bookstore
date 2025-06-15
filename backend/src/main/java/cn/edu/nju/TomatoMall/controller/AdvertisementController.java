@@ -2,11 +2,13 @@ package cn.edu.nju.TomatoMall.controller;
 
 import cn.edu.nju.TomatoMall.enums.AdSpaceType;
 import cn.edu.nju.TomatoMall.models.dto.advertisement.*;
+import cn.edu.nju.TomatoMall.models.dto.payment.PaymentInfoResponse;
 import cn.edu.nju.TomatoMall.models.vo.ApiResponse;
 import cn.edu.nju.TomatoMall.service.AdvertisementService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import java.util.List;
 
 /**
@@ -41,7 +43,7 @@ public class AdvertisementController {
      * 创建新广告
      */
     @PostMapping(consumes = "multipart/form-data")
-    public ApiResponse<Void> createAdvertisement(@ModelAttribute AdCreateRequest params) {
+    public ApiResponse<Void> createAdvertisement(@Valid @ModelAttribute AdCreateRequest params) {
         advertisementService.createAdvertisement(
                 params.getStoreId(),
                 params.getTitle(),
@@ -56,7 +58,7 @@ public class AdvertisementController {
     @PutMapping(path = "/{adId}", consumes = "multipart/form-data")
     public ApiResponse<Void> updateAdvertisement(
             @PathVariable("adId") int adId,
-            @ModelAttribute AdUpdateRequest params) {
+            @Valid @ModelAttribute AdUpdateRequest params) {
         advertisementService.updateAdvertisement(
                 adId,
                 params.getTitle(),
@@ -108,7 +110,7 @@ public class AdvertisementController {
      * 创建广告位
      */
     @PostMapping("/spaces")
-    public ApiResponse<Void> createAdSpace(@RequestBody AdSpaceCreateRequest params) {
+    public ApiResponse<Void> createAdSpace(@Valid @RequestBody AdSpaceCreateRequest params) {
         advertisementService.createAdSpace(
                 params.getLabel(),
                 params.getType(),
@@ -123,7 +125,7 @@ public class AdvertisementController {
     @PatchMapping("/spaces/{spaceId}/slots/status")
     public ApiResponse<Void> setAdSlotStatus(
             @PathVariable("spaceId") int spaceId,
-            @RequestBody AdSlotStatusUpdateRequest params
+            @Valid @RequestBody AdSlotStatusUpdateRequest params
     ) {
         advertisementService.setAdSlotStatus(spaceId, params.getSlotIds(), params.getAvailable(), params.getActive());
         return ApiResponse.success();

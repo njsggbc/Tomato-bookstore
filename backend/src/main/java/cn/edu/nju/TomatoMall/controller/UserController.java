@@ -5,9 +5,11 @@ import cn.edu.nju.TomatoMall.service.UserService;
 import cn.edu.nju.TomatoMall.models.vo.ApiResponse;
 import cn.edu.nju.TomatoMall.util.SecurityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletResponse;
+import javax.validation.Valid;
 import java.util.Map;
 
 /**
@@ -26,7 +28,7 @@ public class UserController {
      * 用户注册
      */
     @PostMapping(path = "/register", consumes = "multipart/form-data")
-    public ApiResponse<Void> register(@ModelAttribute UserRegisterRequest params) {
+    public ApiResponse<Void> register(@Valid @ModelAttribute UserRegisterRequest params) {
         userService.register(
                 params.getUsername(),
                 params.getPhone(),
@@ -42,7 +44,7 @@ public class UserController {
      * 用户登录
      */
     @PostMapping("/login")
-    public ApiResponse<String> login(@RequestBody UserLoginRequest params, HttpServletResponse response) {
+    public ApiResponse<String> login(@Valid @RequestBody UserLoginRequest params, HttpServletResponse response) {
         String token = userService.login(
                 params.getUsername(),
                 params.getPhone(),
@@ -73,7 +75,7 @@ public class UserController {
      * 更新用户信息
      */
     @PutMapping(consumes = "multipart/form-data")
-    public ApiResponse<Void> updateInformation(@ModelAttribute UserUpdateRequest params) {
+    public ApiResponse<Void> updateInformation(@Valid @ModelAttribute UserUpdateRequest params) {
         userService.updateInformation(
                 params.getUsername(),
                 params.getName(),
@@ -88,7 +90,7 @@ public class UserController {
      * 更新用户密码
      */
     @PatchMapping("/password")
-    public ApiResponse<Void> updatePassword(@RequestBody UserUpdatePasswordRequest payload) {
+    public ApiResponse<Void> updatePassword(@Valid @RequestBody UserUpdatePasswordRequest payload) {
         userService.updatePassword(payload.getCurrentPassword(), payload.getNewPassword());
         return ApiResponse.success();
     }
