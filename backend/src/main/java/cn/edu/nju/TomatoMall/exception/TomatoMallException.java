@@ -309,4 +309,13 @@ public class TomatoMallException extends RuntimeException {
     public static TomatoMallException messageTypeNotSupported(String message) {
         return new TomatoMallException(400, 701, message);
     }
+
+    // Comment-related Exceptions (800–899)
+    public static TomatoMallException commentNotFound() {
+        return new TomatoMallException(404, 800, "评论不存在!");
+    }
+
+    public static TomatoMallException commentNotFound(String message) {
+        return new TomatoMallException(404, 800, message);
+    }
 }

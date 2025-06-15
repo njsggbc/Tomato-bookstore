@@ -5,6 +5,7 @@ import cn.edu.nju.TomatoMall.enums.StoreStatus;
 import lombok.*;
 
 import javax.persistence.*;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -41,8 +42,7 @@ public class Store {
     @Column(nullable = false)
     private StoreStatus status;
 
-    private Integer score;
-    private Integer scoreCount;
+    private BigDecimal rating;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "manager_id", nullable = false)

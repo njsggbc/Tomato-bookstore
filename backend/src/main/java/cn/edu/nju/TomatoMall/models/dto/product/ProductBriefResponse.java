@@ -11,20 +11,22 @@ import java.math.BigDecimal;
 
 @Data
 public class ProductBriefResponse {
-    private int id;
-    private String title;
-    private String cover;
-    private BigDecimal price;
-    private Double rate;
-    private Integer sales;
-    private InventoryStatus inventoryStatus;
+    int id;
+    String title;
+    String description;
+    String cover;
+    BigDecimal price;
+    BigDecimal rate;
+    Integer sales;
+    InventoryStatus inventoryStatus;
 
     public ProductBriefResponse(Product product) {
         this.id = product.getId();
         this.title = product.getName();
+        this.description = product.getDescription();
         this.cover = product.getImages().get(0);
         this.price = product.getPrice();
-        this.rate = product.getRate();
+        this.rate = product.getRating();
         this.sales = product.getSales();
         this.inventoryStatus = product.getInventoryStatus();
     }
