@@ -3,9 +3,6 @@ package cn.edu.nju.TomatoMall.models.dto.product;
 import cn.edu.nju.TomatoMall.enums.InventoryStatus;
 import cn.edu.nju.TomatoMall.models.po.Product;
 import lombok.Data;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 import java.math.BigDecimal;
 

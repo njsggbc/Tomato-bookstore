@@ -198,12 +198,6 @@ public class ProductServiceImpl implements ProductService {
         return imageUrls;
     }
 
-    private void deleteImages(List<String> imageUrls) {
-        if (imageUrls != null) {
-            imageUrls.forEach(fileUtil::delete);
-        }
-    }
-
     private void validatePermission(Integer storeId) {
         User currentUser = securityUtil.getCurrentUser();
         // 系统默认店铺，只有系统管理员具有权限
