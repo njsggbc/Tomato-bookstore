@@ -1,6 +1,6 @@
-package cn.edu.nju.TomatoMall.websocket.config;
+package cn.edu.nju.TomatoMall.configure;
 
-import cn.edu.nju.TomatoMall.websocket.handler.TomatoMallWebSocketHandler;
+import cn.edu.nju.TomatoMall.websocket.TomatoMallWebSocketHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
@@ -9,7 +9,7 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 
 @Configuration
 @EnableWebSocket
-public class TomatoMallWebSocketConfigurer implements WebSocketConfigurer {
+public class TomatoMallWebSocketConfig implements WebSocketConfigurer {
 
     @Autowired
     private TomatoMallWebSocketHandler messageWebSocketHandler;

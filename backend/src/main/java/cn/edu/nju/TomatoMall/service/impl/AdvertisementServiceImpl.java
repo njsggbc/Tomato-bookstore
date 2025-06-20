@@ -11,7 +11,6 @@ import cn.edu.nju.TomatoMall.service.PermissionService;
 import cn.edu.nju.TomatoMall.service.impl.events.advertisement.AdPlacementCancelEvent;
 import cn.edu.nju.TomatoMall.service.impl.events.advertisement.AdvertisingEvent;
 import cn.edu.nju.TomatoMall.service.impl.events.advertisement.AdvertisingReviewEvent;
-import cn.edu.nju.TomatoMall.service.impl.events.order.OrderCancelEvent;
 import cn.edu.nju.TomatoMall.service.impl.events.payment.PaymentCreateEvent;
 import cn.edu.nju.TomatoMall.service.impl.strategy.AdChargingStrategy;
 import cn.edu.nju.TomatoMall.service.impl.strategy.SimpleAdChargingStrategy;
@@ -294,7 +293,6 @@ public class AdvertisementServiceImpl implements AdvertisementService {
                 .orElseThrow(TomatoMallException::adPlacementNotFound);
 
         Advertisement ad = placement.getAdvertisement();
-        AdvertisementSpace space = placement.getSpace();
 
         // 验证当前用户对广告所属商店的权限
         StoreRole role = permissionService.getStoreRole(ad.getStore().getId());

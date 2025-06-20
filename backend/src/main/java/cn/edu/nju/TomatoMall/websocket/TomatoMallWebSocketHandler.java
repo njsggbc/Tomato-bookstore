@@ -1,15 +1,19 @@
-package cn.edu.nju.TomatoMall.websocket.handler;
+package cn.edu.nju.TomatoMall.websocket;
 
 import cn.edu.nju.TomatoMall.models.po.User;
-import cn.edu.nju.TomatoMall.service.MessageService;
 import cn.edu.nju.TomatoMall.util.SecurityUtil;
-import cn.edu.nju.TomatoMall.websocket.message.TomatoMallWebSocketMessage;
+import cn.edu.nju.TomatoMall.websocket.type.TomatoMallWebSocketMessage;
+import cn.edu.nju.TomatoMall.websocket.type.DisconnectReason;
+import cn.edu.nju.TomatoMall.websocket.type.ConnectionInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.*;
 
+import javax.annotation.PreDestroy;
 import java.io.IOException;
 import java.net.URI;
 import java.util.*;
@@ -25,11 +29,24 @@ public class TomatoMallWebSocketHandler implements WebSocketHandler {
     // 存储会话用户映射：WebSocketSession -> User（用于快速查找）
     private static final ConcurrentHashMap<WebSocketSession, User> sessionUserMap = new ConcurrentHashMap<>();
 
+    // 存储连接信息：WebSocketSession -> ConnectionInfo（心跳管理）
+    private static final ConcurrentHashMap<WebSocketSession, ConnectionInfo> connectionInfoMap = new ConcurrentHashMap<>();
+
     @Autowired
     private ObjectMapper objectMapper;
 
     @Autowired
     private SecurityUtil securityUtil;
+
+    // 配置参数
+    @Value("${websocket.max-connections-per-user:5}")
+    private int maxConnectionsPerUser;
+
+    @Value("${websocket.heartbeat.timeout:90000}")
+    private long heartbeatTimeout; // 心跳超时时间（毫秒）
+
+    @Value("${websocket.heartbeat.max-miss:3}")
+    private int maxHeartbeatMiss; // 最大心跳丢失次数
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -37,15 +54,24 @@ public class TomatoMallWebSocketHandler implements WebSocketHandler {
             // 从URL参数获取token并验证用户身份
             User user = getUserFromSession(session);
             if (user != null) {
-                addUserSession(user, session);
-                log.info("用户 {} 建立WebSocket连接，该用户当前连接数: {}, 总在线连接数: {}",
-                        user.getId(), getUserSessionCount(user.getId()), getTotalConnectionCount());
+                // 检查连接数限制
+                if (checkConnectionLimit(user, session)) {
+                    addUserSession(user, session);
 
-                // 发送连接成功消息
-                Map<String, Object> data = new HashMap<>();
-                data.put("userId", user.getId());
-                data.put("username", user.getUsername());
-                sendToSession(session, TomatoMallWebSocketMessage.success(data));
+                    // 创建连接信息用于心跳管理
+                    ConnectionInfo connectionInfo = new ConnectionInfo(session, user);
+                    connectionInfoMap.put(session, connectionInfo);
+
+                    log.info("用户 {} 建立WebSocket连接，该用户当前连接数: {}, 总在线连接数: {}",
+                            user.getId(), getUserSessionCount(user.getId()), getTotalConnectionCount());
+
+                    // 发送连接成功消息
+                    Map<String, Object> data = new HashMap<>();
+                    data.put("userId", user.getId());
+                    data.put("username", user.getUsername());
+                    data.put("connectionTime", System.currentTimeMillis());
+                    sendToSession(session, TomatoMallWebSocketMessage.success(data));
+                }
             } else {
                 log.warn("WebSocket连接认证失败，关闭连接");
                 session.close(CloseStatus.NOT_ACCEPTABLE.withReason("认证失败"));
@@ -57,18 +83,21 @@ public class TomatoMallWebSocketHandler implements WebSocketHandler {
     }
 
     @Override
-    public void handleMessage(WebSocketSession session, org.springframework.web.socket.WebSocketMessage<?> message) throws Exception {
+    public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
+        // 更新活跃时间
+        updateConnectionActivity(session);
+
         if (message instanceof TextMessage) {
             String payload = ((TextMessage) message).getPayload();
             log.debug("收到客户端消息: {}", payload);
 
-            // 处理心跳包
+            // 处理简单心跳包
             if ("PING".equals(payload)) {
                 sendToSession(session, TomatoMallWebSocketMessage.pong());
                 return;
             }
 
-            // 可以处理其他客户端消息
+            // 处理JSON格式消息
             try {
                 TomatoMallWebSocketMessage clientMessage = objectMapper.readValue(payload, TomatoMallWebSocketMessage.class);
                 handleClientMessage(session, clientMessage);
@@ -81,13 +110,13 @@ public class TomatoMallWebSocketHandler implements WebSocketHandler {
     @Override
     public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
         log.error("WebSocket传输错误", exception);
-        removeUserSession(session);
+        handleDisconnect(session, DisconnectReason.CONNECTION_ERROR);
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus closeStatus) throws Exception {
         User user = sessionUserMap.get(session);
-        removeUserSession(session);
+        handleDisconnect(session, DisconnectReason.NORMAL_CLOSE);
         log.info("WebSocket连接关闭: {}, 用户: {}, 总在线连接数: {}",
                 closeStatus, user != null ? user.getId() : "未知", getTotalConnectionCount());
     }
@@ -98,10 +127,103 @@ public class TomatoMallWebSocketHandler implements WebSocketHandler {
     }
 
     /**
+     * 定时心跳检测 - 每30秒执行一次
+     */
+    @Scheduled(fixedRate = 30000)
+    public void heartbeatCheck() {
+        int timeoutCount = 0;
+        List<WebSocketSession> timeoutSessions = new ArrayList<>();
+
+        for (ConnectionInfo info : connectionInfoMap.values()) {
+            if (info.isTimeout(heartbeatTimeout)) {
+                timeoutSessions.add(info.getSession());
+                timeoutCount++;
+            }
+        }
+
+        // 处理超时连接
+        for (WebSocketSession session : timeoutSessions) {
+            log.warn("连接心跳超时，强制断开: 用户={}",
+                    sessionUserMap.containsKey(session) ? sessionUserMap.get(session).getId() : "未知");
+            handleDisconnect(session, DisconnectReason.HEARTBEAT_TIMEOUT);
+        }
+
+        if (timeoutCount > 0) {
+            log.info("心跳检测完成，清理超时连接: {} 个", timeoutCount);
+        }
+    }
+
+    /**
+     * 定时发送心跳 - 每25秒执行一次
+     */
+    @Scheduled(fixedRate = 25000)
+    public void sendHeartbeat() {
+        int heartbeatCount = 0;
+        TomatoMallWebSocketMessage pingMessage = TomatoMallWebSocketMessage.ping();
+
+        for (WebSocketSession session : sessionUserMap.keySet()) {
+            if (session.isOpen()) {
+                try {
+                    sendToSession(session, pingMessage);
+                    heartbeatCount++;
+                } catch (Exception e) {
+                    log.warn("发送心跳失败: {}", e.getMessage());
+                    // 标记心跳失败
+                    ConnectionInfo info = connectionInfoMap.get(session);
+                    if (info != null) {
+                        info.incrementHeartbeatMiss();
+                        if (info.getHeartbeatMissCount() >= maxHeartbeatMiss) {
+                            handleDisconnect(session, DisconnectReason.HEARTBEAT_TIMEOUT);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (heartbeatCount > 0) {
+            log.debug("发送心跳完成，成功发送: {} 个", heartbeatCount);
+        }
+    }
+
+    /**
+     * 连接统计日志 - 每分钟执行一次
+     */
+    @Scheduled(fixedRate = 60000)
+    public void logConnectionStats() {
+        int totalConnections = getTotalConnectionCount();
+        int onlineUsers = getOnlineUserCount();
+        double avgConnections = onlineUsers > 0 ? (double) totalConnections / onlineUsers : 0;
+
+        log.info("WebSocket连接统计 - 在线用户: {}, 总连接数: {}",
+                        onlineUsers, totalConnections);
+    }
+
+    /**
+     * 优雅关闭
+     */
+    @PreDestroy
+    public void shutdown() {
+        log.info("开始关闭WebSocket服务...");
+
+        // 通知所有客户端服务即将关闭
+        TomatoMallWebSocketMessage shutdownMessage =
+                TomatoMallWebSocketMessage.serverShutdown("服务器即将重启，请稍后重连");
+
+        sessionUserMap.keySet().forEach(session -> {
+            try {
+                sendToSession(session, shutdownMessage);
+                Thread.sleep(50); // 给客户端处理时间
+                session.close(CloseStatus.GOING_AWAY.withReason("服务器关闭"));
+            } catch (Exception e) {
+                log.error("关闭连接失败", e);
+            }
+        });
+
+        log.info("WebSocket服务关闭完成");
+    }
+
+    /**
      * 发送消息给指定用户的所有连接
-     * @param userId 用户ID
-     * @param message 消息对象
-     * @return 成功发送的连接数
      */
     public int sendToUser(Integer userId, TomatoMallWebSocketMessage message) {
         Set<WebSocketSession> sessions = userSessions.get(userId);
@@ -123,12 +245,12 @@ public class TomatoMallWebSocketHandler implements WebSocketHandler {
                     log.error("发送消息到会话失败，用户ID: {}", userId, e);
                     // 移除失效连接
                     iterator.remove();
-                    sessionUserMap.remove(session);
+                    cleanupConnection(session);
                 }
             } else {
                 // 移除已关闭连接
                 iterator.remove();
-                sessionUserMap.remove(session);
+                cleanupConnection(session);
             }
         }
 
@@ -143,9 +265,6 @@ public class TomatoMallWebSocketHandler implements WebSocketHandler {
 
     /**
      * 批量发送消息给多个用户
-     * @param userIds 用户ID列表
-     * @param message 消息对象
-     * @return 成功发送的总连接数
      */
     public int sendToUsers(List<Integer> userIds, TomatoMallWebSocketMessage message) {
         int totalSuccessCount = 0;
@@ -158,17 +277,13 @@ public class TomatoMallWebSocketHandler implements WebSocketHandler {
 
     /**
      * 广播消息给所有在线用户
-     * @param message 消息对象
-     * @return 成功发送的连接数
      */
     public int broadcastToAll(TomatoMallWebSocketMessage message) {
         return sendToUsers(getOnlineUserIds(), message);
     }
 
     /**
-     * 检查用户是否在线（至少有一个连接）
-     * @param userId 用户ID
-     * @return 是否在线
+     * 检查用户是否在线
      */
     public boolean isUserOnline(Integer userId) {
         Set<WebSocketSession> sessions = userSessions.get(userId);
@@ -180,8 +295,6 @@ public class TomatoMallWebSocketHandler implements WebSocketHandler {
 
     /**
      * 获取用户连接数
-     * @param userId 用户ID
-     * @return 连接数
      */
     public int getUserSessionCount(Integer userId) {
         Set<WebSocketSession> sessions = userSessions.get(userId);
@@ -190,7 +303,6 @@ public class TomatoMallWebSocketHandler implements WebSocketHandler {
 
     /**
      * 获取总连接数
-     * @return 总连接数
      */
     public int getTotalConnectionCount() {
         return sessionUserMap.size();
@@ -198,7 +310,6 @@ public class TomatoMallWebSocketHandler implements WebSocketHandler {
 
     /**
      * 获取在线用户数量
-     * @return 在线用户数
      */
     public int getOnlineUserCount() {
         return userSessions.size();
@@ -206,38 +317,30 @@ public class TomatoMallWebSocketHandler implements WebSocketHandler {
 
     /**
      * 获取所有在线用户ID
-     * @return 在线用户ID列表
      */
     public List<Integer> getOnlineUserIds() {
         return new ArrayList<>(userSessions.keySet());
     }
 
-    /**
-     * 断开用户所有连接
-     * @param userId 用户ID
-     * @param reason 断开原因
-     */
-    public void disconnectUser(Integer userId, String reason) {
-        Set<WebSocketSession> sessions = userSessions.get(userId);
-        if (sessions != null) {
-            for (WebSocketSession session : sessions) {
-                try {
-                    if (session.isOpen()) {
-                        session.close(CloseStatus.NORMAL.withReason(reason));
-                    }
-                } catch (IOException e) {
-                    log.error("断开用户连接失败，用户ID: {}", userId, e);
-                }
-            }
-            userSessions.remove(userId);
-            // 清理会话映射
-            for (WebSocketSession session : sessions) {
-                sessionUserMap.remove(session);
-            }
-        }
-    }
+    // ====================== 私有方法 ======================
 
-    // 私有方法
+    /**
+     * 检查连接数限制
+     */
+    private boolean checkConnectionLimit(User user, WebSocketSession session) throws IOException {
+        Set<WebSocketSession> existingSessions = userSessions.get(user.getId());
+        if (existingSessions != null && existingSessions.size() >= maxConnectionsPerUser) {
+            log.warn("用户 {} 连接数超限，当前连接数: {}, 最大允许: {}",
+                    user.getId(), existingSessions.size(), maxConnectionsPerUser);
+
+            // 关闭最老的连接
+            WebSocketSession oldestSession = existingSessions.iterator().next();
+            sendToSession(oldestSession, TomatoMallWebSocketMessage.connectionLimit("连接数超限，已断开旧连接"));
+            oldestSession.close(CloseStatus.NORMAL.withReason("连接数超限"));
+            cleanupConnection(oldestSession);
+        }
+        return true;
+    }
 
     /**
      * 添加用户连接
@@ -248,10 +351,24 @@ public class TomatoMallWebSocketHandler implements WebSocketHandler {
     }
 
     /**
-     * 移除用户连接
+     * 处理断连
      */
-    private void removeUserSession(WebSocketSession session) {
+    private void handleDisconnect(WebSocketSession session, DisconnectReason reason) {
+        User user = sessionUserMap.get(session);
+        cleanupConnection(session);
+
+        if (user != null) {
+            log.debug("用户 {} 断开连接，原因: {}", user.getId(), reason.getDescription());
+        }
+    }
+
+    /**
+     * 清理连接
+     */
+    private void cleanupConnection(WebSocketSession session) {
         User user = sessionUserMap.remove(session);
+        connectionInfoMap.remove(session);
+
         if (user != null) {
             Set<WebSocketSession> sessions = userSessions.get(user.getId());
             if (sessions != null) {
@@ -260,6 +377,16 @@ public class TomatoMallWebSocketHandler implements WebSocketHandler {
                     userSessions.remove(user.getId());
                 }
             }
+        }
+    }
+
+    /**
+     * 更新连接活跃时间
+     */
+    private void updateConnectionActivity(WebSocketSession session) {
+        ConnectionInfo info = connectionInfoMap.get(session);
+        if (info != null) {
+            info.updateActiveTime();
         }
     }
 
@@ -282,9 +409,7 @@ public class TomatoMallWebSocketHandler implements WebSocketHandler {
         try {
             String token = getTokenFromSession(session);
             if (token != null) {
-                // 验证token
                 if (securityUtil.verifyToken(token)) {
-                    // 获取用户信息
                     return securityUtil.getUser(token);
                 }
             }
@@ -348,6 +473,11 @@ public class TomatoMallWebSocketHandler implements WebSocketHandler {
                 } catch (IOException e) {
                     log.error("发送心跳响应失败", e);
                 }
+                break;
+            case PONG:
+                // 客户端响应心跳，更新活跃时间
+                updateConnectionActivity(session);
+                log.debug("收到用户 {} 的心跳响应", user.getId());
                 break;
             case USER_STATUS:
                 // 处理用户状态更新
