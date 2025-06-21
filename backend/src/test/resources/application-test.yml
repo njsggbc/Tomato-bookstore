@@ -1,0 +1,187 @@
+# TomatoMall 测试环境配置
+spring:
+  # 数据库配置 - 使用H2内存数据库进行测试
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MySQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+
+  # H2控制台配置
+  h2:
+    console:
+      enabled: true
+
+  # JPA配置
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.H2Dialect
+    defer-datasource-initialization: true
+
+  # SQL初始化
+  sql:
+    init:
+      mode: always
+      data-locations: classpath:test-data.sql
+
+  # Redis配置（测试环境使用嵌入式Redis）
+  redis:
+    host: localhost
+    port: 6379
+    database: 15
+    timeout: 5000ms
+
+  # 缓存配置
+  cache:
+    type: simple
+
+  # 邮件配置（测试环境禁用实际邮件发送）
+  mail:
+    host: smtp.test.com
+    port: 587
+    username: test@example.com
+    password: test_password
+    test-connection: false
+
+  # 线程池配置
+  task:
+    execution:
+      pool:
+        core-size: 2
+        max-size: 4
+        queue-capacity: 100
+      thread-name-prefix: test-async-
+
+  # 安全配置
+  security:
+    require-ssl: false
+
+  # 分页配置
+  data:
+    web:
+      pageable:
+        default-page-size: 10
+        max-page-size: 100
+
+  # 国际化配置
+  messages:
+    basename: messages
+    encoding: UTF-8
+    cache-duration: 3600
+
+  # Jackson配置
+  jackson:
+    time-zone: GMT+8
+    date-format: yyyy-MM-dd HH:mm:ss
+    default-property-inclusion: non_null
+
+  # 文件上传配置
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 50MB
+
+# 日志配置
+logging:
+  level:
+    org.springframework.test: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.security: DEBUG
+    cn.edu.nju.TomatoMall: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+# 文件上传配置（测试环境使用临时目录）
+file:
+  upload:
+    path: ${java.io.tmpdir}/tomatomall-test/uploads/
+  avatar:
+    path: ${java.io.tmpdir}/tomatomall-test/avatars/
+  product:
+    path: ${java.io.tmpdir}/tomatomall-test/products/
+  store:
+    path: ${java.io.tmpdir}/tomatomall-test/stores/
+  ad:
+    path: ${java.io.tmpdir}/tomatomall-test/advertisements/
+
+# JWT配置（测试环境使用更短的过期时间）
+jwt:
+  secret: testSecretKeyForTomatoMallIntegrationTestsOnly
+  expiration: 3600000
+  refresh-expiration: 7200000
+
+# 支付宝配置（测试环境使用沙箱）
+alipay:
+  app-id: test_app_id
+  private-key: test_private_key
+  public-key: test_public_key
+  server-url: https://openapi.alipaydev.com/gateway.do
+  format: json
+  charset: UTF-8
+  sign-type: RSA2
+  notify-url: http://localhost:8080/api/alipay/notify
+  return-url: http://localhost:8080/payment/success
+
+# 邮件配置（测试环境禁用实际邮件发送）
+mail:
+  enabled: false
+
+# 性能监控（测试环境启用详细监控）
+management:
+  security:
+    enabled: false
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    enabled: true
+
+# 并发控制
+server:
+  tomcat:
+    max-threads: 50
+    accept-count: 100
+
+# 测试专用配置
+test:
+  cleanup:
+    enabled: true
+  mock:
+    payment: true
+    shipping: true
+  data:
+    reset: true
+  user:
+    admin:
+      username: admin
+      password: password123
+    default:
+      password: password123
+
+# 业务规则配置（测试环境可调整）
+business:
+  order:
+    timeout-minutes: 30
+  payment:
+    timeout-minutes: 15
+  inventory:
+    reserve-minutes: 10
+  comment:
+    max-length: 1000
+  rating:
+    min-value: 1
+    max-value: 5
+
+# 应用配置
+app:
+  environment: test
+  debug: true
