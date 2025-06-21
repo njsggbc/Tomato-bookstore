@@ -99,8 +99,9 @@ public class ProductController {
      */
     // HACK: 返回值无意义
     @DeleteMapping("/{productId}")
-    public ApiResponse<String> deleteProduct(@PathVariable int productId) {
-        return ApiResponse.success(productService.deleteProduct(productId));
+    public ApiResponse<Void> deleteProduct(@PathVariable int productId) {
+        productService.deleteProduct(productId);
+        return ApiResponse.success();
     }
 
     /**

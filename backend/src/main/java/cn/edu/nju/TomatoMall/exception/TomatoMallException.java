@@ -64,12 +64,20 @@ public class TomatoMallException extends RuntimeException {
         return new TomatoMallException(400, 104, message);
     }
 
+    public static TomatoMallException permissionDenied() {
+        return new TomatoMallException(403, 105, "无权限!");
+    }
+
+    public static TomatoMallException permissionDenied(String message) {
+        return new TomatoMallException(403, 105, message);
+    }
+
     public static TomatoMallException fileUploadFail() {
-        return new TomatoMallException(500, 105, "文件上传失败!");
+        return new TomatoMallException(500, 106, "文件上传失败!");
     }
 
     public static TomatoMallException fileUploadFail(String message) {
-        return new TomatoMallException(500, 105, message);
+        return new TomatoMallException(500, 106, message);
     }
 
     // User-related Exceptions (200–299)
@@ -160,14 +168,6 @@ public class TomatoMallException extends RuntimeException {
 
     public static TomatoMallException tokenInvalid(String message) {
         return new TomatoMallException(403, 303, message);
-    }
-
-    public static TomatoMallException permissionDenied() {
-        return new TomatoMallException(403, 304, "无权限!");
-    }
-
-    public static TomatoMallException permissionDenied(String message) {
-        return new TomatoMallException(403, 304, message);
     }
 
     // Product-related Exceptions (400–499)

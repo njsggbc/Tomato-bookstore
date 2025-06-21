@@ -5,7 +5,6 @@ import cn.edu.nju.TomatoMall.enums.PaymentStatus;
 import cn.edu.nju.TomatoMall.models.dto.payment.PaymentInfoResponse;
 import cn.edu.nju.TomatoMall.models.po.Payment;
 import org.springframework.data.domain.Page;
-import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.servlet.http.HttpServletRequest;
@@ -44,6 +43,14 @@ public interface PaymentService {
      * @return 支付信息分页
      */
     Page<PaymentInfoResponse> getPaymentList(int page, int size, String field, boolean order, PaymentStatus status);
+
+    /**
+     * 获取支付信息详情
+     * @param paymentId 支付ID
+     * @param paymentNo 支付单号
+     * @return 支付信息详情
+     */
+    PaymentInfoResponse getPaymentInfo(Integer paymentId, String paymentNo);
 
     /**
      * 退款处理

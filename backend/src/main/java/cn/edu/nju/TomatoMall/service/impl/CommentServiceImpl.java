@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @Transactional
@@ -146,13 +147,23 @@ public class CommentServiceImpl implements CommentService {
             throw TomatoMallException.permissionDenied();
         }
 
+        // 递归删除评论及其回复
+        deleteRecursively(comment);
+    }
+
+    private void deleteRecursively(Comment comment) {
         // 记录是否需要更新评分
         boolean shouldUpdateRating = comment.getRating() != null && comment.getParent() == null;
         EntityType entityType = comment.getEntityType();
         int entityId = comment.getEntityId();
 
-        // 删除所有回复
-        commentRepository.deleteAllByParentId(commentId);
+        List<Comment> replies = commentRepository.findListByParentId(comment.getId());
+
+        for (Comment reply : replies) {
+            // 递归删除回复
+            deleteRecursively(reply);
+        }
+
         // 删除评论
         commentRepository.delete(comment);
 

@@ -4,11 +4,12 @@ package cn.edu.nju.TomatoMall.models.dto.shipment;
 import lombok.Data;
 
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
 @Data
 public class DeliveryConfirmRequest {
-    @NotBlank
+    @NotNull
     private LocalDateTime deliveryTime;    // 送达时间
     @NotBlank
     private String deliveryLocation;       // 送达地点

@@ -181,6 +181,17 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
+    public PaymentInfoResponse getPaymentInfo(Integer paymentId, String paymentNo) {
+        int userId = securityUtil.getCurrentUser().getId();
+        if (paymentId == null && paymentNo == null) {
+            throw TomatoMallException.invalidParameter("支付ID或支付单号不能为空");
+        }
+        Payment payment = paymentRepository.findByIdOrPaymentNoAndUserId(paymentId, paymentNo, userId)
+                .orElseThrow(TomatoMallException::paymentNotFound);
+        return new PaymentInfoResponse(payment);
+    }
+
+    @Override
     @Transactional
     public void refund(String paymentNo, String orderNo, String reason) {
         // 获取支付信息

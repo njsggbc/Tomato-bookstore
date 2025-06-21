@@ -643,6 +643,11 @@ public class OrderServiceImpl implements OrderService {
 
         // 更新订单状态
         Order order = shippingInfo.getOrder();
+
+        if (order.getStatus() != OrderStatus.IN_TRANSIT) {
+            throw TomatoMallException.invalidOperation();
+        }
+
         order.setStatus(OrderStatus.AWAITING_RECEIPT);
         order.getLogs().add(
                 OrderLog.builder()

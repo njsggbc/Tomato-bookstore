@@ -18,7 +18,7 @@ public class TokenInfoResponse {
         this.name = employmentToken.getName();
         this.createTime = employmentToken.getCreateTime().toString();
         this.expireTime = employmentToken.getExpireTime() == null ? null : employmentToken.getExpireTime().toString();
-        this.expired = employmentToken.isValid();
+        this.expired = !employmentToken.isValid();
         this.consumer = employmentToken.getConsumer() == null ? null : new UserBriefResponse(employmentToken.getConsumer());
     }
 }

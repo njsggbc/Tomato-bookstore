@@ -188,6 +188,9 @@ public class AdvertisementServiceImpl implements AdvertisementService {
         }
 
         fileUtil.delete(ad.getContent());
+
+        advertisementPlacementRepository.deleteAllByAdvertisementId(adId);
+
         advertisementRepository.delete(ad);
     }
 
@@ -258,21 +261,23 @@ public class AdvertisementServiceImpl implements AdvertisementService {
                 .slotList(slots)
                 .build();
 
-        // 保存投放记录
-        advertisementPlacementRepository.save(placement);
-
-        // 更新广告状态
-        updateAdStatus(ad);
-
-        // 发布投放事件
-        eventPublisher.publishEvent(new AdvertisingEvent(placement));
-
         // 创建支付
         Payment payment = adChargingStrategy.charge(placement);
         payment = paymentRepository.save(payment);
 
         // 发布支付创建事件
         eventPublisher.publishEvent(new PaymentCreateEvent(payment));
+
+        // 将支付信息关联到投放记录
+        placement.setPayment(payment);
+        // 保存投放记录
+        advertisementPlacementRepository.save(placement);
+
+        // 发布投放事件
+        eventPublisher.publishEvent(new AdvertisingEvent(placement));
+
+        // 更新广告状态
+        updateAdStatus(ad);
 
         return new PaymentInfoResponse(payment);
     }

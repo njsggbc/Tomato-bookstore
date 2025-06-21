@@ -4,12 +4,13 @@ import cn.edu.nju.TomatoMall.enums.ShippingCompany;
 import lombok.Data;
 
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 
 @Data
 public class ShipRequest {
     @NotBlank
     private String trackingNo;
-    @NotBlank
+    @NotNull
     private ShippingCompany shippingCompany;
 
     private String senderName;

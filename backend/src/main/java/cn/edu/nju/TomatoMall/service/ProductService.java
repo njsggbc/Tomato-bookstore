@@ -37,9 +37,8 @@ public interface ProductService {
     /**
      * 删除商品
      * @param productId 商品ID
-     * @return 操作结果信息
      */
-    String deleteProduct(int productId);
+    void deleteProduct(int productId);
 
     /**
      * 获取商品详情

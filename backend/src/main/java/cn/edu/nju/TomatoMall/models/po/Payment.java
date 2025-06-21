@@ -36,6 +36,7 @@ public class Payment {
     @Builder.Default
     List<Order> orders = new ArrayList<>();
 
+    @Enumerated(EnumType.STRING)
     private EntityType entityType;
 
     private Integer entityId;

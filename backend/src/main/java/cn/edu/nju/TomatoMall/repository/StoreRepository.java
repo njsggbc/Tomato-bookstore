@@ -18,7 +18,9 @@ public interface StoreRepository extends JpaRepository<Store, Integer> {
 
     // Find store by name
     Store findByName(String name);
-    boolean existsByName(String name);
+
+    @Query("SELECT COUNT(s) > 0 FROM Store s WHERE LOWER(s.name) = LOWER(:name) AND s.status != 'DELETED'")
+    boolean existsByName(@Param("name") String name);
 
     // Find stores by status
     Page<Store> findByStatus(StoreStatus status, Pageable pageable);
@@ -34,8 +36,10 @@ public interface StoreRepository extends JpaRepository<Store, Integer> {
     @Query("SELECT s.manager.id FROM Store s WHERE s.id = ?1")
     Optional<Integer> findManagerIdById(int storeId);
 
+    @Query("SELECT COUNT(s) > 0 FROM Store s WHERE s.id = ?1 AND s.manager.id = ?2 AND s.status != 'DELETED'")
     boolean existsByIdAndManagerId(int storeId, int managerId);
 
+    @Query("SELECT s FROM Store s WHERE s.manager.id = ?1 AND s.status != 'DELETED'")
     List<Store> findByManagerId(int managerId);
 
     Store getReferenceById(@NonNull int storeId);

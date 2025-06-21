@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -24,6 +25,8 @@ public interface CommentRepository extends JpaRepository<Comment, Integer> {
      * 根据父评论ID查找回复
      */
     Page<Comment> findByParentId(int parentId, Pageable pageable);
+
+    List<Comment> findListByParentId(int parentId);
 
     /**
      * 根据实体类型和实体ID统计评论数量（不包括回复）

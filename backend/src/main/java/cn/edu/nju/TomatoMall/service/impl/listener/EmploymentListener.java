@@ -26,7 +26,7 @@ public class EmploymentListener {
                 MessageType.BUSINESS,
                 event.getUser(),
                 "您已被解雇",
-                "商店：" + event.getEmployment().getStore().getName() + "\n" +
+                "商店：" + event.getStore().getName() + "\n" +
                         "原因：" + event.getReason() + "\n" +
                         "如有疑问，请联系商店经理或请求客服处理",
                 EntityType.EMPLOYMENT,
@@ -41,7 +41,7 @@ public class EmploymentListener {
                 MessageType.BUSINESS,
                 event.getStore().getManager(),
                 "员工离职通知",
-                "员工 " + event.getEmployment().getEmployee().getUsername() + " 已离职\n" +
+                "员工 " + event.getUser().getUsername() + " 已离职\n" +
                         "离职原因：" + event.getReason(),
                 EntityType.EMPLOYMENT,
                 null,

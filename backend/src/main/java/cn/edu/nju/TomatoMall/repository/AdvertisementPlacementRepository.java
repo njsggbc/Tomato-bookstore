@@ -12,4 +12,6 @@ public interface AdvertisementPlacementRepository extends CrudRepository<Adverti
     List<AdvertisementPlacement> findByStatus(AdPlacementStatus adPlacementStatus);
 
     List<AdvertisementPlacement> findByAdvertisementStoreId(int storeId);
+
+    void deleteAllByAdvertisementId(int adId);
 }

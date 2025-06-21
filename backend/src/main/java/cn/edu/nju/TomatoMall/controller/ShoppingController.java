@@ -143,7 +143,7 @@ public class ShoppingController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createTime") String field,
             @RequestParam(defaultValue = "false") boolean order,
-            @RequestParam(required = false) CustomerRequestOrderStatus status) {
+            @RequestParam(defaultValue = "ALL") CustomerRequestOrderStatus status) {
         return ApiResponse.success(orderService.getOrderList(page, size, field, order, status));
     }
 
@@ -210,7 +210,7 @@ public class ShoppingController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createTime") String field,
             @RequestParam(defaultValue = "false") boolean order,
-            @RequestParam(required = false) StoreRequestOrderStatus status) {
+            @RequestParam(defaultValue = "ALL") StoreRequestOrderStatus status) {
         return ApiResponse.success(orderService.getStoreOrderList(storeId, page, size, field, order, status));
     }
 
@@ -294,6 +294,18 @@ public class ShoppingController {
             @RequestParam(defaultValue = "false") boolean order
     ) {
         return ApiResponse.success(paymentService.getPaymentList(page, size, field, order, PaymentStatus.PENDING));
+    }
+
+    /**
+     * 获取支付单信息
+     */
+    @GetMapping("/payments/info")
+    public ApiResponse<PaymentInfoResponse> getPaymentInfo(
+            @RequestParam(required = false) Integer paymentId,
+            @RequestParam(required = false) String paymentNo
+
+    ) {
+        return ApiResponse.success(paymentService.getPaymentInfo(paymentId, paymentNo));
     }
 
     /**

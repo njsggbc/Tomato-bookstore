@@ -29,26 +29,73 @@ public class SecurityUtil {
     HttpServletRequest httpServletRequest;
 
     /**
-     * 获取当前用户，使用JWT而非HttpSession
-     * 使用缓存来减少数据库查询
+     * 获取当前用户，支持JWT Bearer Token和Cookie两种方式
+     * 优先级：1. Session中的用户 2. Authorization头中的Bearer Token 3. Cookie中的Token
      */
     public User getCurrentUser() {
-        Cookie tokenCookie = getTokenCookie();
-        if (tokenCookie == null) {
-            return null;
+        // 优先从Session中获取用户（如果拦截器已经设置）
+        User sessionUser = (User) httpServletRequest.getSession().getAttribute("currentUser");
+        if (sessionUser != null) {
+            return sessionUser;
         }
-        return getUser(tokenCookie.getValue());
+
+        // 从Authorization头获取Bearer Token
+        String authHeader = httpServletRequest.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            User user = getUser(token);
+            if (user != null) {
+                // 将用户信息缓存到Session中
+                httpServletRequest.getSession().setAttribute("currentUser", user);
+                return user;
+            }
+        }
+
+        // 从Cookie中获取Token（向后兼容）
+        Cookie tokenCookie = getTokenCookie();
+        if (tokenCookie != null) {
+            User user = getUser(tokenCookie.getValue());
+            if (user != null) {
+                // 将用户信息缓存到Session中
+                httpServletRequest.getSession().setAttribute("currentUser", user);
+                return user;
+            }
+        }
+
+        return null;
     }
 
     /**
-     * 从Cookie中获取User信息
-     * 使用缓存来提高效率
+     * 从Token中获取User信息
      */
-    @Cacheable(value = "users", key = "#cookie.value")
+    @Cacheable(value = "users", key = "#token")
     public User getUser(String token) {
-        Integer userId = Integer.parseInt(JWT.decode(token).getAudience().get(0));
-        Optional<User> userOptional = userRepository.findById(userId);
-        return userOptional.orElse(null); // 如果用户不存在返回null
+        try {
+            if (token == null || token.trim().isEmpty()) {
+                return null;
+            }
+
+            // 验证token是否有效
+            if (!verifyToken(token)) {
+                return null;
+            }
+
+            // 从JWT中提取用户ID
+            Integer userId = Integer.parseInt(JWT.decode(token).getAudience().get(0));
+            Optional<User> userOptional = userRepository.findById(userId);
+
+            User user = userOptional.orElse(null);
+            if (user != null) {
+                logger.info("Successfully retrieved user: " + user.getUsername() + " (ID: " + user.getId() + ")");
+            } else {
+                logger.warning("User not found for ID: " + userId);
+            }
+
+            return user;
+        } catch (Exception e) {
+            logger.warning("Failed to get user from token: " + e.getMessage());
+            return null;
+        }
     }
 
     /**
@@ -78,21 +125,50 @@ public class SecurityUtil {
     }
 
     /**
+     * 获取当前请求的Token（从Authorization头或Cookie）
+     */
+    public String getCurrentToken() {
+        // 优先从Authorization头获取
+        String authHeader = httpServletRequest.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7);
+        }
+
+        // 从Cookie获取
+        Cookie tokenCookie = getTokenCookie();
+        if (tokenCookie != null) {
+            return tokenCookie.getValue();
+        }
+
+        return null;
+    }
+
+    /**
      * 根据用户生成JWT token
      */
     public String getToken(User user) {
-        Date date = new Date(System.currentTimeMillis() + EXPIRE_TIME); // 设置过期时间
-        return JWT.create()
-                .withAudience(String.valueOf(user.getId())) // 将用户ID存储在JWT的受众字段中
-                .withExpiresAt(date) // 设置过期时间
-                .sign(Algorithm.HMAC256(user.getPassword())); // 使用用户密码的哈希值作为签名
+        try {
+            Date date = new Date(System.currentTimeMillis() + EXPIRE_TIME); // 设置过期时间
+            String token = JWT.create()
+                    .withAudience(String.valueOf(user.getId())) // 将用户ID存储在JWT的受众字段中
+                    .withExpiresAt(date) // 设置过期时间
+                    .withIssuedAt(new Date()) // 设置签发时间
+                    .sign(Algorithm.HMAC256(user.getPassword())); // 使用用户密码的哈希值作为签名
+
+            logger.info("Generated token for user: " + user.getUsername() + " (ID: " + user.getId() + ")");
+            return token;
+        } catch (Exception e) {
+            logger.severe("Failed to generate token for user: " + user.getUsername() + ", error: " + e.getMessage());
+            throw new RuntimeException("Token generation failed", e);
+        }
     }
 
     /**
      * 验证token是否有效
      */
     public boolean verifyToken(String token) {
-        if (token == null) {
+        if (token == null || token.trim().isEmpty()) {
+            logger.warning("Token is null or empty");
             return false;
         }
 
@@ -101,6 +177,7 @@ public class SecurityUtil {
             Integer userId = Integer.parseInt(JWT.decode(token).getAudience().get(0));
             Optional<User> userOptional = userRepository.findById(userId);
             if (!userOptional.isPresent()) {
+                logger.warning("User not found for token verification, userId: " + userId);
                 return false; // 用户不存在
             }
             User user = userOptional.get();
@@ -108,9 +185,13 @@ public class SecurityUtil {
             // 创建JWT验证器
             JWTVerifier jwtVerifier = JWT.require(Algorithm.HMAC256(user.getPassword())).build();
             jwtVerifier.verify(token); // 验证JWT
+
+            logger.fine("Token verification successful for user: " + user.getUsername());
             return true;
         } catch (JWTVerificationException e) {
             logger.warning("JWT verification failed: " + e.getMessage());
+        } catch (NumberFormatException e) {
+            logger.warning("Invalid user ID in token: " + e.getMessage());
         } catch (Exception e) {
             logger.warning("Token validation failed: " + e.getMessage());
         }
@@ -122,5 +203,35 @@ public class SecurityUtil {
      */
     public boolean verifyCookie(Cookie cookie) {
         return cookie != null && verifyToken(cookie.getValue());
+    }
+
+    /**
+     * 清除当前用户的Session信息
+     */
+    public void clearCurrentUser() {
+        httpServletRequest.getSession().removeAttribute("currentUser");
+    }
+
+    /**
+     * 获取当前用户ID（便捷方法）
+     */
+    public Integer getCurrentUserId() {
+        User currentUser = getCurrentUser();
+        return currentUser != null ? currentUser.getId() : null;
+    }
+
+    /**
+     * 检查当前用户是否已登录
+     */
+    public boolean isLoggedIn() {
+        return getCurrentUser() != null;
+    }
+
+    /**
+     * 检查当前用户是否有指定角色
+     */
+    public boolean hasRole(String role) {
+        User currentUser = getCurrentUser();
+        return currentUser != null && role.equals(currentUser.getRole());
     }
 }

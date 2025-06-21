@@ -36,4 +36,9 @@ public interface PaymentRepository extends JpaRepository<Payment, String> {
     List<Payment> findByStatusAndPaymentMethodIsNullAndCreateTimeBefore(PaymentStatus paymentStatus, LocalDateTime timeoutThreshold);
 
     List<Payment> findByStatusAndPaymentMethodIsNotNullAndPaymentRequestTimeBefore(PaymentStatus paymentStatus, LocalDateTime timeoutThreshold);
+
+    @Query("SELECT p FROM Payment p WHERE :paymentId IS NULL OR p.id = :paymentId " +
+           "AND (:paymentNo IS NULL OR p.paymentNo = :paymentNo) " +
+           "AND p.user.id = :userId")
+    Optional<Payment> findByIdOrPaymentNoAndUserId(Integer paymentId, String paymentNo, int userId);
 }

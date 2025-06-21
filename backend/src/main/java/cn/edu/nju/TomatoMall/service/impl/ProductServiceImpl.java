@@ -134,7 +134,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    public String deleteProduct(int productId) {
+    public void deleteProduct(int productId) {
         Product product = productRepository.findById(productId).orElseThrow(TomatoMallException::productNotFound);
 
         validatePermission(product.getStore().getId());
@@ -146,9 +146,6 @@ public class ProductServiceImpl implements ProductService {
         product.setInventory(null);
 
         productRepository.save(product);
-
-        // HACK: for test
-        return "删除成功";
     }
 
     @Override

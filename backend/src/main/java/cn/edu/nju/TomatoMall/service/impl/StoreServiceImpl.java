@@ -80,12 +80,14 @@ public class StoreServiceImpl implements StoreService {
     @Transactional(readOnly = true)
     public StoreInfoResponse getInfo(int storeId) {
         Store store = storeRepository.findById(storeId).orElseThrow(TomatoMallException::storeNotFound);
-        if (!store.getStatus().equals(StoreStatus.NORMAL)
-                && !securityUtil.getCurrentUser().getRole().equals(Role.ADMIN)
-                && !securityUtil.getCurrentUser().equals(store.getManager()) // 普通用户只能查看正常店铺的信息
+        if (store.getStatus().equals(StoreStatus.DELETED)
+                || (!store.getStatus().equals(StoreStatus.NORMAL)
+                        && !securityUtil.getCurrentUser().getRole().equals(Role.ADMIN)
+                        && !securityUtil.getCurrentUser().equals(store.getManager())) // 普通用户只能查看正常店铺的信息
         ) {
             throw TomatoMallException.storeNotFound();
         }
+
         return new StoreInfoResponse(store);
     }
 
@@ -164,7 +166,7 @@ public class StoreServiceImpl implements StoreService {
             validateDescription(description);
             store.setDescription(description);
         }
-        if (qualifications != null) {
+        if (qualifications != null && !qualifications.isEmpty()) {
             validateQualifications(qualifications);
             store.getQualifications().forEach(fileUtil::delete);
             store.setQualifications(qualifications.stream()
@@ -206,7 +208,11 @@ public class StoreServiceImpl implements StoreService {
             store.getQualifications().forEach(fileUtil::delete);
         }
 
-        storeRepository.delete(store);
+        store.setStatus(StoreStatus.DELETED);
+
+        employmentRepository.deleteAllByStoreId(store.getId());
+
+        storeRepository.save(store);
     }
 
     @Override
@@ -219,25 +225,18 @@ public class StoreServiceImpl implements StoreService {
 
         switch (store.getStatus()) {
             case PENDING:
+            case UPDATING:
                 if (pass) {
                     store.setStatus(StoreStatus.NORMAL);
                     storeRepository.save(store);
-                } else {
-                    deleteStore(store);
-                }
-                break;
-            case DELETING:
-                if (pass) {
-                    storeRepository.delete(store);
                 } else {
                     store.setStatus(StoreStatus.SUSPENDED);
                     storeRepository.save(store);
                 }
                 break;
-            case UPDATING:
+            case DELETING:
                 if (pass) {
-                    store.setStatus(StoreStatus.NORMAL);
-                    storeRepository.save(store);
+                    deleteStore(store);
                 } else {
                     store.setStatus(StoreStatus.SUSPENDED);
                     storeRepository.save(store);
@@ -296,7 +295,7 @@ public class StoreServiceImpl implements StoreService {
     }
 
     private void validateName(String name) {
-        if (name == null || name.isEmpty()) {
+        if (name == null || name.isEmpty() || name.length() > 50) {
             throw TomatoMallException.invalidParameter("店铺名称不合法");
         }
     }

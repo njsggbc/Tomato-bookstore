@@ -27,4 +27,6 @@ public interface EmploymentRepository extends JpaRepository<Employment, Integer>
     List<Store> getStoreByEmployeeId(Integer employeeId);
 
     boolean existsByStoreIdAndEmployeeId(int storeId, int employeeId);
+
+    void deleteAllByStoreId(int storeId);
 }

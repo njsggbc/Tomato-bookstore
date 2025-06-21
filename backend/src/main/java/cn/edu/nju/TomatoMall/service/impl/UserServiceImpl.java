@@ -48,6 +48,10 @@ public class UserServiceImpl implements UserService {
             }
         }
 
+        if (name != null) {
+            validateName(name);
+        }
+
        User user = User.builder()
                .phone(phone)
                .username(username)
@@ -133,6 +137,7 @@ public class UserServiceImpl implements UserService {
         }
 
         if(name != null){
+           validateName(name);
             user.setName(name);
         }
         if(location != null){
@@ -173,6 +178,12 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    private void validateName(String name) {
+        if (name == null || name.isEmpty() || name.length() > 50) {
+            throw TomatoMallException.invalidParameter("姓名字符需在1到50个字符之间");
+        }
+    }
+
     private void validateEmail(String email) {
         if (email == null || email.isEmpty() || !email.matches("^[\\w-\\.]+@[\\w-]+\\.[a-z]{2,4}$")) {
             throw TomatoMallException.invalidParameter("邮箱格式不正确");
@@ -180,8 +191,8 @@ public class UserServiceImpl implements UserService {
     }
 
     private void validatePassword(String password) {
-        if (password == null || password.length() < 6) {
-            throw TomatoMallException.invalidParameter("密码长度不能小于6位");
+        if (password == null || password.length() < 6 || password.length() > 20) {
+            throw TomatoMallException.invalidParameter("密码长度必须在6到20个字符之间");
         }
     }
 }

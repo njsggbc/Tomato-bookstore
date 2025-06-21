@@ -26,6 +26,7 @@ public class Comment {
     private User user;
 
     @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
     private EntityType entityType; // 评论的实体类型，如商品、商店
 
     @Column(nullable = false)
