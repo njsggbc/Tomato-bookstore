@@ -1,7 +1,6 @@
 package cn.edu.nju.TomatoMall.test;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.apache.tomcat.jni.Local;
 import org.junit.jupiter.api.*;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;

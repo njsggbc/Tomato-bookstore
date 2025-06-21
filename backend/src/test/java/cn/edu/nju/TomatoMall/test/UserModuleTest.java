@@ -9,8 +9,6 @@ import org.springframework.test.annotation.Commit;
 import java.util.Map;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * 用户模块集成测试

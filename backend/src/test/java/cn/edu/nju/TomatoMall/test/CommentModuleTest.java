@@ -16,8 +16,6 @@ import org.springframework.test.web.servlet.MvcResult;
 import java.util.*;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * 评论模块集成测试
