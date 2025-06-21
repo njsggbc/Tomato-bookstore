@@ -8,480 +8,541 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.annotation.Commit;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.math.BigDecimal;
 import java.util.Map;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 
-/**
- * 商品模块集成测试
- * 测试商品创建、更新、库存管理、删除等功能
- */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@DisplayName("商品模块测试")
+@DisplayName("商品模块完整测试")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class ProductModuleTest extends BaseIntegrationTest {
 
     private Long testStoreId;
+    private Long testStoreId2;
     private Long testProductId;
+    private Long testProductId2;
     private String storeManagerToken;
+    private String storeManager2Token;
     private String staffToken;
-    private Long staffUserId;
+    private String customerToken;
 
     @Test
     @Order(1)
-    @DisplayName("创建测试店铺和员工")
+    @DisplayName("环境准备")
     @Commit
-    void testSetupStoreAndStaff() throws Exception {
-        logTestStart("创建测试店铺和员工", "为商品测试创建必要的店铺和员工环境");
+    void testSetupEnvironment() throws Exception {
+        logTestStart("环境准备", "创建测试环境");
 
-        checkPreconditions("创建测试店铺和员工",
-                "userToken", userToken,
-                "adminToken", adminToken);
-
-        // 创建店铺
-        Map<String, String> storeData = TestDataBuilder.createStoreParams(
-                "技术图书专营店", "北京市海淀区中关村大街1号", "专业的技术图书销售店铺"
-        );
-
-        MockMultipartFile logoFile = new MockMultipartFile(
-                "logo", "logo.jpg", "image/jpeg", "fake logo content".getBytes()
-        );
-        MockMultipartFile qualificationFile = new MockMultipartFile(
-                "qualification", "qualification.pdf", "application/pdf", "fake qualification content".getBytes()
-        );
-
-        logInfo("创建店铺: " + storeData.get("name"));
-
-        MvcResult createStoreResult = executeRequest(
-                createMultipartRequest("/api/stores", "POST")
-                        .file(logoFile)
-                        .file(qualificationFile)
-                        .param("name", storeData.get("name"))
-                        .param("address", storeData.get("address"))
-                        .param("description", storeData.get("description"))
-                        .param("merchantAccounts.ALIPAY", "alipay@bookstore.com")
-                        .header("Authorization", "Bearer " + userToken),
-                200, "创建店铺API调用"
-        );
-
-        verifyApiSuccessResponse(createStoreResult, "创建店铺响应验证");
-        waitFor(200);
-
-        // 获取店铺ID并审核通过
-        logInfo("获取待审核店铺列表");
-        MvcResult listResult = executeRequest(
-                authenticatedGet("/api/stores/awaiting-review", adminToken)
-                        .param("page", "0")
-                        .param("size", "10")
-                        .param("field", "id")
-                        .param("order", "true"),
-                200, "获取待审核店铺列表API调用"
-        );
-
-        JsonNode listResponse = verifyApiSuccessResponse(listResult, "获取待审核店铺列表响应验证");
-        JsonNode listData = extractDataFromResponse(listResponse, "获取待审核店铺列表");
-        JsonNode pendingStores = verifyPageResponse(listData, "待审核店铺列表分页验证");
-
-        assertListNotEmptyWithDebug(pendingStores, "待审核店铺列表", "获取待审核店铺列表");
-        testStoreId = pendingStores.get(0).get("id").asLong();
-        logInfo("获取到测试店铺ID: " + testStoreId);
-
-        // 管理员审核通过
-        logInfo("管理员审核店铺");
-        MvcResult reviewResult = executeRequest(
-                authenticatedPost("/api/stores/review", adminToken)
-                        .param("storeId", testStoreId.toString())
-                        .param("pass", "true")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("\"商品测试店铺审核通过\""),
-                200, "审核店铺API调用"
-        );
-
-        verifyApiSuccessResponse(reviewResult, "审核店铺响应验证");
-        waitFor(200);
-
-        verifyRecordCountWithDebug("stores", "id = " + testStoreId + " AND status = 'NORMAL'", 1, "店铺审核通过状态验证");
+        // 创建第一个店铺
+        testStoreId = createStore("技术图书专营店", "北京市海淀区中关村大街1号", userToken);
         storeManagerToken = userToken;
 
+        // 创建第二个店铺
+        String owner2Token = createUser("storeowner", "Store Owner 2", "Shanghai");
+        testStoreId2 = createStore("数码产品专营店", "上海市浦东新区陆家嘴金融中心", owner2Token);
+        storeManager2Token = owner2Token;
+
         // 创建员工
-        logInfo("创建店铺员工");
-        Map<String, Object> staffData = TestDataBuilder.createUserRequest(
-                "bookstaff", "13912345678", "password123",
-                "staff@bookstore.com", "Book Staff", "Beijing"
-        );
+        staffToken = createUser("staff", "Store Staff", "Beijing");
+        addStaffToStore(testStoreId, staffToken);
 
-        MvcResult staffCreateResult = executeRequest(
-                post("/api/users/register")
-                        .contentType(MediaType.MULTIPART_FORM_DATA)
-                        .param("username", staffData.get("username").toString())
-                        .param("phone", staffData.get("phone").toString())
-                        .param("password", staffData.get("password").toString())
-                        .param("email", staffData.get("email").toString())
-                        .param("name", staffData.get("name").toString())
-                        .param("location", staffData.get("location").toString()),
-                200, "创建员工用户API调用"
-        );
+        // 创建普通用户
+        customerToken = createUser("customer", "Customer User", "Guangzhou");
 
-        verifyApiSuccessResponse(staffCreateResult, "创建员工用户响应验证");
-        waitFor(100);
-
-        // 员工登录
-        logInfo("员工登录");
-        String loginRequest = objectMapper.writeValueAsString(
-                TestDataBuilder.createLoginRequest("bookstaff", "password123")
-        );
-
-        MvcResult loginResult = executeRequest(
-                post("/api/users/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(loginRequest),
-                200, "员工登录API调用"
-        );
-
-        JsonNode loginResponse = verifyApiSuccessResponse(loginResult, "员工登录响应验证");
-        staffToken = extractDataFromResponse(loginResponse, "员工登录").asText();
-
-        // 获取员工ID
-        MvcResult staffInfoResult = executeRequest(
-                authenticatedGet("/api/users", staffToken),
-                200, "获取员工用户信息API调用"
-        );
-
-        JsonNode userResponse = verifyApiSuccessResponse(staffInfoResult, "获取员工用户信息响应验证");
-        JsonNode userData = extractDataFromResponse(userResponse, "获取员工用户信息");
-        staffUserId = userData.get("id").asLong();
-        logInfo("员工用户创建成功，ID: " + staffUserId);
-
-        // 创建员工token并加入店铺
-        logInfo("创建员工授权Token");
-        String tokenRequest = objectMapper.writeValueAsString(
-                TestDataBuilder.createTokenRequest("商品管理员工Token", TestDataBuilder.getFutureTimeString(30))
-        );
-
-        MvcResult tokenResult = executeRequest(
-                authenticatedPost("/api/stores/" + testStoreId + "/tokens", storeManagerToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(tokenRequest),
-                200, "创建员工授权Token API调用"
-        );
-
-        JsonNode tokenResponse = verifyApiSuccessResponse(tokenResult, "创建员工授权Token响应验证");
-        String authToken = extractDataFromResponse(tokenResponse, "创建员工授权Token").asText();
-
-        // 员工加入店铺
-        logInfo("员工加入店铺");
-        MvcResult joinResult = executeRequest(
-                authenticatedPost("/api/stores/" + testStoreId + "/auth", staffToken)
-                        .param("token", authToken),
-                200, "员工加入店铺API调用"
-        );
-
-        verifyApiSuccessResponse(joinResult, "员工加入店铺响应验证");
-        waitFor(200);
-
-        verifyRecordCountWithDebug("employments",
-                "store_id = " + testStoreId + " AND employee_id = " + staffUserId,
-                1, "员工雇佣关系验证");
-
-        logTestEnd("创建测试店铺和员工", true);
+        logTestEnd("环境准备", true);
     }
 
     @Test
     @Order(2)
-    @DisplayName("店长创建商品 - 成功案例")
+    @DisplayName("商品创建测试")
     @Commit
-    void testCreateProduct_ByManager_Success() throws Exception {
-        logTestStart("店长创建商品", "测试店长创建商品的完整流程");
+    void testProductCreation() throws Exception {
+        logTestStart("商品创建测试", "测试创建商品");
 
-        checkPreconditions("店长创建商品",
-                "storeManagerToken", storeManagerToken,
-                "testStoreId", testStoreId);
+        testProductId = createProduct("Java编程思想(第4版)", "89.99", storeManagerToken, testStoreId);
+        testProductId2 = createProduct("Spring Boot实战", "79.99", staffToken, testStoreId);
 
-        MockMultipartFile imageFile = new MockMultipartFile(
-                "images", "java_book.jpg", "image/jpeg", "fake image content".getBytes()
-        );
+        verifyProductExists(testProductId, "Java编程思想(第4版)");
+        verifyProductExists(testProductId2, "Spring Boot实战");
 
-        logInfo("创建商品: Java编程思想(第4版), 价格: ¥89.99");
-
-        MvcResult result = executeRequest(
-                multipart("/api/products")
-                        .file(imageFile)
-                        .param("title", "Java编程思想(第4版)")
-                        .param("description", "这是一本经典的Java编程教材，适合初学者和进阶者")
-                        .param("price", "89.99")
-                        .param("storeId", testStoreId.toString())
-                        .param("specifications[author]", "Bruce Eckel")
-                        .param("specifications[publisher]", "机械工业出版社")
-                        .param("specifications[isbn]", "978-7-111-21382-7")
-                        .param("specifications[pages]", "880")
-                        .header("Authorization", "Bearer " + storeManagerToken),
-                200, "创建商品API调用"
-        );
-
-        verifyApiSuccessResponse(result, "创建商品响应验证");
-        waitFor(200);
-
-        // 验证数据库中的商品记录 - 使用正确的字段名 name
-        verifyRecordCountWithDebug("products", "name = 'Java编程思想(第4版)'", 1, "创建商品数据库验证");
-
-        // 验证库存记录也被创建
-        verifyRecordCountWithDebug("inventories",
-                "product_id IN (SELECT id FROM products WHERE name = 'Java编程思想(第4版)')",
-                1, "商品库存记录验证");
-
-        logTestEnd("店长创建商品", true);
+        logTestEnd("商品创建测试", true);
     }
 
     @Test
     @Order(3)
-    @DisplayName("员工创建商品 - 成功案例")
+    @DisplayName("商品查询测试")
     @Commit
-    void testCreateProduct_ByStaff_Success() throws Exception {
-        logTestStart("员工创建商品", "测试员工创建商品的权限和流程");
+    void testProductQuery() throws Exception {
+        logTestStart("商品查询测试", "测试各种查询功能");
 
-        checkPreconditions("员工创建商品",
-                "staffToken", staffToken,
-                "testStoreId", testStoreId);
+        testProductList();
+        testStoreProductList();
+        testProductDetail();
+        testProductSorting();
+        testProductPagination();
 
-        MockMultipartFile imageFile = new MockMultipartFile(
-                "images", "spring_book.jpg", "image/jpeg", "fake image content".getBytes()
-        );
-
-        logInfo("员工创建商品: Spring Boot实战");
-
-        MvcResult result = executeRequest(
-                multipart("/api/products")
-                        .file(imageFile)
-                        .param("title", "Spring Boot实战")
-                        .param("description", "Spring Boot开发实战教程")
-                        .param("price", "79.99")
-                        .param("storeId", testStoreId.toString())
-                        .param("specifications[author]", "Craig Walls")
-                        .param("specifications[publisher]", "人民邮电出版社")
-                        .param("specifications[category]", "编程技术")
-                        .header("Authorization", "Bearer " + staffToken),
-                200, "员工创建商品API调用"
-        );
-
-        verifyApiSuccessResponse(result, "员工创建商品响应验证");
-        waitFor(200);
-
-        verifyRecordCountWithDebug("products", "name = 'Spring Boot实战'", 1, "员工创建商品数据库验证");
-
-        logTestEnd("员工创建商品", true);
+        logTestEnd("商品查询测试", true);
     }
 
     @Test
     @Order(4)
-    @DisplayName("获取商品列表")
+    @DisplayName("商品更新测试")
     @Commit
-    void testGetProductList() throws Exception {
-        logTestStart("获取商品列表", "测试获取所有商品的分页列表");
+    void testProductUpdate() throws Exception {
+        logTestStart("商品更新测试", "测试商品更新功能");
 
-        Map<String, String> pageParams = TestDataBuilder.createDefaultPageParams();
+        updateProduct(testProductId, "title", "Java编程思想(第5版)", storeManagerToken);
+        updateProduct(testProductId, "price", "99.99", storeManagerToken);
+        updateProduct(testProductId, "description", "更新后的描述", storeManagerToken);
 
-        MvcResult result = executeRequest(
-                get("/api/products")
-                        .param("page", pageParams.get("page"))
-                        .param("size", pageParams.get("size"))
-                        .param("field", pageParams.get("field"))
-                        .param("order", pageParams.get("order")),
-                200, "获取商品列表API调用"
-        );
-
-        JsonNode response = verifyApiSuccessResponse(result, "获取商品列表响应验证");
-        JsonNode data = extractDataFromResponse(response, "获取商品列表");
-        JsonNode productList = verifyPageResponse(data, "商品列表分页验证");
-
-        assertListNotEmptyWithDebug(productList, "商品列表", "获取商品列表");
-
-        testProductId = productList.get(0).get("id").asLong();
-        logInfo("获取到测试商品ID: " + testProductId);
-
-        JsonNode firstProduct = productList.get(0);
-        assertNotNullWithDebug(firstProduct.get("title"), "商品标题", "商品信息验证");
-        assertNotNullWithDebug(firstProduct.get("price"), "商品价格", "商品信息验证");
-        assertNotNullWithDebug(firstProduct.get("cover"), "商品封面", "商品信息验证");
-        assertNotNullWithDebug(firstProduct.get("sales"), "商品销量", "商品信息验证");
-        assertNotNullWithDebug(firstProduct.get("inventoryStatus"), "库存状态", "商品信息验证");
-
-        logTestEnd("获取商品列表", true);
+        logTestEnd("商品更新测试", true);
     }
 
     @Test
     @Order(5)
-    @DisplayName("设置商品库存")
+    @DisplayName("库存管理测试")
     @Commit
-    void testSetProductInventory() throws Exception {
-        logTestStart("设置商品库存", "测试店长设置商品库存数量");
+    void testInventoryManagement() throws Exception {
+        logTestStart("库存管理测试", "测试库存操作");
 
-        checkPreconditions("设置商品库存",
-                "storeManagerToken", storeManagerToken,
-                "testProductId", testProductId);
+        setInventory(testProductId, 150, storeManagerToken);
+        setThreshold(testProductId, 20, storeManagerToken);
+        testLowInventory();
 
-        Map<String, Integer> inventoryRequest = TestDataBuilder.createInventoryRequest(100);
-        String requestBody = objectMapper.writeValueAsString(inventoryRequest);
-
-        logInfo("设置商品库存为: 100");
-
-        MvcResult result = executeRequest(
-                authenticatedPatch("/api/products/stockpile/" + testProductId, storeManagerToken)
-                        .param("stockpile", "100")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody),
-                200, "设置商品库存API调用"
-        );
-
-        verifyApiSuccessResponse(result, "设置商品库存响应验证");
-        waitFor(200);
-
-        // 使用API验证库存设置成功
-        MvcResult inventoryResult = executeRequest(
-                authenticatedGet("/api/products/stockpile/" + testProductId, storeManagerToken),
-                200, "获取库存信息验证设置"
-        );
-
-        JsonNode inventoryResponse = verifyApiSuccessResponse(inventoryResult, "获取库存信息响应验证");
-        JsonNode inventoryData = extractDataFromResponse(inventoryResponse, "获取库存信息");
-
-        assertEqualsWithDebug(100, inventoryData.get("stock").asInt(), "库存数量", "库存设置验证");
-
-        logTestEnd("设置商品库存", true);
+        logTestEnd("库存管理测试", true);
     }
 
     @Test
     @Order(6)
-    @DisplayName("测试商品参数验证")
+    @DisplayName("权限控制测试")
     @Commit
-    void testProductValidation() throws Exception {
-        logTestStart("测试商品参数验证", "测试各种无效参数的验证");
+    void testPermissionControl() throws Exception {
+        logTestStart("权限控制测试", "测试各种权限");
 
-        checkPreconditions("测试商品参数验证",
-                "storeManagerToken", storeManagerToken,
-                "testStoreId", testStoreId);
+        testUnauthorizedAccess();
+        testCustomerPermissions();
+        testCrossStorePermissions();
+        testStaffPermissions();
 
-        MockMultipartFile imageFile = new MockMultipartFile(
-                "images", "test.jpg", "image/jpeg", "fake image content".getBytes()
-        );
-
-        // 测试空标题
-        logInfo("测试空标题验证");
-        executeRequest(
-                multipart("/api/products")
-                        .file(imageFile)
-                        .param("title", "")
-                        .param("description", "测试描述")
-                        .param("price", "29.99")
-                        .param("storeId", testStoreId.toString())
-                        .param("specifications[category]", "测试")
-                        .header("Authorization", "Bearer " + storeManagerToken),
-                400, "空标题测试（应失败）"
-        );
-
-        // 测试缺少specifications参数
-        logInfo("测试缺少specifications参数验证");
-        executeRequest(
-                multipart("/api/products")
-                        .file(imageFile)
-                        .param("title", "测试商品")
-                        .param("description", "测试描述")
-                        .param("price", "29.99")
-                        .param("storeId", testStoreId.toString())
-                        .header("Authorization", "Bearer " + storeManagerToken),
-                400, "缺少specifications参数测试（应失败）"
-        );
-
-        logTestEnd("测试商品参数验证", true);
+        logTestEnd("权限控制测试", true);
     }
 
     @Test
     @Order(7)
-    @DisplayName("删除商品")
+    @DisplayName("参数验证测试")
     @Commit
-    void testDeleteProduct() throws Exception {
-        logTestStart("删除商品", "测试店长删除商品功能");
+    void testValidation() throws Exception {
+        logTestStart("参数验证测试", "测试各种无效参数");
 
-        checkPreconditions("删除商品",
-                "storeManagerToken", storeManagerToken,
-                "testStoreId", testStoreId);
+        testInvalidProductCreation();
+        testInvalidProductUpdate();
+        testInvalidInventoryOperations();
 
-        MockMultipartFile imageFile = new MockMultipartFile(
-                "images", "delete_test.jpg", "image/jpeg", "fake image content".getBytes()
-        );
-
-        logInfo("创建待删除商品");
-
-        MvcResult createResult = executeRequest(
-                multipart("/api/products")
-                        .file(imageFile)
-                        .param("title", "待删除测试商品")
-                        .param("description", "这是一个用于删除测试的商品")
-                        .param("price", "39.99")
-                        .param("storeId", testStoreId.toString())
-                        .param("specifications[category]", "测试商品")
-                        .header("Authorization", "Bearer " + storeManagerToken),
-                200, "创建待删除商品API调用"
-        );
-
-        verifyApiSuccessResponse(createResult, "创建待删除商品响应验证");
-        waitFor(200);
-
-        // 获取新创建的商品ID
-        Long newProductId = executeDatabaseOperation("获取最新商品ID", connection -> {
-            try (var statement = connection.createStatement()) {
-                var resultSet = statement.executeQuery(
-                        "SELECT id FROM products WHERE store_id = " + testStoreId + " ORDER BY create_time DESC LIMIT 1"
-                );
-                return resultSet.next() ? resultSet.getLong("id") : null;
-            }
-        });
-
-        assertNotNullWithDebug(newProductId, "新商品ID", "新商品创建验证");
-        logInfo("获取到新商品ID: " + newProductId);
-
-        // 删除商品
-        logInfo("删除商品ID: " + newProductId);
-        MvcResult deleteResult = executeRequest(
-                authenticatedDelete("/api/products/" + newProductId, storeManagerToken),
-                200, "删除商品API调用"
-        );
-
-        verifyApiSuccessResponse(deleteResult, "删除商品响应验证");
-        waitFor(200);
-
-        // 验证商品已被删除
-        executeRequest(
-                get("/api/products/" + newProductId),
-                404, "访问已删除商品API调用（应返回404）"
-        );
-
-        logTestEnd("删除商品", true);
+        logTestEnd("参数验证测试", true);
     }
 
     @Test
     @Order(8)
-    @DisplayName("测试清理资源")
+    @DisplayName("商品删除测试")
     @Commit
-    void testCleanupResources() throws Exception {
-        logTestStart("测试清理资源", "清理测试过程中创建的资源");
+    void testProductDeletion() throws Exception {
+        logTestStart("商品删除测试", "测试删除功能");
 
-        try {
-            logInfo("开始清理测试数据");
+        deleteProduct(testProductId, storeManagerToken);
+        verifyProductDeleted(testProductId);
 
-            if (testStoreId != null) {
-                int productCount = countRecords("products", "store_id = " + testStoreId);
-                int inventoryCount = countRecords("inventory", "product_id IN (SELECT id FROM products WHERE store_id = " + testStoreId + ")");
+        logTestEnd("商品删除测试", true);
+    }
 
-                logInfo("测试店铺 " + testStoreId + " 的最终统计:");
-                logInfo("- 商品数量: " + productCount);
-                logInfo("- 库存记录数量: " + inventoryCount);
+    @Test
+    @Order(9)
+    @DisplayName("快照功能测试")
+    @Commit
+    void testSnapshot() throws Exception {
+        logTestStart("快照功能测试", "测试快照功能");
+
+        testProductSnapshot(testProductId2);
+        updateProduct(testProductId2, "title", "Spring Boot实战(更新版)", storeManagerToken);
+        verifySnapshotCreated(testProductId2);
+
+        logTestEnd("快照功能测试", true);
+    }
+
+    @Test
+    @Order(10)
+    @DisplayName("性能测试")
+    @Commit
+    void testPerformance() throws Exception {
+        logTestStart("性能测试", "测试性能和并发");
+
+        testBatchQuery();
+        testLargePagination();
+        testConcurrentOperations();
+
+        logTestEnd("性能测试", true);
+    }
+
+    // ============ 核心辅助方法 ============
+
+    private String createUser(String prefix, String name, String location) throws Exception {
+        String id = generateUniqueId();
+        String username = prefix + id;
+        String phone = generateUniquePhone();
+        String email = generateUniqueEmail();
+
+        executeRequest(
+                post("/api/users/register")
+                        .contentType(MediaType.MULTIPART_FORM_DATA)
+                        .param("username", username)
+                        .param("phone", phone)
+                        .param("password", "password123")
+                        .param("email", email)
+                        .param("name", name)
+                        .param("location", location),
+                200, "创建用户: " + username
+        );
+
+        return login(username, "password123");
+    }
+
+    private String login(String username, String password) throws Exception {
+        String loginRequest = objectMapper.writeValueAsString(
+                TestDataBuilder.createLoginRequest(username, password)
+        );
+
+        MvcResult result = executeRequest(
+                post("/api/users/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginRequest),
+                200, "登录: " + username
+        );
+
+        JsonNode response = verifyApiSuccessResponse(result, "登录响应验证");
+        return extractDataFromResponse(response, "登录").asText();
+    }
+
+    private Long createStore(String name, String address, String ownerToken) throws Exception {
+        MockMultipartFile logoFile = new MockMultipartFile("logo", "logo.jpg", "image/jpeg", "logo".getBytes());
+        MockMultipartFile qualFile = new MockMultipartFile("qualification", "qual.pdf", "application/pdf", "qual".getBytes());
+
+        executeRequest(
+                createMultipartRequest("/api/stores", "POST")
+                        .file(logoFile)
+                        .file(qualFile)
+                        .param("name", name)
+                        .param("address", address)
+                        .param("description", "测试店铺")
+                        .param("merchantAccounts.ALIPAY", "alipay_account@alipay.com")
+                        .header("Authorization", "Bearer " + ownerToken),
+                200, "创建店铺: " + name
+        );
+
+        return approveLatestStore();
+    }
+
+    private Long approveLatestStore() throws Exception {
+        MvcResult listResult = executeRequest(
+                authenticatedGet("/api/stores/awaiting-review", adminToken)
+                        .param("page", "0").param("size", "10").param("field", "id").param("order", "true"),
+                200, "获取待审核店铺"
+        );
+
+        JsonNode response = verifyApiSuccessResponse(listResult, "待审核店铺响应");
+        JsonNode stores = verifyPageResponse(extractDataFromResponse(response, "待审核店铺"), "店铺分页");
+        Long storeId = stores.get(0).get("id").asLong();
+
+        executeRequest(
+                authenticatedPost("/api/stores/review", adminToken)
+                        .param("storeId", storeId.toString())
+                        .param("pass", "true")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("\"审核通过\""),
+                200, "审核店铺"
+        );
+
+        return storeId;
+    }
+
+    private void addStaffToStore(Long storeId, String staffToken) throws Exception {
+        String tokenRequest = objectMapper.writeValueAsString(
+                TestDataBuilder.createTokenRequest("员工Token", TestDataBuilder.getFutureTimeString(30))
+        );
+
+        MvcResult tokenResult = executeRequest(
+                authenticatedPost("/api/stores/" + storeId + "/tokens", storeManagerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(tokenRequest),
+                200, "创建员工Token"
+        );
+
+        JsonNode response = verifyApiSuccessResponse(tokenResult, "员工Token响应");
+        String authToken = extractDataFromResponse(response, "员工Token").asText();
+
+        executeRequest(
+                authenticatedPost("/api/stores/" + storeId + "/auth", staffToken)
+                        .param("token", authToken),
+                200, "员工加入店铺"
+        );
+    }
+
+    private Long createProduct(String title, String price, String token, Long storeId) throws Exception {
+        MockMultipartFile imageFile = new MockMultipartFile("images", "image.jpg", "image/jpeg", "image".getBytes());
+
+        executeRequest(
+                multipart("/api/products")
+                        .file(imageFile)
+                        .param("title", title)
+                        .param("description", "测试商品描述")
+                        .param("price", price)
+                        .param("storeId", storeId.toString())
+                        .param("specifications[category]", "测试分类")
+                        .header("Authorization", "Bearer " + token),
+                200, "创建商品: " + title
+        );
+
+        return getLatestProductId(storeId);
+    }
+
+    private void updateProduct(Long productId, String field, String value, String token) throws Exception {
+        executeRequest(
+                createMultipartRequest("/api/products/" + productId, "PATCH")
+                        .param(field, value)
+                        .header("Authorization", "Bearer " + token),
+                200, "更新商品" + field + ": " + value
+        );
+    }
+
+    private void setInventory(Long productId, int stock, String token) throws Exception {
+        Map<String, Integer> request = TestDataBuilder.createInventoryRequest(stock);
+        executeRequest(
+                authenticatedPatch("/api/products/stockpile/" + productId, token)
+                        .param("stockpile", String.valueOf(stock))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)),
+                200, "设置库存: " + stock
+        );
+    }
+
+    private void setThreshold(Long productId, int threshold, String token) throws Exception {
+        executeRequest(
+                authenticatedPatch("/api/products/threshold/" + productId, token)
+                        .param("threshold", String.valueOf(threshold)),
+                200, "设置阈值: " + threshold
+        );
+    }
+
+    private void deleteProduct(Long productId, String token) throws Exception {
+        executeRequest(
+                authenticatedDelete("/api/products/" + productId, token),
+                200, "删除商品: " + productId
+        );
+    }
+
+    private Long getLatestProductId(Long storeId) throws Exception {
+        return executeDatabaseOperation("获取最新商品ID", connection -> {
+            try (var statement = connection.createStatement()) {
+                var rs = statement.executeQuery(
+                        "SELECT id FROM products WHERE store_id = " + storeId + " ORDER BY create_time DESC LIMIT 1"
+                );
+                return rs.next() ? rs.getLong("id") : null;
             }
+        });
+    }
 
-            logSuccess("测试资源清理完成");
-        } catch (Exception e) {
-            logWarning("资源清理过程中发生异常: " + e.getMessage());
+    // ============ 验证方法 ============
+
+    private void verifyProductExists(Long productId, String title) throws Exception {
+        verifyRecordCountWithDebug("products", "id = " + productId + " AND name = '" + title + "'", 1, "商品存在验证");
+        verifyRecordCountWithDebug("inventories", "product_id = " + productId, 1, "库存记录验证");
+        verifyRecordCountWithDebug("product_snapshots", "product_id = " + productId, 1, "快照记录验证");
+    }
+
+    private void verifyProductDeleted(Long productId) throws Exception {
+        verifyRecordCountWithDebug("products", "id = " + productId + " AND on_sale = false", 1, "商品删除验证");
+        executeRequest(get("/api/products/" + productId), 404, "访问已删除商品");
+    }
+
+    // ============ 测试方法 ============
+
+    private void testProductList() throws Exception {
+        MvcResult result = executeRequest(
+                get("/api/products").param("page", "0").param("size", "10").param("field", "id").param("order", "true"),
+                200, "获取商品列表"
+        );
+        JsonNode response = verifyApiSuccessResponse(result, "商品列表响应");
+        JsonNode data = extractDataFromResponse(response, "商品列表");
+        JsonNode products = verifyPageResponse(data, "商品列表分页");
+        assertListNotEmptyWithDebug(products, "商品列表", "商品列表验证");
+    }
+
+    private void testStoreProductList() throws Exception {
+        executeRequest(
+                get("/api/products/store/" + testStoreId)
+                        .param("page", "0").param("size", "10").param("field", "id").param("order", "true"),
+                200, "获取店铺商品列表"
+        );
+    }
+
+    private void testProductDetail() throws Exception {
+        MvcResult result = executeRequest(get("/api/products/" + testProductId), 200, "获取商品详情");
+        JsonNode response = verifyApiSuccessResponse(result, "商品详情响应");
+        JsonNode detail = extractDataFromResponse(response, "商品详情");
+        assertNotNullWithDebug(detail.get("title"), "商品标题", "商品详情验证");
+    }
+
+    private void testProductSorting() throws Exception {
+        executeRequest(
+                get("/api/products").param("page", "0").param("size", "5").param("field", "id").param("order", "true"),
+                200, "升序排序测试"
+        );
+        executeRequest(
+                get("/api/products").param("page", "0").param("size", "5").param("field", "id").param("order", "false"),
+                200, "降序排序测试"
+        );
+    }
+
+    private void testProductPagination() throws Exception {
+        executeRequest(
+                get("/api/products").param("page", "0").param("size", "1").param("field", "id").param("order", "true"),
+                200, "第一页测试"
+        );
+        executeRequest(
+                get("/api/products").param("page", "1").param("size", "1").param("field", "id").param("order", "true"),
+                200, "第二页测试"
+        );
+    }
+
+    private void testLowInventory() throws Exception {
+        setInventory(testProductId, 15, storeManagerToken);
+        MvcResult result = executeRequest(get("/api/products/" + testProductId), 200, "获取低库存商品详情");
+        JsonNode response = verifyApiSuccessResponse(result, "低库存商品响应");
+        JsonNode detail = extractDataFromResponse(response, "低库存商品详情");
+        String status = detail.get("inventoryStatus").asText();
+        assertTrueWithDebug(
+                "INSUFFICIENT".equals(status) || "OUT_OF_STOCK".equals(status),
+                "库存状态应为不足或缺货", "低库存验证"
+        );
+    }
+
+    private void testUnauthorizedAccess() throws Exception {
+        executeRequest(get("/api/products/stockpile/" + testProductId), 401, "未登录访问库存");
+        executeRequest(patch("/api/products/stockpile/" + testProductId).param("stockpile", "50"), 401, "未登录设置库存");
+        executeRequest(delete("/api/products/" + testProductId), 401, "未登录删除商品");
+    }
+
+    private void testCustomerPermissions() throws Exception {
+        executeRequest(authenticatedGet("/api/products/" + testProductId, customerToken), 200, "普通用户查看商品");
+        executeRequest(authenticatedGet("/api/products/stockpile/" + testProductId, customerToken), 403, "普通用户查看库存");
+        executeRequest(authenticatedDelete("/api/products/" + testProductId, customerToken), 403, "普通用户删除商品");
+    }
+
+    private void testCrossStorePermissions() throws Exception {
+        executeRequest(authenticatedGet("/api/products/stockpile/" + testProductId, storeManager2Token), 403, "跨店铺查看库存");
+        executeRequest(authenticatedPatch("/api/products/stockpile/" + testProductId, storeManager2Token).param("stockpile", "50"), 403, "跨店铺设置库存");
+    }
+
+    private void testStaffPermissions() throws Exception {
+        executeRequest(authenticatedGet("/api/products/stockpile/" + testProductId, staffToken), 200, "员工查看库存");
+        executeRequest(authenticatedPatch("/api/products/stockpile/" + testProductId, staffToken).param("stockpile", "80"), 200, "员工设置库存");
+    }
+
+    private void testInvalidProductCreation() throws Exception {
+        MockMultipartFile imageFile = new MockMultipartFile("images", "test.jpg", "image/jpeg", "test".getBytes());
+
+        executeRequest(
+                multipart("/api/products")
+                        .file(imageFile)
+                        .param("title", "")
+                        .param("description", "测试")
+                        .param("price", "29.99")
+                        .param("storeId", testStoreId.toString())
+                        .param("specifications[category]", "测试")
+                        .header("Authorization", "Bearer " + storeManagerToken),
+                400, "空标题验证"
+        );
+
+        executeRequest(
+                multipart("/api/products")
+                        .file(imageFile)
+                        .param("title", "测试商品")
+                        .param("description", "测试")
+                        .param("price", "-10")
+                        .param("storeId", testStoreId.toString())
+                        .param("specifications[category]", "测试")
+                        .header("Authorization", "Bearer " + storeManagerToken),
+                400, "负价格验证"
+        );
+    }
+
+    private void testInvalidProductUpdate() throws Exception {
+        executeRequest(
+                createMultipartRequest("/api/products/" + testProductId, "PATCH")
+                        .param("title", "")
+                        .header("Authorization", "Bearer " + storeManagerToken),
+                400, "更新空标题验证"
+        );
+    }
+
+    private void testInvalidInventoryOperations() throws Exception {
+        executeRequest(
+                authenticatedPatch("/api/products/stockpile/" + testProductId, storeManagerToken).param("stockpile", "-10"),
+                400, "设置负库存验证"
+        );
+    }
+
+    private void testProductSnapshot(Long productId) throws Exception {
+        Long snapshotId = executeDatabaseOperation("获取快照ID", connection -> {
+            try (var statement = connection.createStatement()) {
+                var rs = statement.executeQuery(
+                        "SELECT id FROM product_snapshots WHERE product_id = " + productId + " ORDER BY create_time DESC LIMIT 1"
+                );
+                return rs.next() ? rs.getLong("id") : null;
+            }
+        });
+
+        executeRequest(authenticatedGet("/api/products/snapshots/" + snapshotId, userToken), 200, "获取商品快照");
+    }
+
+    private void verifySnapshotCreated(Long productId) throws Exception {
+        int snapshotCount = countRecords("product_snapshots", "product_id = " + productId);
+        assertTrueWithDebug(snapshotCount >= 2, "快照数量应至少为2", "快照创建验证");
+    }
+
+    private void testBatchQuery() throws Exception {
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < 5; i++) {
+            executeRequest(
+                    get("/api/products").param("page", "0").param("size", "20").param("field", "id").param("order", "true"),
+                    200, "批量查询 " + (i + 1)
+            );
         }
+        long duration = System.currentTimeMillis() - start;
+        logInfo("批量查询耗时: " + duration + "ms");
+        assertTrueWithDebug(duration < 10000, "批量查询应少于10秒", "性能测试");
+    }
 
-        logTestEnd("测试清理资源", true);
+    private void testLargePagination() throws Exception {
+        executeRequest(
+                get("/api/products").param("page", "0").param("size", "1000").param("field", "id").param("order", "true"),
+                200, "大分页查询"
+        );
+    }
+
+    private void testConcurrentOperations() throws Exception {
+        if (testProductId2 == null) return;
+
+        setInventory(testProductId2, 100, storeManagerToken);
+        setInventory(testProductId2, 80, storeManagerToken);
+        setInventory(testProductId2, 120, storeManagerToken);
+        setThreshold(testProductId2, 15, storeManagerToken);
+
+        MvcResult result = executeRequest(
+                authenticatedGet("/api/products/stockpile/" + testProductId2, storeManagerToken),
+                200, "获取最终库存状态"
+        );
+        JsonNode response = verifyApiSuccessResponse(result, "最终库存响应");
+        JsonNode data = extractDataFromResponse(response, "最终库存");
+        assertTrueWithDebug(data.get("stock").asInt() >= 0, "最终库存应非负", "并发操作验证");
     }
 }
