@@ -140,23 +140,18 @@ public class ProductServiceImpl implements ProductService {
         validatePermission(product.getStore().getId());
 
         product.setOnSale(false);
-        product.setDescription(null);
-        product.setSpecifications(null);
-        product.setRating(null);
         product.setInventory(null);
 
         productRepository.save(product);
     }
 
     @Override
-    @Transactional(readOnly = true)
     public ProductDetailResponse getProductDetail(int productId) {
         return new ProductDetailResponse(productRepository.findByIdAndOnSaleIsTrue(productId)
                 .orElseThrow(TomatoMallException::productNotFound));
     }
 
     @Override
-    @Transactional(readOnly = true)
     public ProductSnapshotResponse getSnapshot(int snapshotId) {
         return new ProductSnapshotResponse(productSnapshotRepository.findById(snapshotId));
     }
