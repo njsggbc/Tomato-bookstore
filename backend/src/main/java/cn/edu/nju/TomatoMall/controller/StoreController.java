@@ -77,11 +77,6 @@ public class StoreController {
             @RequestParam List<MultipartFile> qualification,
             @RequestParam Map<String, String> allParams) {
 
-        System.out.println("=== 所有参数 ===");
-        allParams.forEach((key, value) -> {
-            System.out.println(key + " = " + value);
-        });
-
         // 手动过滤和转换merchantAccounts
         Map<PaymentMethod, String> merchantAccounts = allParams.entrySet().stream()
                 .filter(entry -> entry.getKey().startsWith("merchantAccounts."))
@@ -139,15 +134,6 @@ public class StoreController {
                 }
             }
         }
-
-        System.out.println("=== 更新商店调试信息 ===");
-        System.out.println("storeId: " + storeId);
-        System.out.println("name: " + name);
-        System.out.println("address: " + address);
-        System.out.println("description: " + description);
-        System.out.println("logo: " + (logo != null ? logo.getOriginalFilename() : "null"));
-        System.out.println("qualification: " + (qualification != null ? qualification.size() : "null"));
-        System.out.println("merchantAccounts: " + merchantAccounts);
 
         storeService.updateStore(storeId, name, description, logo, address, qualification, merchantAccounts);
         return ApiResponse.success();
@@ -209,7 +195,7 @@ public class StoreController {
     @DeleteMapping("/{storeId}/staff/{userId}")
     public ApiResponse<Void> dismissEmployee(@PathVariable int storeId,
                                              @PathVariable int userId,
-                                             @RequestBody String reason) {
+                                             @RequestParam String reason) {
         employmentService.dismiss(storeId, userId, reason);
         return ApiResponse.success();
     }
@@ -219,7 +205,7 @@ public class StoreController {
      */
     @DeleteMapping("/{storeId}/resign")
     public ApiResponse<Void> resign(@PathVariable int storeId,
-                                    @RequestBody String reason) {
+                                    @RequestParam String reason) {
         employmentService.resign(storeId, reason);
         return ApiResponse.success();
     }
