@@ -65,7 +65,7 @@ public class Payment {
             @Override
             public Payment build() {
                 Payment payment = super.build();
-                if (payment.getOrders() != null) {
+                if (payment.getOrders() != null && !payment.getOrders().isEmpty()) {
                     payment.getOrders().forEach(order -> order.setPayment(payment));
                     payment.setAmount(
                             payment.getOrders().stream()

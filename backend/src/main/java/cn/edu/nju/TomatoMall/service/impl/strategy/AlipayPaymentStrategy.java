@@ -373,7 +373,8 @@ public class AlipayPaymentStrategy implements PaymentStrategy {
         JSONObject content = new JSONObject();
         content.put("out_trade_no", payment.getPaymentNo());
         content.put("total_amount", payment.getAmount().setScale(2, RoundingMode.HALF_UP).toString());
-        content.put("subject", truncateSubject(payment.getOrders()));
+        content.put("subject", payment.getOrders() != null && !payment.getOrders().isEmpty()
+                ? truncateSubject(payment.getOrders()) : payment.getEntityType());
         content.put("product_code", "FAST_INSTANT_TRADE_PAY");
         content.put("timeout_express", PAYMENT_TIMEOUT + "m");
 
