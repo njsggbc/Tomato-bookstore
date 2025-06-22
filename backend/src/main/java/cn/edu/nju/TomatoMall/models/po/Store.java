@@ -42,7 +42,8 @@ public class Store {
     @Column(nullable = false)
     private StoreStatus status;
 
-    private BigDecimal rating;
+    @Builder.Default
+    private BigDecimal rating = BigDecimal.ZERO;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "manager_id", nullable = false)

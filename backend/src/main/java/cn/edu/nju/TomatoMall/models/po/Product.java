@@ -37,7 +37,9 @@ public class Product {
     @Builder.Default
     private Map<String, String> specifications  = new HashMap<>();
 
-    private BigDecimal rating;
+    @Column(nullable = false)
+    @Builder.Default
+    private BigDecimal rating = BigDecimal.ZERO;
 
     @Column(nullable = false)
     @Builder.Default
