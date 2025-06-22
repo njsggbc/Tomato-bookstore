@@ -61,7 +61,6 @@ public class StoreServiceImpl implements StoreService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<StoreInfoResponse> getManagedStoreList() {
         return storeRepository.findByManagerId(securityUtil.getCurrentUser().getId()).stream()
                 .map(StoreInfoResponse::new)
@@ -69,7 +68,6 @@ public class StoreServiceImpl implements StoreService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<StoreInfoResponse> getWorkedStoreList() {
         return employmentRepository.getStoreByEmployeeId(securityUtil.getCurrentUser().getId()).stream()
                 .map(StoreInfoResponse::new)
@@ -77,7 +75,6 @@ public class StoreServiceImpl implements StoreService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public StoreInfoResponse getInfo(int storeId) {
         Store store = storeRepository.findById(storeId).orElseThrow(TomatoMallException::storeNotFound);
         if (store.getStatus().equals(StoreStatus.DELETED)
