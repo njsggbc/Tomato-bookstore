@@ -6,8 +6,10 @@ import cn.edu.nju.TomatoMall.models.vo.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.validation.Valid;
+import java.util.List;
 
 /**
  * product
@@ -52,7 +54,9 @@ public class ProductController {
      * 创建新商品
      */
     @PostMapping(consumes = "multipart/form-data")
-    public ApiResponse<Void> createProduct(@Valid @ModelAttribute ProductCreateRequest params) {
+    public ApiResponse<Void> createProduct(
+            @Valid @ModelAttribute ProductCreateRequest params
+    ) {
         productService.createProduct(
                 params.getStoreId(),
                 params.getTitle(),
@@ -75,7 +79,10 @@ public class ProductController {
      * 更新商品信息
      */
     @PatchMapping(path = "/{productId}", consumes = "multipart/form-data")
-    public ApiResponse<Void> updateProduct(@PathVariable int productId, @Valid @ModelAttribute ProductUpdateRequest params) {
+    public ApiResponse<Void> updateProduct(
+            @PathVariable int productId,
+            @Valid @ModelAttribute ProductUpdateRequest params
+    ) {
         productService.updateProduct(
                 productId,
                 params.getTitle(),

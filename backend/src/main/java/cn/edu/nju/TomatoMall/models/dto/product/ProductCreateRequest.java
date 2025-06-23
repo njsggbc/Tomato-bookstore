@@ -1,5 +1,6 @@
 package cn.edu.nju.TomatoMall.models.dto.product;
 
+import cn.edu.nju.TomatoMall.util.JsonMapConverter;
 import lombok.Data;
 import lombok.NonNull;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,5 +27,9 @@ public class ProductCreateRequest {
     private Integer storeId;
     @NotNull
     @Size(min = 1)
-    private Map<String, String> specifications;
+    private String specifications; // 序列化JSON字符串
+
+    public Map<String, String> getSpecifications() {
+        return JsonMapConverter.jsonToStringMap(specifications);
+    }
 }

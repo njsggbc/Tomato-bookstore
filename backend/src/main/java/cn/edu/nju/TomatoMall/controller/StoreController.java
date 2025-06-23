@@ -4,7 +4,9 @@ import cn.edu.nju.TomatoMall.enums.PaymentMethod;
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
 import cn.edu.nju.TomatoMall.models.dto.employment.TokenGenerateRequest;
 import cn.edu.nju.TomatoMall.models.dto.employment.TokenInfoResponse;
+import cn.edu.nju.TomatoMall.models.dto.store.StoreCreateRequest;
 import cn.edu.nju.TomatoMall.models.dto.store.StoreInfoResponse;
+import cn.edu.nju.TomatoMall.models.dto.store.StoreUpdateRequest;
 import cn.edu.nju.TomatoMall.models.dto.user.UserBriefResponse;
 import cn.edu.nju.TomatoMall.service.EmploymentService;
 import cn.edu.nju.TomatoMall.service.StoreService;
@@ -70,25 +72,16 @@ public class StoreController {
      */
     @PostMapping(consumes = "multipart/form-data")
     public ApiResponse<Void> createStore(
-            @RequestParam String name,
-            @RequestParam String address,
-            @RequestParam String description,
-            @RequestParam MultipartFile logo,
-            @RequestParam List<MultipartFile> qualification,
-            @RequestParam Map<String, String> allParams) {
-
-        // 手动过滤和转换merchantAccounts
-        Map<PaymentMethod, String> merchantAccounts = allParams.entrySet().stream()
-                .filter(entry -> entry.getKey().startsWith("merchantAccounts."))
-                .collect(Collectors.toMap(
-                        entry -> {
-                            String methodStr = entry.getKey().substring("merchantAccounts.".length());
-                            return PaymentMethod.valueOf(methodStr);
-                        },
-                        Map.Entry::getValue
-                ));
-
-        storeService.createStore(name, description, logo, address, qualification, merchantAccounts);
+            @Valid @ModelAttribute StoreCreateRequest params
+    ) {
+        storeService.createStore(
+                params.getName(),
+                params.getDescription(),
+                params.getLogo(),
+                params.getAddress(),
+                params.getQualifications(),
+                params.getMerchantAccounts()
+        );
         return ApiResponse.success();
     }
 
@@ -106,36 +99,17 @@ public class StoreController {
     @PatchMapping(path = "/{storeId}", consumes = "multipart/form-data")
     public ApiResponse<Void> updateStore(
             @PathVariable int storeId,
-            @RequestParam(required = false) String name,
-            @RequestParam(required = false) String address,
-            @RequestParam(required = false) String description,
-            @RequestParam(required = false) MultipartFile logo,
-            @RequestParam(required = false) List<MultipartFile> qualification,
-            @RequestParam Map<String, String> allParams) {
-
-        // 手动过滤和转换merchantAccounts（可能为空）
-        Map<PaymentMethod, String> merchantAccounts = null;
-
-        Map<String, String> merchantAccountsStr = allParams.entrySet().stream()
-                .filter(entry -> entry.getKey().startsWith("merchantAccounts."))
-                .collect(Collectors.toMap(
-                        entry -> entry.getKey().substring("merchantAccounts.".length()),
-                        Map.Entry::getValue
-                ));
-
-        if (!merchantAccountsStr.isEmpty()) {
-            merchantAccounts = new HashMap<>();
-            for (Map.Entry<String, String> entry : merchantAccountsStr.entrySet()) {
-                try {
-                    PaymentMethod method = PaymentMethod.valueOf(entry.getKey());
-                    merchantAccounts.put(method, entry.getValue());
-                } catch (IllegalArgumentException e) {
-                    throw TomatoMallException.invalidParameter("无效的支付方式: " + entry.getKey());
-                }
-            }
-        }
-
-        storeService.updateStore(storeId, name, description, logo, address, qualification, merchantAccounts);
+            @Valid @ModelAttribute StoreUpdateRequest params
+            ) {
+        storeService.updateStore(
+                storeId,
+                params.getName(),
+                params.getDescription(),
+                params.getLogo(),
+                params.getAddress(),
+                params.getQualifications(),
+                params.getMerchantAccounts()
+        );
         return ApiResponse.success();
     }
     /**

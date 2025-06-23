@@ -1,5 +1,6 @@
 package cn.edu.nju.TomatoMall.models.dto.product;
 
+import cn.edu.nju.TomatoMall.util.JsonMapConverter;
 import lombok.Data;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -13,5 +14,9 @@ public class ProductUpdateRequest {
     private String description;
     private List<MultipartFile> images;
     private BigDecimal price;
-    private Map<String, String> specifications;
+    private String specifications; // 序列化JSON字符串
+
+    public Map<String, String> getSpecifications() {
+        return JsonMapConverter.jsonToStringMap(specifications);
+    }
 }
