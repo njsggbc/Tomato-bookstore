@@ -2,7 +2,6 @@ package cn.edu.nju.TomatoMall.models.dto.product;
 
 import cn.edu.nju.TomatoMall.util.JsonMapConverter;
 import lombok.Data;
-import lombok.NonNull;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.validation.constraints.NotBlank;

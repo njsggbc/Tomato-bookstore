@@ -1,7 +1,6 @@
 package cn.edu.nju.TomatoMall.controller;
 
 import cn.edu.nju.TomatoMall.enums.PaymentMethod;
-import cn.edu.nju.TomatoMall.exception.TomatoMallException;
 import cn.edu.nju.TomatoMall.models.dto.employment.TokenGenerateRequest;
 import cn.edu.nju.TomatoMall.models.dto.employment.TokenInfoResponse;
 import cn.edu.nju.TomatoMall.models.dto.store.StoreCreateRequest;
@@ -14,13 +13,10 @@ import cn.edu.nju.TomatoMall.models.vo.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import javax.validation.Valid;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * store
