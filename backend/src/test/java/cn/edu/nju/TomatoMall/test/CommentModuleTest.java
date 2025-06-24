@@ -56,7 +56,7 @@ public class CommentModuleTest extends BaseIntegrationTest {
                 "logo", "logo.jpg", "image/jpeg", "fake logo content".getBytes()
         );
         MockMultipartFile qualificationFile = new MockMultipartFile(
-                "qualification", "qualification.pdf", "application/pdf", "fake qualification content".getBytes()
+                "qualifications", "qualification.pdf", "application/pdf", "fake qualification content".getBytes()
         );
 
         logInfo("创建测试店铺: " + storeData.get("name"));
@@ -68,7 +68,7 @@ public class CommentModuleTest extends BaseIntegrationTest {
                         .param("name", storeData.get("name"))
                         .param("address", storeData.get("address"))
                         .param("description", storeData.get("description"))
-                        .param("merchantAccounts.ALIPAY", "comment@bookstore.com")
+                        .param("merchantAccounts", "{\"ALIPAY\":\"comment@bookstore.com\"}")
                         .header("Authorization", "Bearer " + userToken),
                 200, "创建测试店铺"
         );
@@ -121,10 +121,12 @@ public class CommentModuleTest extends BaseIntegrationTest {
                         .param("description", "Java编程的经典教材，适合评论测试")
                         .param("price", "128.00")
                         .param("storeId", testStoreId.toString())
-                        .param("specifications[author]", "Cay S. Horstmann")
-                        .param("specifications[publisher]", "机械工业出版社")
-                        .param("specifications[isbn]", "978-7-111-21382-7")
-                        .param("specifications[pages]", "1200")
+                        .param("specifications", objectMapper.writeValueAsString(new HashMap<String, String>() {{
+                            put("author", "Cay S. Horstmann");
+                            put("publisher", "机械工业出版社");
+                            put("isbn", "978-7-111-21382-7");
+                            put("pages", "1200");
+                        }}))
                         .header("Authorization", "Bearer " + storeManagerToken),
                 200, "创建测试商品"
         );

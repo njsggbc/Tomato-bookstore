@@ -899,7 +899,7 @@ public class ShoppingModuleTest extends BaseIntegrationTest {
                 "logo", "logo.jpg", "image/jpeg", "fake logo content".getBytes()
         );
         MockMultipartFile qualificationFile = new MockMultipartFile(
-                "qualification", "qualification.pdf", "application/pdf", "fake qualification content".getBytes()
+                "qualifications", "qualification.pdf", "application/pdf", "fake qualification content".getBytes()
         );
 
         MvcResult createResult = executeRequest(
@@ -909,7 +909,7 @@ public class ShoppingModuleTest extends BaseIntegrationTest {
                         .param("name", name)
                         .param("address", address)
                         .param("description", description)
-                        .param("merchantAccounts.ALIPAY", "test_merchant@alipay.com")
+                        .param("merchantAccounts", "{\"ALIPAY\":\"test_shopping@alipay.com\"}")
                         .header("Authorization", "Bearer " + userToken),
                 200, "创建测试店铺"
         );
@@ -960,10 +960,14 @@ public class ShoppingModuleTest extends BaseIntegrationTest {
                         .param("description", "详细介绍Spring Boot框架的实战教程")
                         .param("price", PRODUCT_PRICE.toString())
                         .param("storeId", testStoreId.toString())
-                        .param("specifications[author]", "Spring专家")
-                        .param("specifications[publisher]", "技术出版社")
-                        .param("specifications[isbn]", "978-7-111-12345-6")
-                        .param("specifications[pages]", "500")
+                        .param("specifications", objectMapper.writeValueAsString(
+                                new HashMap<String, String>() {{
+                                    put("author", "Spring专家");
+                                    put("publisher", "技术出版社");
+                                    put("isbn", "978-7-111-12345-6");
+                                    put("pages", "500");
+                                }}
+                        ))
                         .header("Authorization", "Bearer " + storeManagerToken),
                 200, "创建测试商品"
         );

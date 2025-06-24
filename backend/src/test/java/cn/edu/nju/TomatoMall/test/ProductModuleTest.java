@@ -8,6 +8,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.annotation.Commit;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -223,7 +224,7 @@ public class ProductModuleTest extends BaseIntegrationTest {
 
     private Long createStore(String name, String address, String ownerToken) throws Exception {
         MockMultipartFile logoFile = new MockMultipartFile("logo", "logo.jpg", "image/jpeg", "logo".getBytes());
-        MockMultipartFile qualFile = new MockMultipartFile("qualification", "qual.pdf", "application/pdf", "qual".getBytes());
+        MockMultipartFile qualFile = new MockMultipartFile("qualifications", "qual.pdf", "application/pdf", "qual".getBytes());
 
         executeRequest(
                 createMultipartRequest("/api/stores", "POST")
@@ -232,7 +233,7 @@ public class ProductModuleTest extends BaseIntegrationTest {
                         .param("name", name)
                         .param("address", address)
                         .param("description", "测试店铺")
-                        .param("merchantAccounts.ALIPAY", "alipay_account@alipay.com")
+                        .param("merchantAccounts", "{\"ALIPAY\":\"test_product@alipay.com\"}")
                         .header("Authorization", "Bearer " + ownerToken),
                 200, "创建店铺: " + name
         );
@@ -295,7 +296,9 @@ public class ProductModuleTest extends BaseIntegrationTest {
                         .param("description", "测试商品描述")
                         .param("price", price)
                         .param("storeId", storeId.toString())
-                        .param("specifications[category]", "测试分类")
+                        .param("specifications", objectMapper.writeValueAsString(new HashMap<String, String>() {{
+                            put("category", "测试分类");
+                        }}))
                         .header("Authorization", "Bearer " + token),
                 200, "创建商品: " + title
         );

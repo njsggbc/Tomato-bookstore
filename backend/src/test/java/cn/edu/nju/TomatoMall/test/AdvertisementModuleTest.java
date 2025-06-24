@@ -967,7 +967,7 @@ public class AdvertisementModuleTest extends BaseIntegrationTest {
                 "logo", "logo.jpg", "image/jpeg", "fake logo content".getBytes()
         );
         MockMultipartFile qualificationFile = new MockMultipartFile(
-                "qualification", "qualification.pdf", "application/pdf", "fake qualification content".getBytes()
+                "qualifications", "qualification.pdf", "application/pdf", "fake qualification content".getBytes()
         );
 
         MvcResult createResult = executeRequest(
@@ -977,7 +977,7 @@ public class AdvertisementModuleTest extends BaseIntegrationTest {
                         .param("name", name)
                         .param("address", address)
                         .param("description", description)
-                        .param("merchantAccounts.ALIPAY", "test_merchant@alipay.com")
+                        .param("merchantAccounts", "{\"ALIPAY\":\"test_merchant@alipay.com\"}")
                         .header("Authorization", "Bearer " + userToken),
                 200, "创建测试店铺"
         );

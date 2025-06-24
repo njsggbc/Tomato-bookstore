@@ -47,7 +47,7 @@ public class StoreModuleTest extends BaseIntegrationTest {
                 "logo", "logo.jpg", "image/jpeg", "fake logo content".getBytes()
         );
         MockMultipartFile qualificationFile = new MockMultipartFile(
-                "qualification", "qualification.pdf", "application/pdf", "fake qualification content".getBytes()
+                "qualifications", "qualification.pdf", "application/pdf", "fake qualification content".getBytes()
         );
 
         // 执行创建店铺请求
@@ -58,7 +58,7 @@ public class StoreModuleTest extends BaseIntegrationTest {
                         .param("name", storeData.get("name"))
                         .param("address", storeData.get("address"))
                         .param("description", storeData.get("description"))
-                        .param("merchantAccounts.ALIPAY", "alipay_account@alipay.com")
+                        .param("merchantAccounts", "{\"ALIPAY\":\"test@alipay.com\"}")
                         .header("Authorization", "Bearer " + userToken),
                 200, "创建商店API调用"
         );
@@ -584,7 +584,7 @@ public class StoreModuleTest extends BaseIntegrationTest {
         MvcResult result = executeRequest(
                 authenticatedDelete("/api/stores/" + testStoreId + "/resign", employeeToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("\"个人原因，申请辞职\""),
+                        .param("reason","\"个人原因，申请辞职\""),
                 200, "员工主动辞职API调用"
         );
 
@@ -657,7 +657,7 @@ public class StoreModuleTest extends BaseIntegrationTest {
         MvcResult fireResult = executeRequest(
                 authenticatedDelete("/api/stores/" + testStoreId + "/staff/" + employeeUserId, storeManagerToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("\"工作表现不佳，予以解雇\""),
+                        .param("reason", "\"工作表现不佳，予以解雇\""),
                 200, "店长解雇员工API调用"
         );
 
@@ -821,7 +821,7 @@ public class StoreModuleTest extends BaseIntegrationTest {
                 "logo", "logo.jpg", "image/jpeg", "fake logo content".getBytes()
         );
         MockMultipartFile qualificationFile = new MockMultipartFile(
-                "qualification", "qualification.pdf", "application/pdf", "fake qualification content".getBytes()
+                "qualifications", "qualification.pdf", "application/pdf", "fake qualification content".getBytes()
         );
 
         executeRequest(
@@ -831,7 +831,7 @@ public class StoreModuleTest extends BaseIntegrationTest {
                         .param("name", storeData.get("name"))
                         .param("address", storeData.get("address"))
                         .param("description", storeData.get("description"))
-                        .param("merchantAccounts.ALIPAY", "test_alipay@alipay.com")
+                        .param("merchantAccounts", "{\"ALIPAY\":\"test@alipay.com\"}")
                         .header("Authorization", "Bearer " + userToken),
                 200, "创建待拒绝店铺API调用"
         );
@@ -902,7 +902,7 @@ public class StoreModuleTest extends BaseIntegrationTest {
         executeRequest(
                 authenticatedDelete("/api/stores/" + testStoreId + "/staff/" + employeeUserId, employeeToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("\"test\""),
+                        .param("reason", "\"test\""),
                 403, "员工尝试解雇员工（应被拒绝）"
         );
 
@@ -923,7 +923,7 @@ public class StoreModuleTest extends BaseIntegrationTest {
                 "logo", "logo.jpg", "image/jpeg", "fake logo content".getBytes()
         );
         MockMultipartFile qualificationFile = new MockMultipartFile(
-                "qualification", "qualification.pdf", "application/pdf", "fake qualification content".getBytes()
+                "qualifications", "qualification.pdf", "application/pdf", "fake qualification content".getBytes()
         );
 
         // 测试超长店铺名称应该失败
@@ -935,7 +935,7 @@ public class StoreModuleTest extends BaseIntegrationTest {
                         .param("name", longName)
                         .param("address", "Test Address")
                         .param("description", "Test Description")
-                        .param("merchantAccounts.ALIPAY", "test_alipay@alipay.com")
+                        .param("merchantAccounts", "{\"ALIPAY\":\"test@alipay.com\"}")
                         .header("Authorization", "Bearer " + userToken),
                 400, "超长店铺名称测试（应失败）"
         );
@@ -948,7 +948,7 @@ public class StoreModuleTest extends BaseIntegrationTest {
                         .param("name", "")
                         .param("address", "Test Address")
                         .param("description", "Test Description")
-                        .param("merchantAccounts.ALIPAY", "test_alipay@alipay.com")
+                        .param("merchantAccounts", "{\"ALIPAY\":\"test@alipay.com\"}")
                         .header("Authorization", "Bearer " + userToken),
                 400, "空店铺名称测试（应失败）"
         );
@@ -986,7 +986,7 @@ public class StoreModuleTest extends BaseIntegrationTest {
                 "logo", "logo.jpg", "image/jpeg", "fake logo content".getBytes()
         );
         MockMultipartFile qualificationFile = new MockMultipartFile(
-                "qualification", "qualification.pdf", "application/pdf", "fake qualification content".getBytes()
+                "qualifications", "qualification.pdf", "application/pdf", "fake qualification content".getBytes()
         );
 
         executeRequest(
@@ -996,7 +996,7 @@ public class StoreModuleTest extends BaseIntegrationTest {
                         .param("name", storeData.get("name"))
                         .param("address", storeData.get("address"))
                         .param("description", storeData.get("description"))
-                        .param("merchantAccounts.ALIPAY", "test_alipay@alipay.com")
+                        .param("merchantAccounts", "{\"ALIPAY\":\"test@alipay.com\"}")
                         .header("Authorization", "Bearer " + userToken),
                 200, "创建第一个店铺"
         );
@@ -1011,7 +1011,7 @@ public class StoreModuleTest extends BaseIntegrationTest {
                         .param("name", storeData.get("name"))
                         .param("address", "地址2")
                         .param("description", "描述2")
-                        .param("merchantAccounts.ALIPAY", "test_alipay@alipay.com")
+                        .param("merchantAccounts", "{\"ALIPAY\":\"test@alipay.com\"}")
                         .header("Authorization", "Bearer " + userToken),
                 409, "创建重复名称店铺（应失败）"
         );
@@ -1159,7 +1159,7 @@ public class StoreModuleTest extends BaseIntegrationTest {
                 "logo", "logo.jpg", "image/jpeg", "fake logo content".getBytes()
         );
         MockMultipartFile qualificationFile = new MockMultipartFile(
-                "qualification", "qualification.pdf", "application/pdf", "fake qualification content".getBytes()
+                "qualifications", "qualification.pdf", "application/pdf", "fake qualification content".getBytes()
         );
 
         executeRequest(
@@ -1169,7 +1169,7 @@ public class StoreModuleTest extends BaseIntegrationTest {
                         .param("name", storeData.get("name"))
                         .param("address", storeData.get("address"))
                         .param("description", storeData.get("description"))
-                        .param("merchantAccounts.ALIPAY", "test_alipay@alipay.com")
+                        .param("merchantAccounts", "{\"ALIPAY\":\"test@alipay.com\"}")
                         .header("Authorization", "Bearer " + userToken),
                 200, "创建权限测试店铺"
         );
