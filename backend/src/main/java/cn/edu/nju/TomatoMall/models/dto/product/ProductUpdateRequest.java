@@ -17,6 +17,9 @@ public class ProductUpdateRequest {
     private String specifications; // 序列化JSON字符串
 
     public Map<String, String> getSpecifications() {
+        if (specifications == null || specifications.isEmpty()) {
+            return null;
+        }
         return JsonMapConverter.jsonToStringMap(specifications);
     }
 }

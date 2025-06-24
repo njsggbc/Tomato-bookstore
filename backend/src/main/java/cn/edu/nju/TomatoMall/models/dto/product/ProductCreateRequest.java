@@ -24,8 +24,7 @@ public class ProductCreateRequest {
     private BigDecimal price;
     @NotNull
     private Integer storeId;
-    @NotNull
-    @Size(min = 1)
+    @NotBlank
     private String specifications; // 序列化JSON字符串
 
     public Map<String, String> getSpecifications() {
