@@ -1,6 +1,9 @@
 package cn.edu.nju.TomatoMall.service;
 
-import cn.edu.nju.TomatoMall.models.dto.product.*;
+import cn.edu.nju.TomatoMall.models.dto.product.ProductBriefResponse;
+import cn.edu.nju.TomatoMall.models.dto.product.ProductDetailResponse;
+import cn.edu.nju.TomatoMall.models.dto.product.ProductInventoryResponse;
+import cn.edu.nju.TomatoMall.models.dto.product.ProductSnapshotResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.web.multipart.MultipartFile;
 

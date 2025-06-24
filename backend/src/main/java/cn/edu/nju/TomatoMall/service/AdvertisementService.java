@@ -1,8 +1,10 @@
 package cn.edu.nju.TomatoMall.service;
 
 import cn.edu.nju.TomatoMall.enums.AdSpaceType;
-import cn.edu.nju.TomatoMall.enums.PaymentMethod;
-import cn.edu.nju.TomatoMall.models.dto.advertisement.*;
+import cn.edu.nju.TomatoMall.models.dto.advertisement.AdInfoResponse;
+import cn.edu.nju.TomatoMall.models.dto.advertisement.AdPlacementInfoResponse;
+import cn.edu.nju.TomatoMall.models.dto.advertisement.AdSlotInfoResponse;
+import cn.edu.nju.TomatoMall.models.dto.advertisement.AdSpaceInfoResponse;
 import cn.edu.nju.TomatoMall.models.dto.payment.PaymentInfoResponse;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;

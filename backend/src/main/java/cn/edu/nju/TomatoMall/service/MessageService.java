@@ -4,7 +4,7 @@ import cn.edu.nju.TomatoMall.enums.EntityType;
 import cn.edu.nju.TomatoMall.enums.MessagePriority;
 import cn.edu.nju.TomatoMall.enums.MessageStatus;
 import cn.edu.nju.TomatoMall.enums.MessageType;
-import cn.edu.nju.TomatoMall.models.dto.message.*;
+import cn.edu.nju.TomatoMall.models.dto.message.MessageResponse;
 import cn.edu.nju.TomatoMall.models.po.Store;
 import cn.edu.nju.TomatoMall.models.po.User;
 import org.springframework.data.domain.Page;

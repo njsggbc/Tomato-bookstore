@@ -1,9 +1,9 @@
 package cn.edu.nju.TomatoMall.util;
 
+import cn.edu.nju.TomatoMall.exception.TomatoMallException;
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;
 import com.aliyun.oss.model.PutObjectRequest;
-import cn.edu.nju.TomatoMall.exception.TomatoMallException;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;

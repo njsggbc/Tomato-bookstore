@@ -2,7 +2,7 @@ package cn.edu.nju.TomatoMall.models.dto.comment;
 
 import lombok.Data;
 
-import javax.validation.constraints.*;
+import javax.validation.constraints.NotBlank;
 
 @Data
 public class CommentCreateRequest {

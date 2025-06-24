@@ -3,8 +3,8 @@ package cn.edu.nju.TomatoMall.test;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.*;
 import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.annotation.Commit;
+import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.Map;
 

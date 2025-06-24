@@ -1,7 +1,6 @@
 package cn.edu.nju.TomatoMall.repository;
 
 import cn.edu.nju.TomatoMall.models.po.Advertisement;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

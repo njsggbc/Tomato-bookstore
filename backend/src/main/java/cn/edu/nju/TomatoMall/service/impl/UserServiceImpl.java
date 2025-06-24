@@ -2,7 +2,8 @@ package cn.edu.nju.TomatoMall.service.impl;
 
 import cn.edu.nju.TomatoMall.enums.Role;
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
-import cn.edu.nju.TomatoMall.models.dto.user.*;
+import cn.edu.nju.TomatoMall.models.dto.user.UserBriefResponse;
+import cn.edu.nju.TomatoMall.models.dto.user.UserDetailResponse;
 import cn.edu.nju.TomatoMall.models.po.User;
 import cn.edu.nju.TomatoMall.repository.UserRepository;
 import cn.edu.nju.TomatoMall.service.UserService;
@@ -12,8 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.Map;
 
 @Service
 public class UserServiceImpl implements UserService {

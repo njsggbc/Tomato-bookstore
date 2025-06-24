@@ -1,7 +1,9 @@
 package cn.edu.nju.TomatoMall.controller;
 
 import cn.edu.nju.TomatoMall.enums.EntityType;
-import cn.edu.nju.TomatoMall.models.dto.comment.*;
+import cn.edu.nju.TomatoMall.models.dto.comment.CommentCreateRequest;
+import cn.edu.nju.TomatoMall.models.dto.comment.CommentResponse;
+import cn.edu.nju.TomatoMall.models.dto.comment.CommentUpdateRequest;
 import cn.edu.nju.TomatoMall.models.vo.ApiResponse;
 import cn.edu.nju.TomatoMall.service.CommentService;
 import org.springframework.beans.factory.annotation.Autowired;

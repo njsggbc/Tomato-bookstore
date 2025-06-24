@@ -1,7 +1,7 @@
 package cn.edu.nju.TomatoMall.service.impl;
 
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
-import cn.edu.nju.TomatoMall.models.dto.employment.*;
+import cn.edu.nju.TomatoMall.models.dto.employment.TokenInfoResponse;
 import cn.edu.nju.TomatoMall.models.dto.user.UserBriefResponse;
 import cn.edu.nju.TomatoMall.models.po.Employment;
 import cn.edu.nju.TomatoMall.models.po.EmploymentToken;

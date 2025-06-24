@@ -1,7 +1,7 @@
 package cn.edu.nju.TomatoMall.service;
 
 import cn.edu.nju.TomatoMall.enums.EntityType;
-import cn.edu.nju.TomatoMall.models.dto.comment.*;
+import cn.edu.nju.TomatoMall.models.dto.comment.CommentResponse;
 import org.springframework.data.domain.Page;
 
 /**

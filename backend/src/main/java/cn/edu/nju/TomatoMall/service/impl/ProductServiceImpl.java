@@ -2,13 +2,19 @@ package cn.edu.nju.TomatoMall.service.impl;
 
 import cn.edu.nju.TomatoMall.enums.Role;
 import cn.edu.nju.TomatoMall.exception.TomatoMallException;
-import cn.edu.nju.TomatoMall.models.dto.product.*;
+import cn.edu.nju.TomatoMall.models.dto.product.ProductBriefResponse;
+import cn.edu.nju.TomatoMall.models.dto.product.ProductDetailResponse;
+import cn.edu.nju.TomatoMall.models.dto.product.ProductInventoryResponse;
+import cn.edu.nju.TomatoMall.models.dto.product.ProductSnapshotResponse;
 import cn.edu.nju.TomatoMall.models.po.Inventory;
 import cn.edu.nju.TomatoMall.models.po.Product;
 import cn.edu.nju.TomatoMall.models.po.User;
-import cn.edu.nju.TomatoMall.repository.*;
-import cn.edu.nju.TomatoMall.service.ProductService;
+import cn.edu.nju.TomatoMall.repository.EmploymentRepository;
+import cn.edu.nju.TomatoMall.repository.ProductRepository;
+import cn.edu.nju.TomatoMall.repository.ProductSnapshotRepository;
+import cn.edu.nju.TomatoMall.repository.StoreRepository;
 import cn.edu.nju.TomatoMall.service.InventoryService;
+import cn.edu.nju.TomatoMall.service.ProductService;
 import cn.edu.nju.TomatoMall.util.FileUtil;
 import cn.edu.nju.TomatoMall.util.SecurityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +27,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class ProductServiceImpl implements ProductService {

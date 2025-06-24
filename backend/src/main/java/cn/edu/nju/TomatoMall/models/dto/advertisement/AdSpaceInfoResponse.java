@@ -3,9 +3,6 @@ package cn.edu.nju.TomatoMall.models.dto.advertisement;
 import cn.edu.nju.TomatoMall.models.po.AdvertisementSpace;
 import lombok.Data;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
 @Data
 public class AdSpaceInfoResponse {
     private Integer id;

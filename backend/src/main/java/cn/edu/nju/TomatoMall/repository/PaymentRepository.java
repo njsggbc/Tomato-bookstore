@@ -1,6 +1,5 @@
 package cn.edu.nju.TomatoMall.repository;
 
-import cn.edu.nju.TomatoMall.enums.PaymentMethod;
 import cn.edu.nju.TomatoMall.enums.PaymentStatus;
 import cn.edu.nju.TomatoMall.models.po.Payment;
 import org.springframework.data.domain.Page;

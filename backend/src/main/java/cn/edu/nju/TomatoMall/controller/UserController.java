@@ -1,16 +1,14 @@
 package cn.edu.nju.TomatoMall.controller;
 
 import cn.edu.nju.TomatoMall.models.dto.user.*;
-import cn.edu.nju.TomatoMall.service.UserService;
 import cn.edu.nju.TomatoMall.models.vo.ApiResponse;
+import cn.edu.nju.TomatoMall.service.UserService;
 import cn.edu.nju.TomatoMall.util.SecurityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
-import java.util.Map;
 
 /**
  * user

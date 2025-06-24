@@ -1,7 +1,7 @@
 package cn.edu.nju.TomatoMall.service;
 
 import cn.edu.nju.TomatoMall.enums.PaymentMethod;
-import cn.edu.nju.TomatoMall.models.dto.store.*;
+import cn.edu.nju.TomatoMall.models.dto.store.StoreInfoResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.web.multipart.MultipartFile;
 

@@ -2,9 +2,9 @@ package cn.edu.nju.TomatoMall.websocket;
 
 import cn.edu.nju.TomatoMall.models.po.User;
 import cn.edu.nju.TomatoMall.util.SecurityUtil;
-import cn.edu.nju.TomatoMall.websocket.type.TomatoMallWebSocketMessage;
-import cn.edu.nju.TomatoMall.websocket.type.DisconnectReason;
 import cn.edu.nju.TomatoMall.websocket.type.ConnectionInfo;
+import cn.edu.nju.TomatoMall.websocket.type.DisconnectReason;
+import cn.edu.nju.TomatoMall.websocket.type.TomatoMallWebSocketMessage;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

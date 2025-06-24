@@ -1,9 +1,8 @@
 package cn.edu.nju.TomatoMall.service;
 
-import cn.edu.nju.TomatoMall.models.dto.user.*;
+import cn.edu.nju.TomatoMall.models.dto.user.UserBriefResponse;
+import cn.edu.nju.TomatoMall.models.dto.user.UserDetailResponse;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.Map;
 
 /**
  * 用户管理服务接口
