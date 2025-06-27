@@ -1,8 +1,9 @@
 spring:
-  datasource: #更换为可用配置
-    url: jdbc:mysql://localhost:3306/TomatoMall?createDatabaseIfNotExist=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-    username: root   
-    password: 123456 
+  datasource:
+    url: jdbc:mysql://localhost:3306/TomatoMall?createDatabaseIfNotExist=true&characterEncoding=utf-8mb4&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: # 请填写MySQL用户名
+    password: # 请填写MySQL密码
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -12,32 +13,31 @@ spring:
 
 app:
   init-data:
-    root-user: #自定义初始管理员信息
-      id: 1
-      username: root
-      phone: 10000000000 
-      password: 123456 
-    system-store: #自定义默认系统商店信息
-      id: 1
+    root-user:
+      username: admin
+      phone: # 设置管理员手机号
+      password: # 设置管理员密码
+    system-store:
       name: TomatoMall
-      description: 番茄商城
-      address: "番茄市番茄区番茄街道番茄路1号"
+      description: 系统默认店铺，用于特殊业务处理
+      address: 默认地址
       logo-url: ""
 
 server:
   port: 8080
 
-aliyun: #添加必要配置！！
+# 可选配置 - 如需完整功能请填写
+aliyun:
   oss:
-    endpoint:
-    accessKeyId:
-    accessKeySecret:
-    bucketName:
+    endpoint: # 如: oss-cn-beijing.aliyuncs.com
+    accessKeyId: # 请填写你的AccessKey ID
+    accessKeySecret: # 请填写你的AccessKey Secret
+    bucketName: # 请填写你的Bucket名称
 
 alipay:
-  app-id: 2021000148608088
-  gateway: https://openapi-sandbox.dl.alipaydev.com/gateway.do
-  notify-url: https://gator-cunning-implicitly.ngrok-free.app/api/alipay/notify
+  app-id: # 请填写支付宝应用ID
+  gateway: # 填写支付宝网关
+  notify-url: # 请填写回调地址
   sign-type: RSA2
   charset: UTF-8
   app-cert-path: classpath:alipay/appPublicCert.crt
