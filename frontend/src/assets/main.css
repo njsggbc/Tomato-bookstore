@@ -1,0 +1,22 @@
+@import './base.css';
+
+#app {
+  margin: 0 auto;
+  font-weight: normal;
+}
+
+a {
+  text-decoration: none;
+  color: #ff6347;
+  transition: 0.4s;
+}
+
+@media (hover: hover) {
+  a:hover {
+    color: #ff4500;
+  }
+}
+
+body {
+  background-color: #f9f9f9;
+}
